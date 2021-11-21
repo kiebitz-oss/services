@@ -1,4 +1,4 @@
-.PHONY: all test clean build install examples
+.PHONY: all test clean build install examples secrets setup
 
 SHELL := /bin/bash
 
@@ -15,6 +15,15 @@ build:
 
 dep:
 	@go get ./...
+
+setup: secrets
+
+secrets:
+	@printf "notification:\n\
+  secret: `openssl rand -base64 32`\n\
+appointments:\n \
+  secret: `openssl rand -base64 32`\n\
+	" > settings/dev/002_secrets.yml
 
 install:
 	@go install $(GOFLAGS) ./...

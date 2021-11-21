@@ -60,18 +60,6 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 			Form:    &AddMediatorPublicKeysForm,
 			Handler: Appointments.addMediatorPublicKeys,
 		},
-		"setQueues": {
-			Form:    &SetQueuesForm,
-			Handler: Appointments.setQueues,
-		},
-		"getQueues": {
-			Form:    &GetQueuesForm,
-			Handler: Appointments.getQueues,
-		},
-		"getQueuesForProvider": {
-			Form:    &GetQueuesForProviderForm,
-			Handler: Appointments.getQueuesForProvider,
-		},
 		"addCodes": {
 			Form:    &AddCodesForm,
 			Handler: Appointments.addCodes,
@@ -435,16 +423,6 @@ var KeyDataForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "queues",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						ID,
-					},
-				},
-			},
-		},
 	},
 }
 
@@ -494,7 +472,6 @@ type SignedKeyData struct {
 type KeyData struct {
 	Signing    []byte             `json:"signing"`
 	Encryption []byte             `json:"encryption"`
-	Queues     [][]byte           `json:"queues"`
 	QueueData  *ProviderQueueData `json:"queueData"`
 }
 
@@ -1048,153 +1025,12 @@ func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *UploadD
 	return context.Acknowledge()
 }
 
-var SetQueuesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &QueuesDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var QueuesDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "queues",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &kbForms.QueueForm,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
-type SetQueuesParams struct {
-	JSON      string      `json:"json"`
-	Data      *QueuesData `json:"data"`
-	Signature []byte      `json:"signature"`
-	PublicKey []byte      `json:"publicKey"`
-}
-
-type QueuesData struct {
-	Timestamp *time.Time        `json:"timestamp"`
-	Queues    []*services.Queue `json:"queues"`
-}
-
 // signed requests are valid only 1 minute
 func expired(timestamp *time.Time) bool {
 	return time.Now().Add(-time.Minute).After(*timestamp)
 }
 
-func (c *Appointments) setQueues(context *jsonrpc.Context, params *SetQueuesParams) *jsonrpc.Response {
-	rootKey := c.settings.Key("root")
-	if rootKey == nil {
-		services.Log.Error("root key missing")
-		return context.InternalError()
-	}
-	if ok, err := rootKey.Verify(&crypto.SignedData{
-		Data:      []byte(params.JSON),
-		Signature: params.Signature,
-	}); !ok {
-		return context.Error(403, "invalid signature", nil)
-	} else if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	if expired(params.Data.Timestamp) {
-		return context.Error(410, "signature expired", nil)
-	}
-	queues := c.db.Value("queues", []byte("primary"))
-	bd, err := json.Marshal(params.Data)
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	if err := queues.Set(bd, 0); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	if result, err := queues.Get(); err != nil {
-		return context.InternalError()
-	} else if !bytes.Equal(result, bd) {
-		return context.InternalError()
-	}
-	return context.Acknowledge()
-}
-
 // public endpoints
-
-var GetQueuesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{
-					MinLength: 5,
-					MaxLength: 5,
-				},
-			},
-		},
-		{
-			Name: "radius",
-			Validators: []forms.Validator{
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    0,
-					Max:    50,
-				},
-			},
-		},
-	},
-}
-
-type GetQueuesParams struct {
-	ZipCode string `json:"zipCode"`
-	Radius  int64  `json:"radius"`
-}
 
 func toStringMap(data []byte) (map[string]interface{}, error) {
 	var v map[string]interface{}
@@ -1210,67 +1046,6 @@ func toInterface(data []byte) (interface{}, error) {
 		return nil, err
 	}
 	return v, nil
-}
-
-func (c *Appointments) getQueuesData() (*QueuesData, error) {
-	queues := c.db.Value("queues", []byte("primary"))
-	if result, err := queues.Get(); err != nil {
-		return nil, err
-	} else if m, err := toStringMap(result); err != nil {
-		return nil, err
-	} else if dataParams, err := QueuesDataForm.Validate(m); err != nil {
-		return nil, err
-	} else {
-		queues := &QueuesData{}
-		if err := QueuesDataForm.Coerce(queues, dataParams); err != nil {
-			return nil, err
-		}
-		return queues, nil
-	}
-}
-
-// { zipCode, radius }
-func (c *Appointments) getQueues(context *jsonrpc.Context, params *GetQueuesParams) *jsonrpc.Response {
-	if queues, err := c.getQueuesData(); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else {
-		relevantQueues := []*services.Queue{}
-		var exactMatch *services.Queue
-		for _, queue := range queues.Queues {
-
-			// we remove the encrypted private key from the queue
-			queue.EncryptedPrivateKey = nil
-
-			if queue.Type == "zipArea" {
-
-				if params.ZipCode[0:len(queue.Name)] != queue.Name {
-					if distance, err := c.getDistance("zipArea", params.ZipCode[0:len(queue.Name)], queue.Name); err != nil {
-						if err != databases.NotFound {
-							services.Log.Error(err)
-						}
-						continue
-					} else {
-						if distance > float64(params.Radius) {
-							// the distance is too far
-							continue
-						}
-					}
-					relevantQueues = append(relevantQueues, queue)
-				} else {
-					exactMatch = queue
-					continue
-				}
-			}
-		}
-
-		// we make sure the exactly matching queue always gets returned first...
-		if exactMatch != nil {
-			relevantQueues = append([]*services.Queue{exactMatch}, relevantQueues...)
-		}
-
-		return context.Result(relevantQueues)
-	}
 }
 
 type GetKeysParams struct {
@@ -1331,7 +1106,6 @@ type ActorKeyData struct {
 type ProviderKeyData struct {
 	Encryption []byte             `json:"encryption"`
 	Signing    []byte             `json:"signing"`
-	Queues     [][]byte           `json:"queues"`
 	QueueData  *ProviderQueueData `json:"queueData"`
 	Timestamp  *time.Time         `json:"timestamp,omitempty"`
 }
@@ -4345,95 +4119,8 @@ func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *
 
 }
 
-var GetQueuesForProviderForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetQueuesForProviderDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var GetQueuesForProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "queueIDs",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						ID,
-					},
-				},
-			},
-		},
-	},
-}
-
-type GetQueuesForProviderParams struct {
-	JSON      string                    `json:"json"`
-	Data      *GetQueuesForProviderData `json:"data"`
-	Signature []byte                    `json:"signature"`
-	PublicKey []byte                    `json:"publicKey"`
-}
-
-type GetQueuesForProviderData struct {
-	QueueIDs [][]byte `json:"queueIDs"`
-}
-
 // mediator-only endpoint
-// { queueIDs }, keyPair
-func (c *Appointments) getQueuesForProvider(context *jsonrpc.Context, params *GetQueuesForProviderParams) *jsonrpc.Response {
 
-	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
-		return resp
-	}
-
-	if queues, err := c.getQueuesData(); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else {
-		relevantQueues := []*services.Queue{}
-		for _, queue := range queues.Queues {
-			for _, queueID := range params.Data.QueueIDs {
-				if bytes.Equal(queue.ID, queueID) {
-					relevantQueues = append(relevantQueues, queue)
-					break
-				}
-			}
-		}
-		return context.Result(relevantQueues)
-	}
-
-}
 
 // stats endpoint
 
