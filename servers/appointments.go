@@ -2116,12 +2116,6 @@ var GetTokenForm = forms.Form{
 			},
 		},
 		{
-			Name: "queueID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
 			Name: "code",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
@@ -2140,31 +2134,6 @@ var GetTokenForm = forms.Form{
 					Encoding:  "base64",
 					MaxLength: 1000,
 					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "queueData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &TokenQueueDataForm,
-				},
-			},
-		},
-		{
-			Name: "signedTokenData",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsStringMap{
-					Form: &SignedTokenDataForm,
-				},
-			},
-		},
-		{
-			Name: "encryptedData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &kbForms.ECDHEncryptedDataForm,
 				},
 			},
 		},
@@ -2292,7 +2261,7 @@ type TokenData struct {
 	Hash      []byte `json:"hash"`
 }
 
-//{hash, encryptedData, queueID, queueData, signedTokenData}
+//{hash, code, publicKey}
 // get a token for a given queue
 func (c *Appointments) getToken(context *jsonrpc.Context, params *GetTokenParams) *jsonrpc.Response {
 
@@ -2307,7 +2276,6 @@ func (c *Appointments) getToken(context *jsonrpc.Context, params *GetTokenParams
 
 	var signedData *crypto.SignedStringData
 
-	// this is a new token
 	if c.settings.UserCodesEnabled {
 		notAuthorized := context.Error(401, "not authorized", nil)
 		if params.Code == nil {
@@ -4120,7 +4088,6 @@ func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *
 }
 
 // mediator-only endpoint
-
 
 // stats endpoint
 
