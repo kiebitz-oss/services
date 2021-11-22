@@ -41,7 +41,7 @@ make secrets
 
 ### Cryptographic Keys
 
-First, we need to generate various cryptographic keys for signing and encryption. To do this, we simply run
+Now, we need to generate various cryptographic keys for signing and encryption. To do this, we simply run
 
 ```bash
 kiebitz admin keys setup
@@ -57,7 +57,7 @@ Now we can then generate mediator keys. To do this, we simply run
 kiebitz admin keys mediator > data/secret-mediator-keys.json
 ```
 
-This will create a JSON data structure with all necessary keys for the mediator. Please be aware that the `provider` and `queue` keys are just copied from the `002_admin.json` file generated before. These keys enable mediators to decrypt provider and queue data.
+This will create a JSON data structure with all necessary keys for the mediator. Please be aware that the `provider` keys are just copied from the `002_admin.json` file generated before. These keys enable mediators to decrypt provider data.
 
 For the next steps of the setup process we'll need a running backend, so let's start it via
 
@@ -71,19 +71,7 @@ That should start the appointments and storage services. Now we can tell the bac
 kiebitz admin mediators upload data/secret-mediator-keys.json
 ```
 
-This will sign the public signing and encryption keys of the mediator with the root key and put the signed key material on the backend for publication. Finally, we need to generate queue keys, which we do via
-
-```bash
-kiebitz admin queues generate > data/secret-queue-keys.json
-```
-
-The queue keys enable providers to decrypt user tokens. The queue keys file contains the public queue keys as well as the encrypted private keys, which only mediators can decrypt with the respective key. To upload the queue keys to the backend, we simply run
-
-```bash
-kiebitz admin queues upload data/secret-queue-keys.json
-```
-
-That's it! Now we should be able to go to the `/mediator` URL in the frontend, load our mediator key file and verify providers. Providers should be able to sign up, upload their data for verification and get tokens. Users should also be able to sign up and receive invitations.
+This will sign the public signing and encryption keys of the mediator with the root key and put the signed key material on the backend for publication. That's it! Now we should be able to go to the `/mediator` URL in the frontend, load our mediator key file and verify providers. Providers should be able to sign up, upload their data for verification and get tokens. Users should also be able to sign up and receive invitations.
 
 ### ZIP Code Data
 
@@ -92,7 +80,7 @@ ZIP code data helps Kiebitz to estimate distances between zip code areas. There 
 ```bash
 # upload distances for full ZIP codes (used when matching tokens to providers)
 kiebitz admin distances upload data/distances.json
-# upload distances for ZIP codes areas (used when selecting queues for providers and users)
+# upload distances for ZIP codes areas (used when filtering appointments for users)
 kiebitz admin distances upload data/distances-areas.json
 ```
 
