@@ -60,7 +60,7 @@ notification:
     smtp_port: 1025
     smtp_user: "test"
     smtp_password: "test"
-    sender: "test@sofort-impfen.de"
+    sender: "kontakt@kiebitz.eu"
     mail_subject: "Neue Impftermine verfügbar!"
     mail_delay: 1
     mail_template: >
