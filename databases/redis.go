@@ -21,6 +21,7 @@ import (
 	"github.com/go-redis/redis"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
+	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"sync"
 	"time"
@@ -101,7 +102,31 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 		DB:           int(redisSettings.Database),
 	}
 
+	redisDurations := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "redis_durations_seconds",
+			Help:    "Redis command durations",
+			Buckets: []float64{0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0},
+		},
+		[]string{"command"},
+	)
+
+	prometheus.MustRegister(redisDurations)
+
 	client := redis.NewUniversalClient(&options)
+
+	client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
+		return func(cmd redis.Cmder) error {
+			startTime := time.Now()
+
+			err := oldProcess(cmd)
+
+			elapsedTime := time.Since(startTime)
+			redisDurations.WithLabelValues(cmd.Name()).Observe(elapsedTime.Seconds())
+
+			return err
+		}
+	})
 
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
@@ -123,6 +148,7 @@ func (d *Redis) Client() redis.Cmdable {
 	if d.transaction != nil {
 		return d.transaction
 	}
+
 	return d.client
 }
 

@@ -35,9 +35,12 @@ func main() {
 		services.Log.Fatal(err)
 	} else if meter, err := helpers.InitializeMeter(settings); err != nil {
 		services.Log.Fatal(err)
+	} else if metricsServer, err := helpers.InitializeMetricsServer(settings); err != nil {
+		services.Log.Fatal(err)
 	} else {
 		settings.DatabaseObj = db
 		settings.MeterObj = meter
+		settings.MetricsObj = metricsServer
 		cmdHelpers.CLI(settings)
 	}
 }

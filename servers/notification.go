@@ -24,15 +24,17 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/jsonrpc"
+	"github.com/kiebitz-oss/services/metrics"
 	"github.com/kiprotect/go-helpers/forms"
 	"net/smtp"
 	"time"
 )
 
 type Notification struct {
-	settings *services.NotificationSettings
-	server   *jsonrpc.JSONRPCServer
-	db       services.Database
+	settings      *services.NotificationSettings
+	server        *jsonrpc.JSONRPCServer
+	metricsServer *metrics.PrometheusMetricsServer
+	db            services.Database
 }
 
 func (c *Notification) Start() error {
@@ -138,13 +140,12 @@ func MakeNotification(settings *services.Settings) (*Notification, error) {
 		return nil, err
 	}
 
-	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Notification.RPC, handler); err != nil {
+	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Notification.RPC, handler, "notifications"); err != nil {
 		return nil, err
 	} else {
 		Notification.server = jsonrpcServer
 		return Notification, nil
 	}
-
 }
 
 func (c *Notification) sendNotifications(context *jsonrpc.Context, params *sendNotificationParams) *jsonrpc.Response {
