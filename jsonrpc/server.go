@@ -17,8 +17,12 @@
 package jsonrpc
 
 import (
+	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/http"
+	"github.com/prometheus/client_golang/prometheus"
+	"strconv"
+	"time"
 )
 
 type Handler func(*Context) *Response
@@ -29,8 +33,23 @@ type JSONRPCServer struct {
 	handler  Handler
 }
 
-func JSONRPC(handler Handler) http.Handler {
+func JSONRPC(handler Handler, metricsPrefix string) http.Handler {
+
+	httpDurations := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    fmt.Sprintf("%s_%s", metricsPrefix, "rpc_durations_seconds"),
+			Help:    "RPC latency distributions",
+			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
+		},
+		[]string{"method", "code"},
+	)
+
+	prometheus.MustRegister(httpDurations)
+
 	return func(c *http.Context) {
+
+		startTime := time.Now()
+
 		// the request data has been validated by the 'ExtractJSONRequest' handler
 		request := c.Get("request").(*Request)
 
@@ -58,6 +77,9 @@ func JSONRPC(handler Handler) http.Handler {
 
 		c.JSON(code, response)
 
+		elapsedTime := time.Since(startTime)
+		codeString := strconv.Itoa(code)
+		httpDurations.WithLabelValues(request.Method, codeString).Observe(elapsedTime.Seconds())
 	}
 }
 
@@ -65,7 +87,7 @@ func NotFound(c *http.Context) {
 	c.JSON(404, map[string]interface{}{"message": "please send all requests to the '/jsonrpc' endpoint"})
 }
 
-func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler) (*JSONRPCServer, error) {
+func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string) (*JSONRPCServer, error) {
 	routeGroups := []*http.RouteGroup{
 		{
 			// these handlers will be executed for all routes in the group
@@ -77,7 +99,7 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 					Pattern: "^/jsonrpc$",
 					Handlers: []http.Handler{
 						ExtractJSONRequest,
-						JSONRPC(handler),
+						JSONRPC(handler, metricsPrefix),
 					},
 				},
 				{
@@ -95,7 +117,7 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 		BindAddress: settings.BindAddress,
 	}
 
-	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups); err != nil {
+	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups, metricsPrefix); err != nil {
 		return nil, err
 	} else {
 		return &JSONRPCServer{

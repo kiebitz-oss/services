@@ -410,6 +410,17 @@ var AppointmentsForm = forms.Form{
 	},
 }
 
+var MetricsForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "bind_address",
+			Validators: []forms.Validator{
+				forms.IsString{},
+			},
+		},
+	},
+}
+
 var SettingsForm = forms.Form{
 	Fields: []forms.Field{
 		{
@@ -468,6 +479,15 @@ var SettingsForm = forms.Form{
 				forms.IsOptional{},
 				forms.IsStringMap{
 					Form: &NotificationForm,
+				},
+			},
+		},
+		{
+			Name: "metrics",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsStringMap{
+					Form: &MetricsForm,
 				},
 			},
 		},

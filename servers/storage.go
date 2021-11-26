@@ -21,14 +21,16 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/databases"
 	"github.com/kiebitz-oss/services/jsonrpc"
+	"github.com/kiebitz-oss/services/metrics"
 	"github.com/kiprotect/go-helpers/forms"
 	"time"
 )
 
 type Storage struct {
-	settings *services.StorageSettings
-	server   *jsonrpc.JSONRPCServer
-	db       services.Database
+	settings      *services.StorageSettings
+	server        *jsonrpc.JSONRPCServer
+	metricsServer *metrics.PrometheusMetricsServer
+	db            services.Database
 }
 
 func MakeStorage(settings *services.Settings) (*Storage, error) {
@@ -59,7 +61,7 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		return nil, err
 	}
 
-	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Storage.RPC, handler); err != nil {
+	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Storage.RPC, handler, "storage"); err != nil {
 		return nil, err
 	} else {
 		Storage.server = jsonrpcServer

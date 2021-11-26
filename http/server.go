@@ -20,8 +20,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/metrics"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -45,12 +49,13 @@ type Route struct {
 type H map[string]interface{}
 
 type HTTPServer struct {
-	settings    *services.HTTPServerSettings
-	mutex       sync.Mutex
-	running     bool
-	err         error
-	server      *http.Server
-	routeGroups []*RouteGroup
+	settings      *services.HTTPServerSettings
+	mutex         sync.Mutex
+	running       bool
+	err           error
+	server        *http.Server
+	routeGroups   []*RouteGroup
+	httpDurations *prometheus.HistogramVec
 }
 
 func initializeRouteGroup(routeGroup *RouteGroup) error {
@@ -75,13 +80,24 @@ func initializeRouteGroup(routeGroup *RouteGroup) error {
 	return nil
 }
 
-func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteGroup) (*HTTPServer, error) {
+func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteGroup, metricsPrefix string) (*HTTPServer, error) {
 
 	for _, routeGroup := range routeGroups {
 		if err := initializeRouteGroup(routeGroup); err != nil {
 			return nil, err
 		}
 	}
+
+	httpDurations := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    fmt.Sprintf("%s_%s", metricsPrefix, "http_durations_seconds"),
+			Help:    "HTTP latency distributions",
+			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
+		},
+		[]string{"path", "code"},
+	)
+
+	prometheus.MustRegister(httpDurations)
 
 	s := &HTTPServer{
 		settings:    settings,
@@ -90,6 +106,7 @@ func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteG
 		server: &http.Server{
 			Addr: settings.BindAddress,
 		},
+		httpDurations: httpDurations,
 	}
 
 	// we add the handler
@@ -123,14 +140,37 @@ func handleRouteGroup(context *Context, group *RouteGroup, handlers []Handler) {
 	}
 
 }
+
 func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
-	context := MakeContext(writer, request)
+	startHandleTime := time.Now()
+
+	statusWriter := metrics.MakeStatusResponseWriter(writer)
+
+	context := MakeContext(statusWriter, request)
 
 	for _, routeGroup := range s.routeGroups {
 		handleRouteGroup(context, routeGroup, []Handler{})
 	}
 
+	handleDuration := time.Since(startHandleTime)
+
+	u, err := url.Parse(request.RequestURI)
+
+	if err != nil {
+		services.Log.Errorf("Could not parse request uri for request %v, skipping...", request.RequestURI)
+		return
+	}
+
+	statusCode, err := statusWriter.Status()
+	statusCodeString := strconv.Itoa(statusCode)
+
+	if err != nil {
+		services.Log.Errorf("Could not get status code for request %v, skipping...", request.RequestURI)
+		return
+	}
+
+	s.httpDurations.WithLabelValues(u.Path, statusCodeString).Observe(handleDuration.Seconds())
 }
 
 func (s *HTTPServer) Start() error {
