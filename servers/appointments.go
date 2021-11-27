@@ -335,6 +335,7 @@ var SignedProviderDataForm = forms.Form{
 		},
 	},
 }
+
 var SignedDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
@@ -1800,6 +1801,14 @@ var AppointmentForm = forms.Form{
 var AppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
+			Name: "updatedAt",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+		{
 			Name: "timestamp",
 			Validators: []forms.Validator{
 				forms.IsTime{Format: "rfc3339"},
@@ -1888,6 +1897,7 @@ type SignedAppointment struct {
 }
 
 type Appointment struct {
+	UpdatedAt  time.Time              `json:"updatedAt"`
 	Timestamp  time.Time              `json:"timestamp"`
 	Duration   int64                  `json:"duration"`
 	Properties map[string]interface{} `json:"properties"`
@@ -1957,9 +1967,72 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 		return context.InternalError()
 	}
 
+	usedTokens := transaction.Set("bookings", []byte("tokens"))
+
 	var bookedSlots, openSlots int64
 
 	for _, appointment := range params.Data.Offers {
+
+		deletedSlots := make([][]byte, 0)
+
+		// check if there's an existing appointment
+		if data, err := appointments.Get(appointment.Data.ID); err == nil {
+
+			existingAppointment := &SignedAppointment{}
+
+			var mapData map[string]interface{}
+
+			if err := json.Unmarshal(data, &mapData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if params, err := AppointmentForm.Validate(mapData); err != nil {
+				services.Log.Error(err)
+			} else if err := AppointmentForm.Coerce(existingAppointment, params); err != nil {
+				services.Log.Error(err)
+			} else {
+				for _, existingSlotData := range existingAppointment.Data.SlotData {
+					found := false
+					for _, slotData := range appointment.Data.SlotData {
+						if bytes.Equal(slotData.ID, existingSlotData.ID) {
+							found = true
+							break
+						}
+					}
+					if !found {
+						deletedSlots = append(deletedSlots, existingSlotData.ID)
+					}
+				}
+			}
+
+			// we delete slots that have been removed from the new appointment
+			if !params.Data.Reset && len(deletedSlots) > 0 {
+
+				// we delete all bookings for slots that have been removed by the provider
+				for _, slotID := range deletedSlots {
+
+					existingBooking := &Booking{}
+
+					if data, err := bookings.Get(slotID); err == nil {
+						// this slot was already booked, we re-enable the associated token
+						if err := json.Unmarshal(data, &existingBooking); err != nil {
+							services.Log.Error(err)
+						} else if err := usedTokens.Del(existingBooking.Token); err != nil {
+							services.Log.Error(err)
+						}
+					}
+
+					// we delete the booking, if any exists
+					if err := bookings.Del(slotID); err != nil {
+						services.Log.Error(err)
+						return context.InternalError()
+					}
+
+				}
+
+			}
+
+		}
+
 		delete(allAppointments, string(appointment.Data.ID))
 		for _, slot := range appointment.Data.SlotData {
 			if _, ok := allBookings[string(slot.ID)]; ok {
@@ -1986,25 +2059,24 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 				return context.InternalError()
 			}
 		}
-	}
 
-	usedTokens := transaction.Set("bookings", []byte("tokens"))
+		// we delete all bookings for slots that have been removed by the provider
+		for k, data := range allBookings {
 
-	// we delete all bookings for slots that have been removed by the provider
-	for k, data := range allBookings {
+			existingBooking := &Booking{}
 
-		existingBooking := &Booking{}
+			if err := json.Unmarshal(data, &existingBooking); err != nil {
+				services.Log.Error(err)
+			} else if err := usedTokens.Del(existingBooking.Token); err != nil {
+				services.Log.Error(err)
+			}
 
-		if err := json.Unmarshal(data, &existingBooking); err != nil {
-			services.Log.Error(err)
-		} else if err := usedTokens.Del(existingBooking.Token); err != nil {
-			services.Log.Error(err)
+			if err := bookings.Del([]byte(k)); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
 		}
 
-		if err := bookings.Del([]byte(k)); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
 	}
 
 	success = true
@@ -2447,7 +2519,7 @@ findAppointment:
 
 	bookings := transaction.Map("bookings", params.Data.ProviderID)
 
-	// appointments expire automatically after 120 days
+	// booking expire automatically after 120 days
 	if err := transaction.Expire("bookings", params.Data.ProviderID, time.Hour*24*120); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
