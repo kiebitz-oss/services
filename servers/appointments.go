@@ -1986,26 +1986,25 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 				return context.InternalError()
 			}
 		}
+	}
 
-		usedTokens := transaction.Set("bookings", []byte("tokens"))
+	usedTokens := transaction.Set("bookings", []byte("tokens"))
 
-		// we delete all bookings for slots that have been removed by the provider
-		for k, data := range allBookings {
+	// we delete all bookings for slots that have been removed by the provider
+	for k, data := range allBookings {
 
-			existingBooking := &Booking{}
+		existingBooking := &Booking{}
 
-			if err := json.Unmarshal(data, &existingBooking); err != nil {
-				services.Log.Error(err)
-			} else if err := usedTokens.Del(existingBooking.Token); err != nil {
-				services.Log.Error(err)
-			}
-
-			if err := bookings.Del([]byte(k)); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			}
+		if err := json.Unmarshal(data, &existingBooking); err != nil {
+			services.Log.Error(err)
+		} else if err := usedTokens.Del(existingBooking.Token); err != nil {
+			services.Log.Error(err)
 		}
 
+		if err := bookings.Del([]byte(k)); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
 	}
 
 	success = true
@@ -2652,13 +2651,11 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *CancelSlotPa
 	if ok, err := usedTokens.Has(token); err != nil {
 		services.Log.Error()
 		return context.InternalError()
-	} else if !ok {
-		return context.Error(401, "not authorized", nil)
-	}
-
-	if err := usedTokens.Del(token); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
+	} else if ok {
+		if err := usedTokens.Del(token); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
 	}
 
 	if c.meter != nil {
