@@ -114,9 +114,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 			Form:    &StoreProviderDataForm,
 			Handler: Appointments.storeProviderData,
 		},
-		"getProviderData": {
-			Form:    &GetProviderDataForm,
-			Handler: Appointments.getProviderData,
+		"checkProviderData": {
+			Form:    &CheckProviderDataForm,
+			Handler: Appointments.checkProviderData,
 		},
 		"getPendingProviderData": {
 			Form:    &GetPendingProviderDataForm,
@@ -237,12 +237,6 @@ var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "verifiedID",
 			Validators: []forms.Validator{
 				ID,
 			},
@@ -440,9 +434,10 @@ type ConfirmProviderParams struct {
 	PublicKey []byte               `json:"publicKey"`
 }
 
+// this data is accessible to the provider, nothing "secret" should be
+// stored here...
 type ConfirmProviderData struct {
 	ID                    []byte                      `json:"id"`
-	VerifiedID            []byte                      `json:"verifiedID"`
 	PublicProviderData    *SignedProviderData         `json:"publicProviderData"`
 	EncryptedProviderData *services.ECDHEncryptedData `json:"encryptedProviderData"`
 	SignedKeyData         *SignedKeyData              `json:"signedKeyData"`
@@ -505,6 +500,7 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *Confirm
 
 	unverifiedProviderData := transaction.Map("providerData", []byte("unverified"))
 	verifiedProviderData := transaction.Map("providerData", []byte("verified"))
+	checkedProviderData := transaction.Map("providerData", []byte("checked"))
 	publicProviderData := transaction.Map("providerData", []byte("public"))
 
 	oldPd, err := unverifiedProviderData.Get(params.Data.ID)
@@ -534,6 +530,12 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *Confirm
 	}
 
 	if err := verifiedProviderData.Set(params.Data.ID, oldPd); err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	// we store a copy of the signed data for the provider to check
+	if err := checkedProviderData.Set(params.Data.ID, []byte(params.JSON)); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
@@ -2683,7 +2685,7 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *CancelSlotPa
 
 // get provider data
 
-var GetProviderDataForm = forms.Form{
+var CheckProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "data",
@@ -2693,7 +2695,7 @@ var GetProviderDataForm = forms.Form{
 					Key: "json",
 				},
 				forms.IsStringMap{
-					Form: &GetProviderDataDataForm,
+					Form: &CheckProviderDataDataForm,
 				},
 			},
 		},
@@ -2721,7 +2723,7 @@ var GetProviderDataForm = forms.Form{
 	},
 }
 
-var GetProviderDataDataForm = forms.Form{
+var CheckProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "timestamp",
@@ -2734,19 +2736,19 @@ var GetProviderDataDataForm = forms.Form{
 	},
 }
 
-type GetProviderDataParams struct {
-	JSON      string               `json:"json"`
-	Data      *GetProviderDataData `json:"data"`
-	Signature []byte               `json:"signature"`
-	PublicKey []byte               `json:"publicKey"`
+type CheckProviderDataParams struct {
+	JSON      string                 `json:"json"`
+	Data      *CheckProviderDataData `json:"data"`
+	Signature []byte                 `json:"signature"`
+	PublicKey []byte                 `json:"publicKey"`
 }
 
-type GetProviderDataData struct {
+type CheckProviderDataData struct {
 	Timestamp *time.Time `json:"timestamp"`
 }
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) getProviderData(context *jsonrpc.Context, params *GetProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *CheckProviderDataParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider
 	resp, _ := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2760,7 +2762,7 @@ func (c *Appointments) getProviderData(context *jsonrpc.Context, params *GetProv
 	}
 
 	hash := crypto.Hash(params.PublicKey)
-	verifiedProviderData := c.db.Map("providerData", []byte("verified"))
+	verifiedProviderData := c.db.Map("providerData", []byte("checked"))
 
 	if data, err := verifiedProviderData.Get(hash); err != nil {
 		if err == databases.NotFound {
@@ -2823,12 +2825,6 @@ var StoreProviderDataForm = forms.Form{
 
 var StoreProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
 		{
 			Name: "code",
 			Validators: []forms.Validator{
@@ -3200,12 +3196,13 @@ func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *
 
 	pdEntries := []map[string]interface{}{}
 
-	for _, v := range pd {
+	for k, v := range pd {
 		var m map[string]interface{}
 		if err := json.Unmarshal(v, &m); err != nil {
 			services.Log.Error(err)
 			continue
 		} else {
+			m["id"] = []byte(k)
 			pdEntries = append(pdEntries, m)
 		}
 	}
