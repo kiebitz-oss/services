@@ -2,13 +2,18 @@ package metrics
 
 import (
 	"context"
+	"github.com/kiebitz-oss/services"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"sync"
 	"time"
 )
 
 type PrometheusMetricsServer struct {
-	server *http.Server
+	server  *http.Server
+	mutex   sync.Mutex
+	err     error
+	running bool
 }
 
 type PrometheusMetricsServerSettings struct {
@@ -21,15 +26,43 @@ func MakePrometheusMetricsServer(bindAddress string) (*PrometheusMetricsServer, 
 		server: &http.Server{Addr: bindAddress, Handler: promhttp.Handler()},
 	}
 
+	return p, nil
+}
+
+func (p *PrometheusMetricsServer) Start() error {
+
 	go func() {
-		if err := p.server.ListenAndServe(); err != nil {
-			if err != http.ErrServerClosed {
-				panic("Could not start metrics server")
-			}
+
+		if err := p.server.ListenAndServe(); err != http.ErrServerClosed {
+
+			// something went wrong, we log and store the error...
+
+			services.Log.Error(err)
+
+			p.mutex.Lock()
+			p.err = err
+			p.running = false
+			p.mutex.Unlock()
+		} else {
+			// the server shut down gracefully...
+			p.mutex.Lock()
+			p.running = false
+			p.err = nil
+			p.mutex.Unlock()
 		}
 	}()
 
-	return p, nil
+	time.Sleep(time.Millisecond * 100)
+
+	p.mutex.Lock()
+	running := p.running
+	p.mutex.Unlock()
+
+	if !running {
+		return p.err
+	}
+
+	return nil
 }
 
 func (p *PrometheusMetricsServer) Stop() error {

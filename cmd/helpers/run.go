@@ -79,6 +79,14 @@ func initializeNotification(settings *services.Settings) (Server, error) {
 	return helpers.InitializeNotificationServer(settings)
 }
 
+func initializeMetrics(settings *services.Settings) (Server, error) {
+	services.Log.Debug("Starting metrics server...")
+	if settings.Metrics == nil {
+		return nil, fmt.Errorf("Metrics settings undefined")
+	}
+	return helpers.InitializeMetricsServer(settings)
+}
+
 type Initializer func(settings *services.Settings) (Server, error)
 
 func startServer(settings *services.Settings, initializer Initializer) Server {
@@ -120,25 +128,25 @@ func Run(settings *services.Settings) ([]cli.Command, error) {
 					Name:   "all",
 					Flags:  []cli.Flag{},
 					Usage:  "Run all servers at once.",
-					Action: run(settings, []Initializer{initializeStorage, initializeAppointments, initializeNotification}),
+					Action: run(settings, []Initializer{initializeMetrics, initializeStorage, initializeAppointments, initializeNotification}),
 				},
 				{
 					Name:   "storage",
 					Flags:  []cli.Flag{},
 					Usage:  "Run the storage server.",
-					Action: run(settings, []Initializer{initializeStorage}),
+					Action: run(settings, []Initializer{initializeMetrics, initializeStorage}),
 				},
 				{
 					Name:   "appointments",
 					Flags:  []cli.Flag{},
 					Usage:  "Run the appointments server.",
-					Action: run(settings, []Initializer{initializeAppointments}),
+					Action: run(settings, []Initializer{initializeMetrics, initializeAppointments}),
 				},
 				{
 					Name:   "notification",
 					Flags:  []cli.Flag{},
 					Usage:  "Run the notification server.",
-					Action: run(settings, []Initializer{initializeNotification}),
+					Action: run(settings, []Initializer{initializeMetrics, initializeNotification}),
 				},
 			},
 		},
