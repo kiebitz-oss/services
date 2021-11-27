@@ -3,31 +3,33 @@ meter:
   name: meter
   type: redis
   settings:
-    addresses: ["localhost:6379"]
+    addresses: [ "localhost:6379" ]
     database: 1
     password: ""
 database:
   name: db
   type: redis
   settings:
-    addresses: ["localhost:6379"]
+    addresses: [ "localhost:6379" ]
     database: 0
     password: ""
+metrics:
+  bind_address: "localhost:9090"
 storage:
   settings_ttl_days: 60
   rpc:
     bind_address: localhost:9999
     cors:
-      allowed_hosts: ["http://localhost:8080"]
-      allowed_headers: ["*"]
-      allowed_methods: ["POST"]
+      allowed_hosts: [ "http://localhost:8080" ]
+      allowed_headers: [ "*" ]
+      allowed_methods: [ "POST" ]
     #tls:
     #  ca_certificate_file: "$DIR/certs/root.crt"
     #  certificate_file: "$DIR/certs/storage-1.crt"
     #  key_file: "$DIR/certs/storage-1.key"
 admin:
   signing:
-    keys: []
+    keys: [ ]
   client:
     appointments_endpoint: http://localhost:8888/jsonrpc
     storage_endpoint: http://localhost:8888/jsonrpc
@@ -36,13 +38,13 @@ admin:
 appointments:
   provider_codes_enabled: false
   user_codes_enabled: false
-  keys: []
+  keys: [ ]
   rpc:
     bind_address: localhost:8888
     cors:
-      allowed_hosts: ["http://localhost:8080"]
-      allowed_headers: ["*"]
-      allowed_methods: ["POST"]
+      allowed_hosts: [ "http://localhost:8080" ]
+      allowed_headers: [ "*" ]
+      allowed_methods: [ "POST" ]
     #tls:
     #  ca_certificate_file: "$DIR/certs/root.crt"
     #  certificate_file: "$DIR/certs/appointments-1.crt"
@@ -51,16 +53,16 @@ notification:
   rpc:
     bind_address: localhost:7777
     cors:
-      allowed_hosts: ["http://localhost:8080"]
-      allowed_headers: ["*"]
-      allowed_methods: ["POST"]
-  keys: []
+      allowed_hosts: [ "http://localhost:8080" ]
+      allowed_headers: [ "*" ]
+      allowed_methods: [ "POST" ]
+  keys: [ ]
   mail:
     smtp_host: "localhost"
     smtp_port: 1025
     smtp_user: "test"
     smtp_password: "test"
-    sender: "test@sofort-impfen.de"
+    sender: "kontakt@kiebitz.eu"
     mail_subject: "Neue Impftermine verfügbar!"
     mail_delay: 1
     mail_template: >

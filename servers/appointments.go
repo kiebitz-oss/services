@@ -29,6 +29,7 @@ import (
 	"github.com/kiebitz-oss/services/databases"
 	kbForms "github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
+	"github.com/kiebitz-oss/services/metrics"
 	"github.com/kiprotect/go-helpers/forms"
 	"regexp"
 	"sort"
@@ -37,10 +38,11 @@ import (
 )
 
 type Appointments struct {
-	server   *jsonrpc.JSONRPCServer
-	db       services.Database
-	meter    services.Meter
-	settings *services.AppointmentsSettings
+	server        *jsonrpc.JSONRPCServer
+	metricsServer *metrics.PrometheusMetricsServer
+	db            services.Database
+	meter         services.Meter
+	settings      *services.AppointmentsSettings
 }
 
 func MakeAppointments(settings *services.Settings) (*Appointments, error) {
@@ -132,7 +134,7 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		return nil, err
 	}
 
-	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Appointments.RPC, handler); err != nil {
+	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Appointments.RPC, handler, "appointments"); err != nil {
 		return nil, err
 	} else {
 		Appointments.server = jsonrpcServer

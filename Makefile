@@ -2,7 +2,7 @@
 
 SHELL := /bin/bash
 
-GOFLAGS ?= $(GOFLAGS:)
+GOFLAGS ?= -ldflags=\"-extldflags=-static\" $(GOFLAGS:)
 
 export KIEBITZ_TEST = yes
 
@@ -11,7 +11,7 @@ KIEBITZ_TEST_SETTINGS ?= "$(shell pwd)/settings/test"
 all: dep install
 
 build:
-	@go build $(GOFLAGS) ./...
+	CGO_ENABLED=0 go build $(GOFLAGS) ./...
 
 dep:
 	@go get ./...
@@ -26,7 +26,7 @@ appointments:\n \
 	" > settings/dev/002_secrets.yml
 
 install:
-	@go install $(GOFLAGS) ./...
+	CGO_ENABLED=0 go install $(GOFLAGS) ./...
 
 test: dep
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test $(testargs) `go list ./...`

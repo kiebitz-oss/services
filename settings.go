@@ -18,6 +18,7 @@ package services
 
 import (
 	"github.com/kiebitz-oss/services/crypto"
+	"github.com/kiebitz-oss/services/metrics"
 )
 
 type RPCSettings struct {
@@ -83,15 +84,17 @@ type MeterSettings struct {
 }
 
 type Settings struct {
-	Admin        *AdminSettings        `json:"admin,omitempty"`
-	Definitions  *Definitions          `json:"definitions,omitempty"`
-	Storage      *StorageSettings      `json:"storage,omitempty"`
-	Appointments *AppointmentsSettings `json:"appointments,omitempty"`
-	Notification *NotificationSettings `json:"notification"`
-	Database     *DatabaseSettings     `json:"database,omitempty"`
-	Meter        *MeterSettings        `json:"meter,omitempty"`
-	DatabaseObj  Database              `json:"-"`
-	MeterObj     Meter                 `json:"-"`
+	Admin        *AdminSettings                   `json:"admin,omitempty"`
+	Definitions  *Definitions                     `json:"definitions,omitempty"`
+	Storage      *StorageSettings                 `json:"storage,omitempty"`
+	Appointments *AppointmentsSettings            `json:"appointments,omitempty"`
+	Notification *NotificationSettings            `json:"notification"`
+	Database     *DatabaseSettings                `json:"database,omitempty"`
+	Meter        *MeterSettings                   `json:"meter,omitempty"`
+	Metrics      *MetricSettings                  `json:"metrics,omitempty"`
+	DatabaseObj  Database                         `json:"-"`
+	MeterObj     Meter                            `json:"-"`
+	MetricsObj   *metrics.PrometheusMetricsServer `json:"-"`
 }
 
 type AdminSettings struct {
@@ -127,6 +130,10 @@ type JSONRPCServerSettings struct {
 type HTTPServerSettings struct {
 	TLS         *TLSSettings `json:"tls,omitempty"`
 	BindAddress string       `json:"bind_address"`
+}
+
+type MetricSettings struct {
+	BindAddress string `json:"bind_address"`
 }
 
 type MailSettings struct {
