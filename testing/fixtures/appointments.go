@@ -14,35 +14,39 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package metrics
+package fixtures
 
 import (
-	"errors"
-	"net/http"
+	"fmt"
+	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/helpers"
 )
 
-type StatusResponseWriter struct {
-	http.ResponseWriter
-	status int
+type Appointments struct {
 }
 
-func MakeStatusResponseWriter(w http.ResponseWriter) *StatusResponseWriter {
-	return &StatusResponseWriter{
-		w,
-		-1,
+func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error) {
+
+	sett := fixtures["settings"]
+
+	if sett == nil {
+		return nil, fmt.Errorf("no settings found")
 	}
-}
 
-func (r *StatusResponseWriter) Status() (int, error) {
+	settingsObj, ok := sett.(*services.Settings)
 
-	if r.status != -1 {
-		return r.status, nil
+	if !ok {
+		return nil, fmt.Errorf("not a real settings object")
+	}
+
+	if appointments, err := helpers.InitializeAppointmentsServer(settingsObj); err != nil {
+		return nil, err
 	} else {
-		return 0, errors.New("status was not set")
+		return appointments, nil
 	}
+
 }
 
-func (r *StatusResponseWriter) WriteHeader(status int) {
-	r.status = status
-	r.ResponseWriter.WriteHeader(status)
+func (c Appointments) Teardown(fixture interface{}) error {
+	return nil
 }
