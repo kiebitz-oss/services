@@ -67,6 +67,12 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 	}
 }
 
+type IsAnything struct{}
+
+func (a IsAnything) Validate(value interface{}, values map[string]interface{}) (interface{}, error) {
+	return value, nil
+}
+
 var StoreSettingsForm = forms.Form{
 	Fields: []forms.Field{
 		{
