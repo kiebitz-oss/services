@@ -1011,10 +1011,9 @@ var GetKeysForm = forms.Form{
 }
 
 type Keys struct {
-	Lists        *KeyLists `json:"lists"`
-	ProviderData []byte    `json:"providerData"`
-	RootKey      []byte    `json:"rootKey"`
-	TokenKey     []byte    `json:"tokenKey"`
+	ProviderData []byte `json:"providerData"`
+	RootKey      []byte `json:"rootKey"`
+	TokenKey     []byte `json:"tokenKey"`
 }
 
 type KeyLists struct {
@@ -1103,6 +1102,22 @@ func (c *Appointments) getListKeys(key string) ([]*ActorKey, error) {
 
 func (c *Appointments) getKeysData() (*Keys, error) {
 
+	providerDataKey := c.settings.Key("provider")
+
+	// to do: remove once the settings are updated
+	if providerDataKey == nil {
+		providerDataKey = c.settings.Key("providerData")
+	}
+
+	return &Keys{
+		ProviderData: providerDataKey.PublicKey,
+		RootKey:      c.settings.Key("root").PublicKey,
+		TokenKey:     c.settings.Key("token").PublicKey,
+	}, nil
+
+}
+
+func (c *Appointments) getActorKeys() (*KeyLists, error) {
 	mediatorKeys, err := c.getListKeys("mediators")
 
 	if err != nil {
@@ -1115,23 +1130,10 @@ func (c *Appointments) getKeysData() (*Keys, error) {
 		return nil, err
 	}
 
-	providerDataKey := c.settings.Key("provider")
-
-	// to do: remove once the settings are updated
-	if providerDataKey == nil {
-		providerDataKey = c.settings.Key("providerData")
-	}
-
-	return &Keys{
-		Lists: &KeyLists{
-			Providers: providerKeys,
-			Mediators: mediatorKeys,
-		},
-		ProviderData: providerDataKey.PublicKey,
-		RootKey:      c.settings.Key("root").PublicKey,
-		TokenKey:     c.settings.Key("token").PublicKey,
+	return &KeyLists{
+		Providers: providerKeys,
+		Mediators: mediatorKeys,
 	}, nil
-
 }
 
 // return all public keys present in the system
@@ -1423,10 +1425,16 @@ type GetAppointmentsByZipCodeParams struct {
 	Radius  int64  `json:"radius"`
 }
 
+type KeyChain struct {
+	Provider *ActorKey `json:"provider"`
+	Mediator *ActorKey `json:"mediator"`
+}
+
 type ProviderAppointments struct {
 	Provider *SignedProviderData  `json:"provider"`
 	Offers   []*SignedAppointment `json:"offers"`
 	Booked   [][]byte             `json:"booked"`
+	KeyChain *KeyChain            `json:"keyChain"`
 }
 
 type SignedProviderData struct {
@@ -1450,7 +1458,7 @@ type ProviderData struct {
 */
 func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params *GetAppointmentsByZipCodeParams) *jsonrpc.Response {
 
-	keys, err := c.getKeysData()
+	keys, err := c.getActorKeys()
 
 	if err != nil {
 		services.Log.Error(err)
@@ -1474,7 +1482,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 	providerAppointmentsList := []*ProviderAppointments{}
 
-	for _, providerKey := range keys.Lists.Providers {
+	for _, providerKey := range keys.Providers {
 		pkd, err := providerKey.ProviderKeyData()
 		if err != nil {
 			services.Log.Error(err)
@@ -1566,10 +1574,23 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			bookedSlots = append(bookedSlots, []byte(k))
 		}
 
+		mediatorKey, err := findActorKey(keys.Mediators, providerKey.PublicKey)
+
+		if err != nil {
+			services.Log.Error(err)
+			continue
+		}
+
+		keyChain := KeyChain{
+			Provider: providerKey,
+			Mediator: mediatorKey,
+		}
+
 		providerAppointments := &ProviderAppointments{
 			Provider: providerData,
 			Offers:   appointments,
 			Booked:   bookedSlots,
+			KeyChain: &keyChain,
 		}
 
 		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
@@ -3032,26 +3053,26 @@ type GetPendingProviderDataData struct {
 
 func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *ActorKey) {
 
-	keys, err := c.getKeysData()
+	keys, err := c.getActorKeys()
 
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError(), nil
 	}
 
-	return c.isOnKeyList(context, data, signature, publicKey, keys.Lists.Mediators)
+	return c.isOnKeyList(context, data, signature, publicKey, keys.Mediators)
 }
 
 func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *ActorKey) {
 
-	keys, err := c.getKeysData()
+	keys, err := c.getActorKeys()
 
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError(), nil
 	}
 
-	return c.isOnKeyList(context, data, signature, publicKey, keys.Lists.Providers)
+	return c.isOnKeyList(context, data, signature, publicKey, keys.Providers)
 }
 
 func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, publicKey []byte, keyList []*ActorKey) (*jsonrpc.Response, *ActorKey) {
