@@ -634,6 +634,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 	providerAppointmentsList := []*services.ProviderAppointments{}
 
 	for _, providerKey := range keys.Providers {
+
 		pkd, err := providerKey.ProviderKeyData()
 		if err != nil {
 			services.Log.Error(err)
@@ -690,7 +691,16 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 		signedAppointments := make([]*services.SignedAppointment, 0)
 
+		visitedDates := make(map[string]bool)
+
 		for _, date := range allDates {
+
+			if _, ok := visitedDates[string(date)]; ok {
+				continue
+			} else {
+				visitedDates[string(date)] = true
+			}
+
 			dateKey := append(hash, date...)
 			appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 			allAppointments, err := appointmentsByDate.GetAll()
