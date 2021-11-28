@@ -1,4 +1,4 @@
-.PHONY: all test clean build install examples secrets setup
+.PHONY: all test clean build install examples secrets setup test-setup test-keys
 
 SHELL := /bin/bash
 
@@ -7,6 +7,7 @@ GOFLAGS ?= -ldflags=\"-extldflags=-static\" $(GOFLAGS:)
 export KIEBITZ_TEST = yes
 
 KIEBITZ_TEST_SETTINGS ?= "$(shell pwd)/settings/test"
+KIEBITZ_ADMIN_SETTINGS ?= "$(KIEBITZ_TEST_SETTINGS)/002_admin.json"
 
 all: dep install
 
@@ -16,25 +17,21 @@ build:
 dep:
 	@go get ./...
 
-setup: secrets
-
-secrets:
-	@printf "notification:\n\
-  secret: `openssl rand -base64 32`\n\
-appointments:\n \
-  secret: `openssl rand -base64 32`\n\
-	" > settings/dev/002_secrets.yml
-
 install:
 	CGO_ENABLED=0 go install $(GOFLAGS) ./...
 
-test: dep
+test-setup: dep test-keys
+
+test-keys:
+	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) kiebitz admin keys setup
+
+test: test-setup
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test $(testargs) `go list ./...`
 
-test-races: dep
+test-races: test-setup
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test -race $(testargs) `go list ./...`
 
-bench: dep
+bench: test-setup
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test -run=NONE -bench=. $(GOFLAGS) `go list ./... | grep -v api/`
 
 clean:

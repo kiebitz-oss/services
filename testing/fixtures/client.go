@@ -19,41 +19,39 @@ package fixtures
 import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/helpers"
-	"github.com/kiebitz-oss/services/servers"
+	"github.com/kiebitz-oss/services/crypto"
+	"github.com/kiebitz-oss/services/testing"
 )
 
-type Appointments struct {
+type Client struct {
+	Key string
 }
 
-func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error) {
+func (c Client) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
-	sett := fixtures["settings"]
-
-	if sett == nil {
-		return nil, fmt.Errorf("no settings found")
-	}
-
-	settingsObj, ok := sett.(*services.Settings)
+	settings, ok := fixtures["settings"].(*services.Settings)
 
 	if !ok {
-		return nil, fmt.Errorf("not a real settings object")
+		return nil, fmt.Errorf("settings missing")
 	}
 
-	if appointments, err := helpers.InitializeAppointmentsServer(settingsObj); err != nil {
-		return nil, err
-	} else if err := appointments.Start(); err != nil {
-		return nil, err
-	} else {
-		return appointments, nil
+	var key *crypto.Key
+
+	if c.Key != "" {
+
+		var ok bool
+
+		key, ok = fixtures[c.Key].(*crypto.Key)
+
+		if !ok {
+			return nil, fmt.Errorf("key missing")
+		}
+
 	}
 
+	return testing.MakeClient(settings, key), nil
 }
 
-func (c Appointments) Teardown(fixture interface{}) error {
-	if fixture == nil {
-		return nil
-	}
-	appointments := fixture.(*servers.Appointments)
-	return appointments.Stop()
+func (c Client) Teardown(fixture interface{}) error {
+	return nil
 }

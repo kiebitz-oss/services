@@ -105,8 +105,6 @@ func MakeRedis(settings interface{}) (services.Meter, error) {
 
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
-	} else {
-		services.Log.Info("Ping to Redis meter succeeded!")
 	}
 
 	meter := &Redis{

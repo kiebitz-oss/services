@@ -44,6 +44,7 @@ type DatabaseOps interface {
 type Database interface {
 	Close() error
 	Open() error
+	Reset() error
 	Begin() (Transaction, error)
 
 	DatabaseOps

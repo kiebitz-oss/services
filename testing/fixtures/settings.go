@@ -43,6 +43,8 @@ func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		return nil, err
 	} else if meter, err := helpers.InitializeMeter(settings); err != nil {
 		return nil, err
+	} else if err := db.Reset(); err != nil {
+		return nil, err
 	} else {
 		settings.DatabaseObj = db
 		settings.MeterObj = meter

@@ -60,6 +60,10 @@ func MakeInMemory(settings interface{}) (services.Database, error) {
 	}, nil
 }
 
+func (d *InMemory) Reset() error {
+	return nil
+}
+
 func (d *InMemory) Open() error {
 	return nil
 }

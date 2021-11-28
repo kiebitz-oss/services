@@ -130,8 +130,6 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 
 	if _, err := client.Ping().Result(); err != nil {
 		return nil, err
-	} else {
-		services.Log.Info("Ping to Redis succeeded!")
 	}
 
 	database := &Redis{
@@ -142,6 +140,10 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 
 	return database, nil
 
+}
+
+func (d *Redis) Reset() error {
+	return d.client.FlushDB().Err()
 }
 
 func (d *Redis) Client() redis.Cmdable {
