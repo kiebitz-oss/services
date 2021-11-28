@@ -30,8 +30,6 @@ import (
 	kbForms "github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
-	"github.com/kiprotect/go-helpers/forms"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -55,75 +53,75 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 
 	methods := map[string]*jsonrpc.Method{
 		"confirmProvider": {
-			Form:    &ConfirmProviderForm,
+			Form:    &kbForms.ConfirmProviderForm,
 			Handler: Appointments.confirmProvider,
 		},
 		"addMediatorPublicKeys": {
-			Form:    &AddMediatorPublicKeysForm,
+			Form:    &kbForms.AddMediatorPublicKeysForm,
 			Handler: Appointments.addMediatorPublicKeys,
 		},
 		"addCodes": {
-			Form:    &AddCodesForm,
+			Form:    &kbForms.AddCodesForm,
 			Handler: Appointments.addCodes,
 		},
 		"uploadDistances": {
-			Form:    &UploadDistancesForm,
+			Form:    &kbForms.UploadDistancesForm,
 			Handler: Appointments.uploadDistances,
 		},
 		"getStats": {
-			Form:    &GetStatsForm,
+			Form:    &kbForms.GetStatsForm,
 			Handler: Appointments.getStats,
 		},
 		"getKeys": {
-			Form:    &GetKeysForm,
+			Form:    &kbForms.GetKeysForm,
 			Handler: Appointments.getKeys,
 		},
 		"getAppointmentsByZipCode": {
-			Form:    &GetAppointmentsByZipCodeForm,
+			Form:    &kbForms.GetAppointmentsByZipCodeForm,
 			Handler: Appointments.getAppointmentsByZipCode,
 		},
 		"getProviderAppointments": {
-			Form:    &GetProviderAppointmentsForm,
+			Form:    &kbForms.GetProviderAppointmentsForm,
 			Handler: Appointments.getProviderAppointments,
 		},
 		"publishAppointments": {
-			Form:    &PublishAppointmentsForm,
+			Form:    &kbForms.PublishAppointmentsForm,
 			Handler: Appointments.publishAppointments,
 		},
 		"getBookedAppointments": {
-			Form:    &GetBookedAppointmentsForm,
+			Form:    &kbForms.GetBookedAppointmentsForm,
 			Handler: Appointments.getBookedAppointments,
 		},
 		"cancelBooking": {
-			Form:    &CancelBookingForm,
+			Form:    &kbForms.CancelBookingForm,
 			Handler: Appointments.cancelBooking,
 		},
 		"bookSlot": {
-			Form:    &BookSlotForm,
+			Form:    &kbForms.BookSlotForm,
 			Handler: Appointments.bookSlot,
 		},
 		"cancelSlot": {
-			Form:    &CancelSlotForm,
+			Form:    &kbForms.CancelSlotForm,
 			Handler: Appointments.cancelSlot,
 		},
 		"getToken": {
-			Form:    &GetTokenForm,
+			Form:    &kbForms.GetTokenForm,
 			Handler: Appointments.getToken,
 		},
 		"storeProviderData": {
-			Form:    &StoreProviderDataForm,
+			Form:    &kbForms.StoreProviderDataForm,
 			Handler: Appointments.storeProviderData,
 		},
 		"checkProviderData": {
-			Form:    &CheckProviderDataForm,
+			Form:    &kbForms.CheckProviderDataForm,
 			Handler: Appointments.checkProviderData,
 		},
 		"getPendingProviderData": {
-			Form:    &GetPendingProviderDataForm,
+			Form:    &kbForms.GetPendingProviderDataForm,
 			Handler: Appointments.getPendingProviderData,
 		},
 		"getVerifiedProviderData": {
-			Form:    &GetVerifiedProviderDataForm,
+			Form:    &kbForms.GetVerifiedProviderDataForm,
 			Handler: Appointments.getVerifiedProviderData,
 		},
 	}
@@ -177,255 +175,6 @@ func (c *Appointments) priorityToken() (uint64, []byte, error) {
 		return intToken, token[:], nil
 
 	}
-}
-
-type JSON struct {
-	Key string
-}
-
-func (j JSON) Validate(value interface{}, values map[string]interface{}) (interface{}, error) {
-	var jsonValue interface{}
-	if err := json.Unmarshal([]byte(value.(string)), &jsonValue); err != nil {
-		return nil, err
-	}
-	// we assign the original value to the given key
-	if j.Key != "" {
-		values[j.Key] = value
-	}
-	return jsonValue, nil
-}
-
-var ConfirmProviderForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &ConfirmProviderDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var ConfirmProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "encryptedProviderData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &kbForms.ECDHEncryptedDataForm,
-				},
-			},
-		},
-		{
-			Name: "publicProviderData",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsStringMap{
-					Form: &SignedProviderDataForm,
-				},
-			},
-		},
-		{
-			Name: "signedKeyData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &SignedDataForm,
-				},
-			},
-		},
-	},
-}
-
-var ProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "name",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-		{
-			Name: "street",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-		{
-			Name: "city",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-	},
-}
-
-var SignedProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &ProviderDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-	},
-}
-
-var SignedDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &KeyDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-	},
-}
-
-var KeyDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "signing",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "encryption",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "queueData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &ProviderQueueDataForm,
-				},
-			},
-		},
-	},
-}
-
-var ProviderQueueDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{
-					MaxLength: 5,
-					MinLength: 5,
-				},
-			},
-		},
-		{
-			Name: "accessible",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-	},
 }
 
 // { id, key, providerData, keyData }, keyPair
@@ -527,73 +276,6 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 	return context.Acknowledge()
 }
 
-var AddMediatorPublicKeysForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &AddMediatorPublicKeysDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var AddMediatorPublicKeysDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "encryption",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding: "base64",
-				},
-			},
-		},
-		{
-			Name: "signing",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding: "base64",
-				},
-			},
-		},
-	},
-}
-
 // { keys }, keyPair
 // add the mediator key to the list of keys (only for testing)
 func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysSignedParams) *jsonrpc.Response {
@@ -635,80 +317,6 @@ func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *s
 	return context.Acknowledge()
 }
 
-// admin endpoints
-
-var AddCodesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CodesDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var CodesDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "actor",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				forms.IsIn{Choices: []interface{}{"provider", "user"}},
-			},
-		},
-		{
-			Name: "codes",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsBytes{
-							Encoding:  "hex",
-							MaxLength: 32,
-							MinLength: 16,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
 func (c *Appointments) addCodes(context *jsonrpc.Context, params *services.AddCodesParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
@@ -735,103 +343,6 @@ func (c *Appointments) addCodes(context *jsonrpc.Context, params *services.AddCo
 		}
 	}
 	return context.Acknowledge()
-}
-
-var UploadDistancesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &DistancesDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var DistancesDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "type",
-			Validators: []forms.Validator{
-				forms.IsIn{Choices: []interface{}{"zipCode", "zipArea"}},
-			},
-		},
-		{
-			Name: "distances",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &DistanceForm,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
-var DistanceForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "from",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-		{
-			Name: "to",
-			Validators: []forms.Validator{
-				forms.IsString{},
-			},
-		},
-		{
-			Name: "distance",
-			Validators: []forms.Validator{
-				forms.IsFloat{
-					HasMin: true,
-					Min:    0.0,
-					HasMax: true,
-					Max:    200.0,
-				},
-			},
-		},
-	},
 }
 
 func (c *Appointments) getDistance(distanceType, from, to string) (float64, error) {
@@ -925,10 +436,6 @@ func toInterface(data []byte) (interface{}, error) {
 	return v, nil
 }
 
-var GetKeysForm = forms.Form{
-	Fields: []forms.Field{},
-}
-
 func findActorKey(keys []*services.ActorKey, publicKey []byte) (*services.ActorKey, error) {
 	for _, key := range keys {
 		if akd, err := key.KeyData(); err != nil {
@@ -1018,141 +525,6 @@ func (c *Appointments) getKeys(context *jsonrpc.Context, params *services.GetKey
 
 // user endpoints
 
-var GetTokenForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "hash",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "code",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "hex", // we encode this as hex since it gets passed in URLs
-					MinLength: 16,
-					MaxLength: 32,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var TokenQueueDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{
-					MaxLength: 5,
-					MinLength: 5,
-				},
-			},
-		},
-		{
-			Name: "distance",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: 5},
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    5,
-					Max:    50,
-				},
-			},
-		},
-		{
-			Name: "accessible",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
-			Name: "offerReceived",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
-			Name: "offerAccepted",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-	},
-}
-
-var SignedTokenDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &TokenDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var TokenDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "hash",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "token",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-	},
-}
-
 //{hash, code, publicKey}
 // get a token for a given queue
 func (c *Appointments) getToken(context *jsonrpc.Context, params *services.GetTokenParams) *jsonrpc.Response {
@@ -1240,32 +612,6 @@ var tws = []services.TimeWindowFunc{
 	services.Month,
 }
 
-var GetAppointmentsByZipCodeForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "radius",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: 50},
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    5,
-					Max:    80,
-				},
-			},
-		},
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{
-					MaxLength: 5,
-					MinLength: 5,
-				},
-			},
-		},
-	},
-}
-
 /*
 - Get all neighbors of the given zip code within the given radius
 */
@@ -1331,10 +677,10 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			continue
 		}
 
-		if params, err := SignedProviderDataForm.Validate(providerDataMap); err != nil {
+		if params, err := kbForms.SignedProviderDataForm.Validate(providerDataMap); err != nil {
 			services.Log.Error(err)
 			continue
-		} else if err := SignedProviderDataForm.Coerce(providerData, params); err != nil {
+		} else if err := kbForms.SignedProviderDataForm.Coerce(providerData, params); err != nil {
 			services.Log.Error(err)
 			continue
 		}
@@ -1413,55 +759,6 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 	return context.Result(providerAppointmentsList)
 }
 
-var GetProviderAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetProviderAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var GetProviderAppointmentsDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-	},
-}
-
 func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params *services.GetProviderAppointmentsSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
@@ -1501,201 +798,6 @@ func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params 
 	}
 
 	return context.Result(signedAppointments)
-}
-
-var PublishAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &PublishAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var PublishAppointmentsDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-		{
-			Name: "reset",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
-			Name: "offers",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &AppointmentForm,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
-var AppointmentPropertiesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "vaccine",
-			Validators: []forms.Validator{
-				forms.IsIn{Choices: []interface{}{"biontech", "moderna", "astrazeneca", "johnson-johnson"}},
-			},
-		},
-	},
-}
-
-var AppointmentForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &AppointmentDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var AppointmentDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "updatedAt",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-		{
-			Name: "duration",
-			Validators: []forms.Validator{
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    5,
-					Max:    300,
-				},
-			},
-		},
-		{
-			Name: "properties",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &AppointmentPropertiesForm,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "slotData",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &SlotForm,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
-var SlotForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-	},
 }
 
 func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
@@ -1773,9 +875,9 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 			if err := json.Unmarshal(data, &mapData); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
-			} else if params, err := AppointmentForm.Validate(mapData); err != nil {
+			} else if params, err := kbForms.AppointmentForm.Validate(mapData); err != nil {
 				services.Log.Error(err)
-			} else if err := AppointmentForm.Coerce(existingAppointment, params); err != nil {
+			} else if err := kbForms.AppointmentForm.Coerce(existingAppointment, params); err != nil {
 				services.Log.Error(err)
 			} else {
 				for _, existingSlotData := range existingAppointment.Data.SlotData {
@@ -1913,54 +1015,6 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 	return context.Acknowledge()
 }
 
-var GetBookedAppointmentsDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-	},
-}
-var GetBookedAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetBookedAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
 func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *services.GetBookedAppointmentsSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
@@ -2007,60 +1061,6 @@ func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *s
 	return context.Result(bookingsList)
 }
 
-var CancelBookingDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-	},
-}
-var CancelBookingForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CancelBookingDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
 func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.CancelBookingSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
@@ -2093,85 +1093,6 @@ func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.
 
 	return context.Acknowledge()
 
-}
-
-var BookSlotForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &BookSlotDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var BookSlotDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "providerID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-		{
-			Name: "signedTokenData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &SignedTokenDataForm,
-				},
-			},
-		},
-		{
-			Name: "encryptedData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &kbForms.ECDHEncryptedDataForm,
-				},
-			},
-		},
-	},
 }
 
 func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookSlotSignedParams) *jsonrpc.Response {
@@ -2325,69 +1246,6 @@ findAppointment:
 
 }
 
-var CancelSlotForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CancelSlotDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var CancelSlotDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "providerID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "signedTokenData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &SignedTokenDataForm,
-				},
-			},
-		},
-	},
-}
-
 func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.CancelSlotSignedParams) *jsonrpc.Response {
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
@@ -2484,57 +1342,6 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.Can
 
 // get provider data
 
-var CheckProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CheckProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var CheckProviderDataDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
-	},
-}
-
 // { id, encryptedData, code }, keyPair
 func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *services.CheckProviderDataSignedParams) *jsonrpc.Response {
 
@@ -2572,68 +1379,6 @@ func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *servi
 }
 
 // store provider data
-
-var StoreProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &StoreProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var StoreProviderDataDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "code",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "hex", // we encode this as hex since it gets passed in URLs
-					MinLength: 16,
-					MaxLength: 32,
-				},
-			},
-		},
-		{
-			Name: "encryptedData",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &kbForms.ECDHEncryptedDataForm,
-				},
-			},
-		},
-	},
-}
 
 func (c *Appointments) transaction(success *bool) (services.Transaction, func(), error) {
 	transaction, err := c.db.Begin()
@@ -2740,61 +1485,6 @@ func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *servi
 	return context.Acknowledge()
 }
 
-var GetPendingProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetPendingProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var GetPendingProviderDataDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "limit",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: 1000},
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    1,
-					Max:    10000,
-				},
-			},
-		},
-	},
-}
-
 func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
 
 	keys, err := c.getActorKeys()
@@ -2841,61 +1531,6 @@ func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, pu
 
 	return nil, actorKey
 
-}
-
-var GetVerifiedProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetPendingProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
-}
-
-var GetVerifiedProviderDataDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "limit",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: 1000},
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    1,
-					Max:    10000,
-				},
-			},
-		},
-	},
 }
 
 // mediator-only endpoint
@@ -2966,89 +1601,6 @@ func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *
 }
 
 // mediator-only endpoint
-
-// stats endpoint
-
-func UsageValidator(values map[string]interface{}, addError forms.ErrorAdder) error {
-	if values["from"] != nil && values["to"] == nil || values["to"] != nil && values["from"] == nil {
-		return fmt.Errorf("both from and to must be specified")
-	}
-	if values["from"] != nil && values["n"] != nil {
-		return fmt.Errorf("cannot specify both n and from/to")
-	}
-	if values["n"] == nil && values["from"] == nil {
-		return fmt.Errorf("you need to specify either n or from/to")
-	}
-	if values["from"] != nil {
-		fromT := values["from"].(time.Time)
-		toT := values["to"].(time.Time)
-		if fromT.UnixNano() > toT.UnixNano() {
-			return fmt.Errorf("from date must be before to date")
-		}
-	}
-	return nil
-}
-
-var GetStatsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				forms.IsIn{Choices: []interface{}{"queues", "tokens"}},
-			},
-		},
-		{
-			Name: "type",
-			Validators: []forms.Validator{
-				forms.IsIn{Choices: []interface{}{"minute", "hour", "day", "quarterHour", "week", "month"}},
-			},
-		},
-		{
-			Name: "name",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: ""},
-				forms.MatchesRegex{Regex: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
-			},
-		},
-		{
-			Name: "metric",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: ""},
-				forms.MatchesRegex{Regex: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
-			},
-		},
-		{
-			Name: "filter",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsStringMap{},
-			},
-		},
-		{
-			Name: "from",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsTime{Format: "rfc3339", ToUTC: true},
-			},
-		},
-		{
-			Name: "to",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsTime{Format: "rfc3339", ToUTC: true},
-			},
-		},
-		{
-			Name: "n",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsInteger{HasMin: true, Min: 1, HasMax: true, Max: 500, Convert: true},
-			},
-		},
-	},
-	Transforms: []forms.Transform{},
-	Validator:  UsageValidator,
-}
 
 // public endpoint
 func (c *Appointments) getStats(context *jsonrpc.Context, params *services.GetStatsParams) *jsonrpc.Response {

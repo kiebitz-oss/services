@@ -20,9 +20,9 @@ import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/databases"
+	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
-	"github.com/kiprotect/go-helpers/forms"
 	"time"
 )
 
@@ -42,15 +42,15 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 
 	methods := map[string]*jsonrpc.Method{
 		"storeSettings": {
-			Form:    &StoreSettingsForm,
+			Form:    &forms.StoreSettingsForm,
 			Handler: Storage.storeSettings,
 		},
 		"getSettings": {
-			Form:    &GetSettingsForm,
+			Form:    &forms.GetSettingsForm,
 			Handler: Storage.getSettings,
 		},
 		"deleteSettings": {
-			Form:    &DeleteSettingsForm,
+			Form:    &forms.DeleteSettingsForm,
 			Handler: Storage.deleteSettings,
 		},
 	}
@@ -67,29 +67,6 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		Storage.server = jsonrpcServer
 		return Storage, nil
 	}
-}
-
-type IsAnything struct{}
-
-func (a IsAnything) Validate(value interface{}, values map[string]interface{}) (interface{}, error) {
-	return value, nil
-}
-
-var StoreSettingsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				IsAnything{},
-			},
-		},
-	},
 }
 
 type StoreSettingsParams struct {
@@ -113,17 +90,6 @@ type GetSettingsParams struct {
 	ID []byte `json:"id"`
 }
 
-var GetSettingsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-	},
-}
-
 func (c *Storage) getSettings(context *jsonrpc.Context, params *GetSettingsParams) *jsonrpc.Response {
 	value := c.db.Value("settings", params.ID)
 	if data, err := value.Get(); err != nil {
@@ -143,17 +109,6 @@ func (c *Storage) getSettings(context *jsonrpc.Context, params *GetSettingsParam
 
 type DeleteSettingsParams struct {
 	ID []byte `json:"id"`
-}
-
-var DeleteSettingsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-	},
 }
 
 func (c *Storage) deleteSettings(context *jsonrpc.Context, params *GetSettingsParams) *jsonrpc.Response {
