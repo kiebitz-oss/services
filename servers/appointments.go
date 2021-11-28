@@ -428,42 +428,8 @@ var ProviderQueueDataForm = forms.Form{
 	},
 }
 
-type ConfirmProviderParams struct {
-	JSON      string               `json:"json"`
-	Data      *ConfirmProviderData `json:"data"`
-	Signature []byte               `json:"signature"`
-	PublicKey []byte               `json:"publicKey"`
-}
-
-// this data is accessible to the provider, nothing "secret" should be
-// stored here...
-type ConfirmProviderData struct {
-	ID                    []byte                      `json:"id"`
-	PublicProviderData    *SignedProviderData         `json:"publicProviderData"`
-	EncryptedProviderData *services.ECDHEncryptedData `json:"encryptedProviderData"`
-	SignedKeyData         *SignedKeyData              `json:"signedKeyData"`
-}
-
-type SignedKeyData struct {
-	JSON      string   `json:"json"`
-	Data      *KeyData `json:"data"`
-	Signature []byte   `json:"signature"`
-	PublicKey []byte   `json:"publicKey"`
-}
-
-type KeyData struct {
-	Signing    []byte             `json:"signing"`
-	Encryption []byte             `json:"encryption"`
-	QueueData  *ProviderQueueData `json:"queueData"`
-}
-
-type ProviderQueueData struct {
-	ZipCode    string `json:"zipCode"`
-	Accessible bool   `json:"accessible"`
-}
-
 // { id, key, providerData, keyData }, keyPair
-func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *ConfirmProviderParams) *jsonrpc.Response {
+func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *services.ConfirmProviderParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -482,7 +448,7 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *Confirm
 	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
 	keys := transaction.Map("keys", []byte("providers"))
 
-	providerKey := &ActorKey{
+	providerKey := &services.ActorKey{
 		Data:      params.Data.SignedKeyData.JSON,
 		Signature: params.Data.SignedKeyData.Signature,
 		PublicKey: params.Data.SignedKeyData.PublicKey,
@@ -628,22 +594,9 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 	},
 }
 
-type AddMediatorPublicKeysParams struct {
-	JSON      string                     `json:"json"`
-	Data      *AddMediatorPublicKeysData `json:"data"`
-	Signature []byte                     `json:"signature"`
-	PublicKey []byte                     `json:"publicKey"`
-}
-
-type AddMediatorPublicKeysData struct {
-	Timestamp  *time.Time `json:"timestamp"`
-	Encryption []byte     `json:"encryption"`
-	Signing    []byte     `json:"signing"`
-}
-
 // { keys }, keyPair
 // add the mediator key to the list of keys (only for testing)
-func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *AddMediatorPublicKeysParams) *jsonrpc.Response {
+func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -756,20 +709,7 @@ var CodesDataForm = forms.Form{
 	},
 }
 
-type AddCodesParams struct {
-	JSON      string     `json:"json"`
-	Data      *CodesData `json:"data"`
-	Signature []byte     `json:"signature"`
-	PublicKey []byte     `json:"publicKey"`
-}
-
-type CodesData struct {
-	Actor     string     `json:"actor"`
-	Timestamp *time.Time `json:"timestamp"`
-	Codes     [][]byte   `json:"codes"`
-}
-
-func (c *Appointments) addCodes(context *jsonrpc.Context, params *AddCodesParams) *jsonrpc.Response {
+func (c *Appointments) addCodes(context *jsonrpc.Context, params *services.AddCodesParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -894,25 +834,6 @@ var DistanceForm = forms.Form{
 	},
 }
 
-type UploadDistancesParams struct {
-	JSON      string         `json:"json"`
-	Data      *DistancesData `json:"data"`
-	Signature []byte         `json:"signature"`
-	PublicKey []byte         `json:"publicKey"`
-}
-
-type DistancesData struct {
-	Timestamp *time.Time `json:"timestamp"`
-	Type      string     `json:"type"`
-	Distances []Distance `json:"distances"`
-}
-
-type Distance struct {
-	From     string  `json:"from"`
-	To       string  `json:"to"`
-	Distance float64 `json:"distance"`
-}
-
 func (c *Appointments) getDistance(distanceType, from, to string) (float64, error) {
 
 	dst := c.db.Map("distances", []byte(distanceType))
@@ -942,7 +863,7 @@ func (c *Appointments) getDistance(distanceType, from, to string) (float64, erro
 
 }
 
-func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *UploadDistancesParams) *jsonrpc.Response {
+func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *services.UploadDistancesParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -1004,68 +925,11 @@ func toInterface(data []byte) (interface{}, error) {
 	return v, nil
 }
 
-type GetKeysParams struct {
-}
-
 var GetKeysForm = forms.Form{
 	Fields: []forms.Field{},
 }
 
-type Keys struct {
-	ProviderData []byte `json:"providerData"`
-	RootKey      []byte `json:"rootKey"`
-	TokenKey     []byte `json:"tokenKey"`
-}
-
-type KeyLists struct {
-	Providers []*ActorKey `json:"providers"`
-	Mediators []*ActorKey `json:"mediators"`
-}
-
-type ActorKey struct {
-	Data      string        `json:"data"`
-	Signature []byte        `json:"signature"`
-	PublicKey []byte        `json:"publicKey"`
-	data      *ActorKeyData `json:"-"`
-}
-
-func (a *ActorKey) KeyData() (*ActorKeyData, error) {
-	var akd *ActorKeyData
-	if a.data != nil {
-		return a.data, nil
-	}
-	if err := json.Unmarshal([]byte(a.Data), &akd); err != nil {
-		return nil, err
-	}
-	a.data = akd
-	return akd, nil
-}
-
-func (a *ActorKey) ProviderKeyData() (*ProviderKeyData, error) {
-	var pkd *ProviderKeyData
-	if err := json.Unmarshal([]byte(a.Data), &pkd); err != nil {
-		return nil, err
-	}
-	if pkd.QueueData == nil {
-		pkd.QueueData = &ProviderQueueData{}
-	}
-	return pkd, nil
-}
-
-type ActorKeyData struct {
-	Encryption []byte     `json:"encryption"`
-	Signing    []byte     `json:"signing"`
-	Timestamp  *time.Time `json:"timestamp"`
-}
-
-type ProviderKeyData struct {
-	Encryption []byte             `json:"encryption"`
-	Signing    []byte             `json:"signing"`
-	QueueData  *ProviderQueueData `json:"queueData"`
-	Timestamp  *time.Time         `json:"timestamp,omitempty"`
-}
-
-func findActorKey(keys []*ActorKey, publicKey []byte) (*ActorKey, error) {
+func findActorKey(keys []*services.ActorKey, publicKey []byte) (*services.ActorKey, error) {
 	for _, key := range keys {
 		if akd, err := key.KeyData(); err != nil {
 			services.Log.Error(err)
@@ -1077,7 +941,7 @@ func findActorKey(keys []*ActorKey, publicKey []byte) (*ActorKey, error) {
 	return nil, nil
 }
 
-func (c *Appointments) getListKeys(key string) ([]*ActorKey, error) {
+func (c *Appointments) getListKeys(key string) ([]*services.ActorKey, error) {
 	mk, err := c.db.Map("keys", []byte(key)).GetAll()
 
 	if err != nil {
@@ -1085,10 +949,10 @@ func (c *Appointments) getListKeys(key string) ([]*ActorKey, error) {
 		return nil, err
 	}
 
-	actorKeys := []*ActorKey{}
+	actorKeys := []*services.ActorKey{}
 
 	for _, v := range mk {
-		var m *ActorKey
+		var m *services.ActorKey
 		if err := json.Unmarshal(v, &m); err != nil {
 			services.Log.Error(err)
 			continue
@@ -1101,7 +965,7 @@ func (c *Appointments) getListKeys(key string) ([]*ActorKey, error) {
 
 }
 
-func (c *Appointments) getKeysData() (*Keys, error) {
+func (c *Appointments) getKeysData() (*services.Keys, error) {
 
 	providerDataKey := c.settings.Key("provider")
 
@@ -1110,7 +974,7 @@ func (c *Appointments) getKeysData() (*Keys, error) {
 		providerDataKey = c.settings.Key("providerData")
 	}
 
-	return &Keys{
+	return &services.Keys{
 		ProviderData: providerDataKey.PublicKey,
 		RootKey:      c.settings.Key("root").PublicKey,
 		TokenKey:     c.settings.Key("token").PublicKey,
@@ -1118,7 +982,7 @@ func (c *Appointments) getKeysData() (*Keys, error) {
 
 }
 
-func (c *Appointments) getActorKeys() (*KeyLists, error) {
+func (c *Appointments) getActorKeys() (*services.KeyLists, error) {
 	mediatorKeys, err := c.getListKeys("mediators")
 
 	if err != nil {
@@ -1131,14 +995,14 @@ func (c *Appointments) getActorKeys() (*KeyLists, error) {
 		return nil, err
 	}
 
-	return &KeyLists{
+	return &services.KeyLists{
 		Providers: providerKeys,
 		Mediators: mediatorKeys,
 	}, nil
 }
 
 // return all public keys present in the system
-func (c *Appointments) getKeys(context *jsonrpc.Context, params *GetKeysParams) *jsonrpc.Response {
+func (c *Appointments) getKeys(context *jsonrpc.Context, params *services.GetKeysParams) *jsonrpc.Response {
 
 	keys, err := c.getKeysData()
 
@@ -1289,28 +1153,9 @@ var TokenDataForm = forms.Form{
 	},
 }
 
-type GetTokenParams struct {
-	Hash      []byte `json:"hash"`
-	Code      []byte `json:"code"`
-	PublicKey []byte `json:"publicKey"`
-}
-
-type SignedTokenData struct {
-	JSON      string     `json:"json"`
-	Data      *TokenData `json:"data"`
-	Signature []byte     `json:"signature"`
-	PublicKey []byte     `json:"publicKey"`
-}
-
-type TokenData struct {
-	PublicKey []byte `json:"publicKey"`
-	Token     []byte `json:"token"`
-	Hash      []byte `json:"hash"`
-}
-
 //{hash, code, publicKey}
 // get a token for a given queue
-func (c *Appointments) getToken(context *jsonrpc.Context, params *GetTokenParams) *jsonrpc.Response {
+func (c *Appointments) getToken(context *jsonrpc.Context, params *services.GetTokenParams) *jsonrpc.Response {
 
 	codes := c.db.Set("codes", []byte("user"))
 	codeScores := c.db.SortedSet("codeScores", []byte("user"))
@@ -1340,7 +1185,7 @@ func (c *Appointments) getToken(context *jsonrpc.Context, params *GetTokenParams
 		services.Log.Error(err)
 		return context.InternalError()
 	} else {
-		tokenData := &TokenData{
+		tokenData := &services.TokenData{
 			Hash:      params.Hash,
 			Token:     token,
 			PublicKey: params.PublicKey,
@@ -1421,43 +1266,10 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 	},
 }
 
-type GetAppointmentsByZipCodeParams struct {
-	ZipCode string `json:"zipCode"`
-	Radius  int64  `json:"radius"`
-}
-
-type KeyChain struct {
-	Provider *ActorKey `json:"provider"`
-	Mediator *ActorKey `json:"mediator"`
-}
-
-type ProviderAppointments struct {
-	Provider *SignedProviderData  `json:"provider"`
-	Offers   []*SignedAppointment `json:"offers"`
-	Booked   [][]byte             `json:"booked"`
-	KeyChain *KeyChain            `json:"keyChain"`
-}
-
-type SignedProviderData struct {
-	ID        []byte        `json:"id"`
-	JSON      string        `json:"data" coerce:"name:json"`
-	Data      *ProviderData `json:"-" coerce:"name:data"`
-	Signature []byte        `json:"signature"`
-	PublicKey []byte        `json:"publicKey"`
-}
-
-type ProviderData struct {
-	Name        string `json:"name"`
-	Street      string `json:"street"`
-	City        string `json:"city"`
-	ZipCode     string `json:"zipCode"`
-	Description string `json:"description"`
-}
-
 /*
 - Get all neighbors of the given zip code within the given radius
 */
-func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params *GetAppointmentsByZipCodeParams) *jsonrpc.Response {
+func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params *services.GetAppointmentsByZipCodeParams) *jsonrpc.Response {
 
 	keys, err := c.getActorKeys()
 
@@ -1481,7 +1293,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 		distances[string(neighbor.Data)] = neighbor.Score
 	}
 
-	providerAppointmentsList := []*ProviderAppointments{}
+	providerAppointmentsList := []*services.ProviderAppointments{}
 
 	for _, providerKey := range keys.Providers {
 		pkd, err := providerKey.ProviderKeyData()
@@ -1511,7 +1323,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			continue
 		}
 
-		providerData := &SignedProviderData{}
+		providerData := &services.SignedProviderData{}
 		var providerDataMap map[string]interface{}
 
 		if err := json.Unmarshal(pd, &providerDataMap); err != nil {
@@ -1545,10 +1357,10 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			services.Log.Error(err)
 		}
 
-		appointments := []*SignedAppointment{}
+		appointments := []*services.SignedAppointment{}
 
 		for _, data := range allAppointments {
-			var appointment *SignedAppointment
+			var appointment *services.SignedAppointment
 			if err := json.Unmarshal(data, &appointment); err != nil {
 				services.Log.Error(err)
 				continue
@@ -1582,16 +1394,16 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			continue
 		}
 
-		keyChain := KeyChain{
+		keyChain := &services.KeyChain{
 			Provider: providerKey,
 			Mediator: mediatorKey,
 		}
 
-		providerAppointments := &ProviderAppointments{
+		providerAppointments := &services.ProviderAppointments{
 			Provider: providerData,
 			Offers:   appointments,
 			Booked:   bookedSlots,
-			KeyChain: &keyChain,
+			KeyChain: keyChain,
 		}
 
 		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
@@ -1650,18 +1462,7 @@ var GetProviderAppointmentsDataForm = forms.Form{
 	},
 }
 
-type GetProviderAppointmentsParams struct {
-	JSON      string                       `json:"json"`
-	Data      *GetProviderAppointmentsData `json:"data"`
-	Signature []byte                       `json:"signature"`
-	PublicKey []byte                       `json:"publicKey"`
-}
-
-type GetProviderAppointmentsData struct {
-	Timestamp *time.Time `json:"timestamp"`
-}
-
-func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params *GetProviderAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params *services.GetProviderAppointmentsParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -1688,10 +1489,10 @@ func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params 
 	appointments := c.db.Map("appointments", hash)
 	allAppointments, err := appointments.GetAll()
 
-	signedAppointments := make([]*SignedAppointment, 0)
+	signedAppointments := make([]*services.SignedAppointment, 0)
 
 	for _, appointment := range allAppointments {
-		var signedAppointment *SignedAppointment
+		var signedAppointment *services.SignedAppointment
 		if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
 			services.Log.Error(err)
 			continue
@@ -1897,41 +1698,7 @@ var SlotForm = forms.Form{
 	},
 }
 
-type PublishAppointmentsParams struct {
-	JSON      string                   `json:"json"`
-	Data      *PublishAppointmentsData `json:"data"`
-	Signature []byte                   `json:"signature"`
-	PublicKey []byte                   `json:"publicKey"`
-}
-
-type PublishAppointmentsData struct {
-	Timestamp *time.Time           `json:"timestamp"`
-	Offers    []*SignedAppointment `json:"offers"`
-	Reset     bool                 `json:"reset"`
-}
-
-type SignedAppointment struct {
-	JSON      string       `json:"data" coerce:"name:json"`
-	Data      *Appointment `json:"-" coerce:"name:data"`
-	Signature []byte       `json:"signature"`
-	PublicKey []byte       `json:"publicKey"`
-}
-
-type Appointment struct {
-	UpdatedAt  time.Time              `json:"updatedAt"`
-	Timestamp  time.Time              `json:"timestamp"`
-	Duration   int64                  `json:"duration"`
-	Properties map[string]interface{} `json:"properties"`
-	SlotData   []*Slot                `json:"slotData"`
-	ID         []byte                 `json:"id"`
-	PublicKey  []byte                 `json:"publicKey"`
-}
-
-type Slot struct {
-	ID []byte `json:"id"`
-}
-
-func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *PublishAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -1999,7 +1766,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 		// check if there's an existing appointment
 		if data, err := appointments.Get(appointment.Data.ID); err == nil {
 
-			existingAppointment := &SignedAppointment{}
+			existingAppointment := &services.SignedAppointment{}
 
 			var mapData map[string]interface{}
 
@@ -2031,7 +1798,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 				// we delete all bookings for slots that have been removed by the provider
 				for _, slotID := range deletedSlots {
 
-					existingBooking := &Booking{}
+					existingBooking := &services.Booking{}
 
 					if data, err := bookings.Get(slotID); err == nil {
 						// this slot was already booked, we re-enable the associated token
@@ -2084,7 +1851,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *Pub
 		// we delete all bookings for slots that have been removed by the provider
 		for k, data := range allBookings {
 
-			existingBooking := &Booking{}
+			existingBooking := &services.Booking{}
 
 			if err := json.Unmarshal(data, &existingBooking); err != nil {
 				services.Log.Error(err)
@@ -2194,18 +1961,7 @@ var GetBookedAppointmentsForm = forms.Form{
 	},
 }
 
-type GetBookedAppointmentsParams struct {
-	JSON      string                     `json:"json"`
-	Data      *GetBookedAppointmentsData `json:"data"`
-	Signature []byte                     `json:"signature"`
-	PublicKey []byte                     `json:"publicKey"`
-}
-
-type GetBookedAppointmentsData struct {
-	Timestamp *time.Time `json:"timestamp"`
-}
-
-func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *GetBookedAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *services.GetBookedAppointmentsParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2237,10 +1993,10 @@ func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *G
 		return context.InternalError()
 	}
 
-	bookingsList := []*Booking{}
+	bookingsList := []*services.Booking{}
 
 	for _, v := range allBookings {
-		var booking *Booking
+		var booking *services.Booking
 		if err := json.Unmarshal(v, &booking); err != nil {
 			services.Log.Error(err)
 			continue
@@ -2305,19 +2061,7 @@ var CancelBookingForm = forms.Form{
 	},
 }
 
-type CancelBookingParams struct {
-	JSON      string             `json:"json"`
-	Data      *CancelBookingData `json:"data"`
-	Signature []byte             `json:"signature"`
-	PublicKey []byte             `json:"publicKey"`
-}
-
-type CancelBookingData struct {
-	Timestamp *time.Time `json:"timestamp"`
-	ID        []byte     `json:"id"`
-}
-
-func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *CancelBookingParams) *jsonrpc.Response {
+func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.CancelBookingParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2430,29 +2174,7 @@ var BookSlotDataForm = forms.Form{
 	},
 }
 
-type BookSlotParams struct {
-	JSON      string        `json:"json"`
-	Data      *BookSlotData `json:"data"`
-	Signature []byte        `json:"signature"`
-	PublicKey []byte        `json:"publicKey"`
-}
-
-type BookSlotData struct {
-	ProviderID      []byte                      `json:"providerID"`
-	ID              []byte                      `json:"id"`
-	EncryptedData   *services.ECDHEncryptedData `json:"encryptedData"`
-	SignedTokenData *SignedTokenData            `json:"signedTokenData"`
-	Timestamp       *time.Time                  `json:"timestamp"`
-}
-
-type Booking struct {
-	ID            []byte                      `json:"id"`
-	PublicKey     []byte                      `json:"publicKey"`
-	Token         []byte                      `json:"token"`
-	EncryptedData *services.ECDHEncryptedData `json:"encryptedData"`
-}
-
-func (c *Appointments) bookSlot(context *jsonrpc.Context, params *BookSlotParams) *jsonrpc.Response {
+func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookSlotParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -2506,10 +2228,10 @@ func (c *Appointments) bookSlot(context *jsonrpc.Context, params *BookSlotParams
 		services.Log.Error(err)
 	}
 
-	appointments := []*SignedAppointment{}
+	appointments := []*services.SignedAppointment{}
 
 	for _, data := range allAppointments {
-		var appointment *SignedAppointment
+		var appointment *services.SignedAppointment
 		if err := json.Unmarshal(data, &appointment); err != nil {
 			services.Log.Error(err)
 			continue
@@ -2521,7 +2243,7 @@ func (c *Appointments) bookSlot(context *jsonrpc.Context, params *BookSlotParams
 		appointments = append(appointments, appointment)
 	}
 
-	var appointment *Appointment
+	var appointment *services.Appointment
 
 	// we find the right appointment
 findAppointment:
@@ -2546,7 +2268,7 @@ findAppointment:
 		return context.InternalError()
 	}
 
-	existingBooking := &Booking{}
+	existingBooking := &services.Booking{}
 
 	if existingBookingData, err := bookings.Get(params.Data.ID); err != nil {
 		if err != databases.NotFound {
@@ -2561,7 +2283,7 @@ findAppointment:
 		return context.Error(401, "permission denied", nil)
 	}
 
-	booking := &Booking{
+	booking := &services.Booking{
 		PublicKey:     params.PublicKey,
 		ID:            params.Data.ID,
 		Token:         token,
@@ -2666,20 +2388,7 @@ var CancelSlotDataForm = forms.Form{
 	},
 }
 
-type CancelSlotParams struct {
-	JSON      string          `json:"json"`
-	Data      *CancelSlotData `json:"data"`
-	Signature []byte          `json:"signature"`
-	PublicKey []byte          `json:"publicKey"`
-}
-
-type CancelSlotData struct {
-	ProviderID      []byte           `json:"providerID"`
-	SignedTokenData *SignedTokenData `json:"signedTokenData"`
-	ID              []byte           `json:"id"`
-}
-
-func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *CancelSlotParams) *jsonrpc.Response {
+func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.CancelSlotParams) *jsonrpc.Response {
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Error(err)
@@ -2700,7 +2409,7 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *CancelSlotPa
 
 	bookings := transaction.Map("bookings", params.Data.ProviderID)
 
-	existingBooking := &Booking{}
+	existingBooking := &services.Booking{}
 
 	if existingBookingData, err := bookings.Get(params.Data.ID); err != nil {
 		if err == databases.NotFound {
@@ -2826,19 +2535,8 @@ var CheckProviderDataDataForm = forms.Form{
 	},
 }
 
-type CheckProviderDataParams struct {
-	JSON      string                 `json:"json"`
-	Data      *CheckProviderDataData `json:"data"`
-	Signature []byte                 `json:"signature"`
-	PublicKey []byte                 `json:"publicKey"`
-}
-
-type CheckProviderDataData struct {
-	Timestamp *time.Time `json:"timestamp"`
-}
-
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *CheckProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *services.CheckProviderDataParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider
 	resp, _ := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2937,18 +2635,6 @@ var StoreProviderDataDataForm = forms.Form{
 	},
 }
 
-type StoreProviderDataParams struct {
-	JSON      string                 `json:"json"`
-	Data      *StoreProviderDataData `json:"data"`
-	Signature []byte                 `json:"signature"`
-	PublicKey []byte                 `json:"publicKey"`
-}
-
-type StoreProviderDataData struct {
-	EncryptedData *services.ECDHEncryptedData `json:"encryptedData"`
-	Code          []byte                      `json:"code"`
-}
-
 func (c *Appointments) transaction(success *bool) (services.Transaction, func(), error) {
 	transaction, err := c.db.Begin()
 
@@ -2973,7 +2659,7 @@ func (c *Appointments) transaction(success *bool) (services.Transaction, func(),
 }
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *StoreProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *services.StoreProviderDataParams) *jsonrpc.Response {
 
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
@@ -3109,18 +2795,7 @@ var GetPendingProviderDataDataForm = forms.Form{
 	},
 }
 
-type GetPendingProviderDataParams struct {
-	JSON      string                      `json:"json"`
-	Data      *GetPendingProviderDataData `json:"data"`
-	Signature []byte                      `json:"signature"`
-	PublicKey []byte                      `json:"publicKey"`
-}
-
-type GetPendingProviderDataData struct {
-	N int64 `json:"n"`
-}
-
-func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *ActorKey) {
+func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
 
 	keys, err := c.getActorKeys()
 
@@ -3132,7 +2807,7 @@ func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, pub
 	return c.isOnKeyList(context, data, signature, publicKey, keys.Mediators)
 }
 
-func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *ActorKey) {
+func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
 
 	keys, err := c.getActorKeys()
 
@@ -3144,7 +2819,7 @@ func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, pub
 	return c.isOnKeyList(context, data, signature, publicKey, keys.Providers)
 }
 
-func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, publicKey []byte, keyList []*ActorKey) (*jsonrpc.Response, *ActorKey) {
+func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (*jsonrpc.Response, *services.ActorKey) {
 
 	actorKey, err := findActorKey(keyList, publicKey)
 
@@ -3223,20 +2898,9 @@ var GetVerifiedProviderDataDataForm = forms.Form{
 	},
 }
 
-type GetVerifiedProviderDataParams struct {
-	JSON      string                       `json:"json"`
-	Data      *GetVerifiedProviderDataData `json:"data"`
-	Signature []byte                       `json:"signature"`
-	PublicKey []byte                       `json:"publicKey"`
-}
-
-type GetVerifiedProviderDataData struct {
-	N int64 `json:"n"`
-}
-
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params *GetVerifiedProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params *services.GetVerifiedProviderDataParams) *jsonrpc.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp
@@ -3269,7 +2933,7 @@ func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params 
 
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *GetPendingProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *services.GetPendingProviderDataParams) *jsonrpc.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp
@@ -3386,54 +3050,8 @@ var GetStatsForm = forms.Form{
 	Validator:  UsageValidator,
 }
 
-type GetStatsParams struct {
-	ID     string                 `json:"id"`
-	Type   string                 `json:"type"`
-	Filter map[string]interface{} `json:"filter"`
-	Metric string                 `json:"metric"`
-	Name   string                 `json:"name"`
-	From   *time.Time             `json:"from"`
-	To     *time.Time             `json:"to"`
-	N      *int64                 `json:"n"`
-}
-
-type StatsValue struct {
-	Name  string            `json:"name"`
-	From  time.Time         `json:"from"`
-	To    time.Time         `json:"to"`
-	Data  map[string]string `json:"data"`
-	Value int64             `json:"value"`
-}
-
-type Values struct {
-	values []*StatsValue
-}
-
-func (f Values) Len() int {
-	return len(f.values)
-}
-
-func (f Values) Less(i, j int) bool {
-	r := (f.values[i].From).Sub(f.values[j].From)
-	if r < 0 {
-		return true
-	}
-	// if the from times match we compare the names
-	if r == 0 {
-		if strings.Compare(f.values[i].Name, f.values[j].Name) < 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func (f Values) Swap(i, j int) {
-	f.values[i], f.values[j] = f.values[j], f.values[i]
-
-}
-
 // public endpoint
-func (c *Appointments) getStats(context *jsonrpc.Context, params *GetStatsParams) *jsonrpc.Response {
+func (c *Appointments) getStats(context *jsonrpc.Context, params *services.GetStatsParams) *jsonrpc.Response {
 
 	if c.meter == nil {
 		return context.InternalError()
@@ -3455,7 +3073,7 @@ func (c *Appointments) getStats(context *jsonrpc.Context, params *GetStatsParams
 		return context.InternalError()
 	}
 
-	values := make([]*StatsValue, 0)
+	values := make([]*services.StatsValue, 0)
 
 addMetric:
 	for _, metric := range metrics {
@@ -3481,7 +3099,7 @@ addMetric:
 			}
 		}
 
-		values = append(values, &StatsValue{
+		values = append(values, &services.StatsValue{
 			From:  time.Unix(metric.TimeWindow.From/1e9, metric.TimeWindow.From%1e9).UTC(),
 			To:    time.Unix(metric.TimeWindow.To/1e9, metric.TimeWindow.From%1e9).UTC(),
 			Name:  metric.Name,
@@ -3495,4 +3113,31 @@ addMetric:
 	sort.Sort(sortableValues)
 
 	return context.Result(values)
+}
+
+type Values struct {
+	values []*services.StatsValue
+}
+
+func (f Values) Len() int {
+	return len(f.values)
+}
+
+func (f Values) Less(i, j int) bool {
+	r := (f.values[i].From).Sub(f.values[j].From)
+	if r < 0 {
+		return true
+	}
+	// if the from times match we compare the names
+	if r == 0 {
+		if strings.Compare(f.values[i].Name, f.values[j].Name) < 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func (f Values) Swap(i, j int) {
+	f.values[i], f.values[j] = f.values[j], f.values[i]
+
 }
