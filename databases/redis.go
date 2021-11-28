@@ -18,7 +18,9 @@ package databases
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/bsm/redislock"
 	"github.com/go-redis/redis/v8"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
@@ -29,13 +31,56 @@ import (
 )
 
 type Redis struct {
+	client   redis.UniversalClient
+	options  redis.UniversalOptions
+	pipeline redis.Pipeliner
+	mutex    sync.Mutex
+	channel  chan bool
+	ctx      context.Context
+}
+
+type RedisLock struct {
+	lockKey     string
 	client      redis.UniversalClient
-	options     redis.UniversalOptions
-	transaction *redis.Tx
-	pipeline    redis.Pipeliner
-	mutex       sync.Mutex
-	channel     chan bool
 	ctx         context.Context
+	dLockClient *redislock.Client
+	dLock       *redislock.Lock
+}
+
+func MakeRedisLock(ctx context.Context, lockKey string, client redis.UniversalClient) (RedisLock, error) {
+
+	rL := RedisLock{
+		client:      client,
+		lockKey:     lockKey,
+		ctx:         ctx,
+		dLockClient: redislock.New(client),
+	}
+
+	return rL, nil
+}
+
+// Makes sure, that RedisLock implements services.Lock
+var _ services.Lock = RedisLock{}
+
+func (r RedisLock) Lock() error {
+
+	lock, err := r.dLockClient.Obtain(r.ctx, r.lockKey, 100*time.Millisecond, nil)
+
+	if err != nil {
+		return err
+	}
+
+	r.dLock = lock
+	return nil
+}
+
+func (r RedisLock) Release() error {
+	if r.dLock == nil {
+		services.Log.Error("Unable to release lock, which was never locked.")
+		return errors.New("no lock")
+	}
+
+	return r.dLock.Release(r.ctx)
 }
 
 type RedisSettings struct {
@@ -163,15 +208,31 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 
 }
 
-func (d *Redis) Reset() error {
-	return d.client.FlushDB().Err()
+// Makes sure, that Redis implements Database
+var _ services.Database = &Redis{}
+
+func (d *Redis) Lock(lockKey string) (services.Lock, error) {
+
+	redisLock, err := MakeRedisLock(d.ctx, lockKey, d.client)
+
+	if err != nil {
+		return nil, err
+	}
+
+	err = redisLock.Lock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var sLock services.Lock
+	sLock = redisLock
+
+	return sLock, nil
+
 }
 
 func (d *Redis) Client() redis.Cmdable {
-	if d.transaction != nil {
-		return d.transaction
-	}
-
 	return d.client
 }
 
@@ -181,117 +242,6 @@ func (d *Redis) Open() error {
 
 func (d *Redis) Close() error {
 	return d.client.Close()
-}
-
-func (d *Redis) Watch(keys ...string) error {
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	if d.transaction == nil {
-		return fmt.Errorf("cannot watch keys outside a transaction")
-	}
-
-	return d.transaction.Watch(d.ctx, keys...).Err()
-}
-
-func (d *Redis) Begin() (services.Transaction, error) {
-
-	if d.transaction != nil {
-		return nil, fmt.Errorf("already in a transaction")
-	}
-
-	nd := &Redis{
-		options: d.options,
-		client:  d.client,
-		channel: make(chan bool),
-	}
-
-	started := make(chan bool)
-
-	tx := func(tx *redis.Tx) error {
-		nd.mutex.Lock()
-		nd.transaction = tx
-		nd.mutex.Unlock()
-
-		started <- true
-
-		_, err := tx.Pipelined(d.ctx, func(pipeline redis.Pipeliner) error {
-
-			nd.mutex.Lock()
-			nd.pipeline = pipeline
-			nd.mutex.Unlock()
-
-			// we block until the transaction completes
-			commit := <-nd.channel
-
-			nd.mutex.Lock()
-			if !commit {
-				if err := nd.pipeline.Discard(); err != nil {
-					services.Log.Error(err)
-				}
-			}
-
-			nd.mutex.Unlock()
-
-			nd.channel <- commit
-
-			return nil
-		})
-		return err
-	}
-
-	go func() {
-		err := nd.client.Watch(d.ctx, tx)
-		if err != nil {
-			services.Log.Error(err)
-		}
-	}()
-
-	select {
-	case <-started:
-	case <-time.After(1 * time.Second):
-		return nil, fmt.Errorf("timeout")
-	}
-
-	return nd, nil
-}
-
-func (d *Redis) Commit() error {
-
-	if d.transaction == nil {
-		return fmt.Errorf("not in a transaction")
-	}
-
-	// we wait for the transaction to finish
-	d.channel <- true
-	<-d.channel
-
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	d.transaction = nil
-	d.pipeline = nil
-
-	return nil
-}
-
-func (d *Redis) Rollback() error {
-
-	if d.transaction == nil {
-		return fmt.Errorf("not in a transaction")
-	}
-
-	// we wait for the transaction to finish
-	d.channel <- false
-	<-d.channel
-
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	d.transaction = nil
-	d.pipeline = nil
-
-	return nil
 }
 
 func (d *Redis) Expire(table string, key []byte, ttl time.Duration) error {

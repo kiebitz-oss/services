@@ -40,22 +40,15 @@ type DatabaseOps interface {
 	Value(table string, key []byte) Value
 }
 
+type Lock interface {
+	Release() error
+}
+
 // A database can deliver and accept message
 type Database interface {
 	Close() error
 	Open() error
-	Reset() error
-	Begin() (Transaction, error)
-
-	DatabaseOps
-}
-
-type Transaction interface {
-	// Watch keys for changes while in a transaction
-	Watch(...string) error
-
-	Commit() error
-	Rollback() error
+	Lock(lockKey string) (Lock, error)
 
 	DatabaseOps
 }
