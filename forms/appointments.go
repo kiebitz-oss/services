@@ -1162,6 +1162,69 @@ var BookAppointmentDataForm = forms.Form{
 	},
 }
 
+var GetAppointmentForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsString{},
+				JSON{
+					Key: "json",
+				},
+				forms.IsStringMap{
+					Form: &GetAppointmentDataForm,
+				},
+			},
+		},
+		{
+			Name: "signature",
+			Validators: []forms.Validator{
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+		{
+			Name: "publicKey",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+	},
+}
+
+var GetAppointmentDataForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "id",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "providerID",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "signedTokenData",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &SignedTokenDataForm,
+				},
+			},
+		},
+	},
+}
+
 var CancelAppointmentForm = forms.Form{
 	Fields: []forms.Field{
 		{

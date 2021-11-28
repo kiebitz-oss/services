@@ -282,6 +282,21 @@ type Booking struct {
 	EncryptedData *ECDHEncryptedData `json:"encryptedData"`
 }
 
+// GetAppointment
+
+type GetAppointmentSignedParams struct {
+	JSON      string                `json:"json"`
+	Data      *GetAppointmentParams `json:"data"`
+	Signature []byte                `json:"signature"`
+	PublicKey []byte                `json:"publicKey"`
+}
+
+type GetAppointmentParams struct {
+	ProviderID      []byte           `json:"providerID"`
+	SignedTokenData *SignedTokenData `json:"signedTokenData"`
+	ID              []byte           `json:"id"`
+}
+
 // CancelAppointment
 
 type CancelAppointmentSignedParams struct {
