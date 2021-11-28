@@ -17,9 +17,10 @@
 package meters
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
 	"regexp"
@@ -33,6 +34,7 @@ type Redis struct {
 	client   redis.UniversalClient
 	options  redis.UniversalOptions
 	settings *RedisSettings
+	ctx      context.Context
 }
 
 type RedisSettings struct {
@@ -102,8 +104,9 @@ func MakeRedis(settings interface{}) (services.Meter, error) {
 	}
 
 	client := redis.NewUniversalClient(&options)
+	ctx := context.TODO()
 
-	if _, err := client.Ping().Result(); err != nil {
+	if _, err := client.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
 
@@ -111,6 +114,7 @@ func MakeRedis(settings interface{}) (services.Meter, error) {
 		options:  options,
 		client:   client,
 		settings: &redisSettings,
+		ctx:      ctx,
 	}
 
 	return meter, nil
@@ -267,14 +271,14 @@ func (r *Redis) AddMax(id string, name string, uid string, data map[string]strin
 	fullId := r.getFullId(id, tw)
 	fullKey := fmt.Sprintf("addMax:%s:%s", fullId, key)
 
-	if oldValueBytes, err := r.client.HGet(fullKey, uid).Result(); err != nil {
+	if oldValueBytes, err := r.client.HGet(r.ctx, fullKey, uid).Result(); err != nil {
 		if err != redis.Nil {
 			return err
 		} else {
 			// the value doesn't exist yet, we store the current value
 			bs := make([]byte, 8)
 			binary.LittleEndian.PutUint64(bs, uint64(value))
-			if err := r.client.HSet(fullKey, uid, bs).Err(); err != nil {
+			if err := r.client.HSet(r.ctx, fullKey, uid, bs).Err(); err != nil {
 				return err
 			}
 
@@ -292,7 +296,7 @@ func (r *Redis) AddMax(id string, name string, uid string, data map[string]strin
 			// new maximum and add the difference
 			bs := make([]byte, 8)
 			binary.LittleEndian.PutUint64(bs, uint64(value))
-			if err := r.client.HSet(fullKey, uid, bs).Err(); err != nil {
+			if err := r.client.HSet(r.ctx, fullKey, uid, bs).Err(); err != nil {
 				return err
 			}
 			// we subtract the old value
@@ -304,7 +308,7 @@ func (r *Redis) AddMax(id string, name string, uid string, data map[string]strin
 	tId := r.getTimeId(tw.From, tw.Type)
 	maxTw := r.getTimeWindowFromTimeId(r.increaseTimeId(tId, 10, tw.Type), tw.Type)
 
-	if _, err := r.client.ExpireAt(fullKey, time.Unix(maxTw.To/1e9, 0)).Result(); err != nil {
+	if _, err := r.client.ExpireAt(r.ctx, fullKey, time.Unix(maxTw.To/1e9, 0)).Result(); err != nil {
 		return err
 	}
 
@@ -325,7 +329,7 @@ func (r *Redis) AddOnce(id string, name string, uid string, data map[string]stri
 	fullId := r.getFullId(id, tw)
 	fullKey := fmt.Sprintf("addOnce:%s:%s", fullId, key)
 
-	if ok, err := r.client.SIsMember(fullKey, uid).Result(); err != nil {
+	if ok, err := r.client.SIsMember(r.ctx, fullKey, uid).Result(); err != nil {
 		return err
 	} else if ok {
 		// the UID has already been counted
@@ -335,11 +339,11 @@ func (r *Redis) AddOnce(id string, name string, uid string, data map[string]stri
 	tId := r.getTimeId(tw.From, tw.Type)
 	maxTw := r.getTimeWindowFromTimeId(r.increaseTimeId(tId, 10, tw.Type), tw.Type)
 
-	if _, err := r.client.ExpireAt(fullKey, time.Unix(maxTw.To/1e9, 0)).Result(); err != nil {
+	if _, err := r.client.ExpireAt(r.ctx, fullKey, time.Unix(maxTw.To/1e9, 0)).Result(); err != nil {
 		return err
 	}
 
-	if err := r.client.SAdd(fullKey, uid).Err(); err != nil {
+	if err := r.client.SAdd(r.ctx, fullKey, uid).Err(); err != nil {
 		return err
 	}
 	// the UID hasn't been counted yet, we add it
@@ -354,7 +358,7 @@ func (r *Redis) Add(id string, name string, data map[string]string, tw services.
 	}
 	fullId := r.getFullId(id, tw)
 
-	res, err := r.client.HIncrBy(fullId, key, value).Result()
+	res, err := r.client.HIncrBy(r.ctx, fullId, key, value).Result()
 	if err != nil {
 		return err
 	}
@@ -363,7 +367,7 @@ func (r *Redis) Add(id string, name string, data map[string]string, tw services.
 		tId := r.getTimeId(tw.From, tw.Type)
 		// we keep n intervals at most
 		maxTw := r.getTimeWindowFromTimeId(r.increaseTimeId(tId, 10, tw.Type), tw.Type)
-		_, err = r.client.ExpireAt(fullId, time.Unix(maxTw.To/1e9, 0)).Result()
+		_, err = r.client.ExpireAt(r.ctx, fullId, time.Unix(maxTw.To/1e9, 0)).Result()
 	}
 	return err
 }
@@ -438,7 +442,7 @@ func (r *Redis) GetByTimeIds(id string, from, to int64, tId, maxTId int64, name,
 	}
 
 	for tId <= maxTId {
-		result, err := r.client.HGetAll(r.getFullIdByTimeId(id, tId, twType)).Result()
+		result, err := r.client.HGetAll(r.ctx, r.getFullIdByTimeId(id, tId, twType)).Result()
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +471,7 @@ func (r *Redis) Get(id string, name string, data map[string]string, tw services.
 		return nil, err
 	}
 	fullId := r.getFullId(id, tw)
-	res, err := r.client.HGet(fullId, key).Int64()
+	res, err := r.client.HGet(r.ctx, fullId, key).Int64()
 	if err != nil {
 		if err == redis.Nil {
 			res = 0

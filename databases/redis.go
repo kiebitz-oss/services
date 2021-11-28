@@ -17,8 +17,9 @@
 package databases
 
 import (
+	"context"
 	"fmt"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
 	"github.com/prometheus/client_golang/prometheus"
@@ -34,6 +35,7 @@ type Redis struct {
 	pipeline    redis.Pipeliner
 	mutex       sync.Mutex
 	channel     chan bool
+	ctx         context.Context
 }
 
 type RedisSettings struct {
@@ -41,6 +43,34 @@ type RedisSettings struct {
 	Addresses  []string `json:"addresses`
 	Database   int64    `json:"database"`
 	Password   string   `json:"password"`
+}
+
+type MetricHook struct {
+	redisDurations *prometheus.HistogramVec
+}
+
+func (m MetricHook) BeforeProcess(ctx context.Context, cmd redis.Cmder) (context.Context, error) {
+	return context.WithValue(ctx, "time", time.Now()), nil
+
+}
+
+func (m MetricHook) AfterProcess(ctx context.Context, cmd redis.Cmder) error {
+	if startTime, ok := ctx.Value("time").(time.Time); ok {
+		elapsedTime := time.Since(startTime)
+		m.redisDurations.WithLabelValues(cmd.Name()).Observe(elapsedTime.Seconds())
+	} else {
+		services.Log.Warning("Context without time value found, something is broken within the metric instrumentation")
+	}
+
+	return nil
+}
+
+func (m MetricHook) BeforeProcessPipeline(ctx context.Context, cmds []redis.Cmder) (context.Context, error) {
+	return ctx, nil
+}
+
+func (m MetricHook) AfterProcessPipeline(ctx context.Context, cmds []redis.Cmder) error {
+	return nil
 }
 
 var RedisForm = forms.Form{
@@ -92,6 +122,7 @@ func ValidateRedisSettings(settings map[string]interface{}) (interface{}, error)
 func MakeRedis(settings interface{}) (services.Database, error) {
 
 	redisSettings := settings.(RedisSettings)
+	ctx := context.TODO()
 
 	options := redis.UniversalOptions{
 		MasterName:   redisSettings.MasterName,
@@ -114,21 +145,10 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 	prometheus.MustRegister(redisDurations)
 
 	client := redis.NewUniversalClient(&options)
+	metricHook := MetricHook{redisDurations: redisDurations}
+	client.AddHook(metricHook)
 
-	client.WrapProcess(func(oldProcess func(cmd redis.Cmder) error) func(cmd redis.Cmder) error {
-		return func(cmd redis.Cmder) error {
-			startTime := time.Now()
-
-			err := oldProcess(cmd)
-
-			elapsedTime := time.Since(startTime)
-			redisDurations.WithLabelValues(cmd.Name()).Observe(elapsedTime.Seconds())
-
-			return err
-		}
-	})
-
-	if _, err := client.Ping().Result(); err != nil {
+	if _, err := client.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
 
@@ -136,6 +156,7 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 		options: options,
 		client:  client,
 		channel: make(chan bool),
+		ctx:     ctx,
 	}
 
 	return database, nil
@@ -170,7 +191,7 @@ func (d *Redis) Watch(keys ...string) error {
 		return fmt.Errorf("cannot watch keys outside a transaction")
 	}
 
-	return d.transaction.Watch(keys...).Err()
+	return d.transaction.Watch(d.ctx, keys...).Err()
 }
 
 func (d *Redis) Begin() (services.Transaction, error) {
@@ -194,7 +215,7 @@ func (d *Redis) Begin() (services.Transaction, error) {
 
 		started <- true
 
-		_, err := tx.Pipelined(func(pipeline redis.Pipeliner) error {
+		_, err := tx.Pipelined(d.ctx, func(pipeline redis.Pipeliner) error {
 
 			nd.mutex.Lock()
 			nd.pipeline = pipeline
@@ -220,7 +241,7 @@ func (d *Redis) Begin() (services.Transaction, error) {
 	}
 
 	go func() {
-		err := nd.client.Watch(tx)
+		err := nd.client.Watch(d.ctx, tx)
 		if err != nil {
 			services.Log.Error(err)
 		}
@@ -274,7 +295,7 @@ func (d *Redis) Rollback() error {
 }
 
 func (d *Redis) Expire(table string, key []byte, ttl time.Duration) error {
-	return d.Client().Expire(string(d.fullKey(table, key)), ttl).Err()
+	return d.Client().Expire(d.ctx, string(d.fullKey(table, key)), ttl).Err()
 }
 
 func (d *Redis) Set(table string, key []byte) services.Set {
@@ -318,11 +339,11 @@ type RedisMap struct {
 }
 
 func (r *RedisMap) Del(key []byte) error {
-	return r.db.Client().HDel(string(r.fullKey), string(key)).Err()
+	return r.db.Client().HDel(r.db.ctx, string(r.fullKey), string(key)).Err()
 }
 
 func (r *RedisMap) GetAll() (map[string][]byte, error) {
-	result, err := r.db.Client().HGetAll(string(r.fullKey)).Result()
+	result, err := r.db.Client().HGetAll(r.db.ctx, string(r.fullKey)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -337,7 +358,7 @@ func (r *RedisMap) GetAll() (map[string][]byte, error) {
 }
 
 func (r *RedisMap) Get(key []byte) ([]byte, error) {
-	result, err := r.db.Client().HGet(string(r.fullKey), string(key)).Result()
+	result, err := r.db.Client().HGet(r.db.ctx, string(r.fullKey), string(key)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -348,7 +369,7 @@ func (r *RedisMap) Get(key []byte) ([]byte, error) {
 }
 
 func (r *RedisMap) Set(key []byte, value []byte) error {
-	return r.db.Client().HSet(string(r.fullKey), string(key), string(value)).Err()
+	return r.db.Client().HSet(r.db.ctx, string(r.fullKey), string(key), string(value)).Err()
 }
 
 type RedisSet struct {
@@ -357,19 +378,19 @@ type RedisSet struct {
 }
 
 func (r *RedisSet) Add(data []byte) error {
-	return r.db.Client().SAdd(string(r.fullKey), string(data)).Err()
+	return r.db.Client().SAdd(r.db.ctx, string(r.fullKey), string(data)).Err()
 }
 
 func (r *RedisSet) Has(data []byte) (bool, error) {
-	return r.db.Client().SIsMember(string(r.fullKey), string(data)).Result()
+	return r.db.Client().SIsMember(r.db.ctx, string(r.fullKey), string(data)).Result()
 }
 
 func (r *RedisSet) Del(data []byte) error {
-	return r.db.Client().SRem(string(r.fullKey), string(data)).Err()
+	return r.db.Client().SRem(r.db.ctx, string(r.fullKey), string(data)).Err()
 }
 
 func (r *RedisSet) Members() ([]*services.SetEntry, error) {
-	result, err := r.db.Client().SMembers(string(r.fullKey)).Result()
+	result, err := r.db.Client().SMembers(r.db.ctx, string(r.fullKey)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -390,11 +411,11 @@ type RedisValue struct {
 }
 
 func (r *RedisValue) Set(data []byte, ttl time.Duration) error {
-	return r.db.Client().Set(string(r.fullKey), string(data), ttl).Err()
+	return r.db.Client().Set(r.db.ctx, string(r.fullKey), string(data), ttl).Err()
 }
 
 func (r *RedisValue) Get() ([]byte, error) {
-	result, err := r.db.Client().Get(string(r.fullKey)).Result()
+	result, err := r.db.Client().Get(r.db.ctx, string(r.fullKey)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -405,7 +426,7 @@ func (r *RedisValue) Get() ([]byte, error) {
 }
 
 func (r *RedisValue) Del() error {
-	return r.db.Client().Del(string(r.fullKey)).Err()
+	return r.db.Client().Del(r.db.ctx, string(r.fullKey)).Err()
 }
 
 type RedisSortedSet struct {
@@ -414,7 +435,7 @@ type RedisSortedSet struct {
 }
 
 func (r *RedisSortedSet) Score(data []byte) (int64, error) {
-	n, err := r.db.Client().ZScore(string(r.fullKey), string(data)).Result()
+	n, err := r.db.Client().ZScore(r.db.ctx, string(r.fullKey), string(data)).Result()
 	if err == redis.Nil {
 		return 0, NotFound
 	} else if err != nil {
@@ -424,16 +445,16 @@ func (r *RedisSortedSet) Score(data []byte) (int64, error) {
 }
 
 func (r *RedisSortedSet) Add(data []byte, score int64) error {
-	return r.db.Client().ZAdd(string(r.fullKey), redis.Z{Score: float64(score), Member: string(data)}).Err()
+	return r.db.Client().ZAdd(r.db.ctx, string(r.fullKey), &redis.Z{Score: float64(score), Member: string(data)}).Err()
 }
 
 func (r *RedisSortedSet) Del(data []byte) (bool, error) {
-	n, err := r.db.Client().ZRem(string(r.fullKey), string(data)).Result()
+	n, err := r.db.Client().ZRem(r.db.ctx, string(r.fullKey), string(data)).Result()
 	return n > 0, err
 }
 
 func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeWithScores(string(r.fullKey), from, to).Result()
+	result, err := r.db.Client().ZRangeWithScores(r.db.ctx, string(r.fullKey), from, to).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -450,7 +471,7 @@ func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, erro
 }
 
 func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeByScoreWithScores(string(r.fullKey), redis.ZRangeBy{
+	result, err := r.db.Client().ZRangeByScoreWithScores(r.db.ctx, string(r.fullKey), &redis.ZRangeBy{
 		Min: strconv.FormatInt(from, 10),
 		Max: strconv.FormatInt(to, 10),
 	}).Result()
@@ -470,7 +491,7 @@ func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntr
 }
 
 func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeWithScores(string(r.fullKey), index, index).Result()
+	result, err := r.db.Client().ZRangeWithScores(r.db.ctx, string(r.fullKey), index, index).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -487,7 +508,7 @@ func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZPopMin(string(r.fullKey), n).Result()
+	result, err := r.db.Client().ZPopMin(r.db.ctx, string(r.fullKey), n).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -502,7 +523,7 @@ func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) RemoveRangeByScore(from, to int64) error {
-	_, err := r.db.Client().ZRemRangeByScore(string(r.fullKey), strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
+	_, err := r.db.Client().ZRemRangeByScore(r.db.ctx, string(r.fullKey), strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
 	if err != nil {
 		return err
 	}
