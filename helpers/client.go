@@ -141,6 +141,70 @@ func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Res
 
 }
 
+func (a *AppointmentsClient) ConfirmProvider(provider interface{}, mediator *crypto.Actor) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) AddCodes(codes interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) UploadDistances(distances interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetStats(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetAppointmentsByZipCode(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetProviderAppointments(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) PublishAppointments(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetBookedAppointments(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) CancelBooking(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) BookSlot(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) CancelSlot(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetToken(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) StoreProviderData(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) CheckProviderData(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetPendingProviderData(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
+func (a *AppointmentsClient) GetVerifiedProviderData(params interface{}) (*Response, error) {
+	return nil, nil
+}
+
 type StorageClient struct {
 	settings  *services.Settings
 	requester Requester

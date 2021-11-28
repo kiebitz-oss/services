@@ -21,6 +21,7 @@ func TestAppointmentsApi(t *testing.T) {
 		// we create a client (without a key)
 		at.FC{af.Client{}, "client"},
 
+		// we create a mediator
 		at.FC{af.Mediator{}, "mediator"},
 	}
 
