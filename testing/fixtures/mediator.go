@@ -19,23 +19,39 @@ package fixtures
 import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/helpers"
 )
 
-type Client struct {
+type Mediator struct {
 }
 
-func (c Client) Setup(fixtures map[string]interface{}) (interface{}, error) {
+// Creates a new mediator and
+func (c Mediator) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
-	settings, ok := fixtures["settings"].(*services.Settings)
+	client, ok := fixtures["client"].(*helpers.Client)
 
 	if !ok {
-		return nil, fmt.Errorf("settings missing")
+		return nil, fmt.Errorf("client missing")
 	}
 
-	return helpers.MakeClient(settings), nil
+	services.Log.Info(client)
+
+	mediator, err := crypto.MakeActor("mediator")
+
+	if err != nil {
+		return nil, err
+	}
+
+	// we add the mediator public keys to the backend
+	if _, err := client.Appointments.AddMediatorPublicKeys(mediator); err != nil {
+		return nil, err
+	}
+
+	return mediator, nil
+
 }
 
-func (c Client) Teardown(fixture interface{}) error {
+func (c Mediator) Teardown(fixture interface{}) error {
 	return nil
 }

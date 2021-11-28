@@ -2,6 +2,7 @@ package servers_test
 
 import (
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
@@ -19,14 +20,21 @@ func TestAppointmentsApi(t *testing.T) {
 
 		// we create a client (without a key)
 		at.FC{af.Client{}, "client"},
+
+		at.FC{af.Mediator{}, "mediator"},
 	}
 
 	fixtures, err := at.SetupFixtures(fixturesConfig)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	defer at.TeardownFixtures(fixturesConfig, fixtures)
 
-	client := fixtures["client"].(*at.Client)
+	client := fixtures["client"].(*helpers.Client)
 
-	resp, err := client.Appointments("getKeys", map[string]interface{}{})
+	resp, err := client.Appointments.GetKeys()
 
 	if err != nil {
 		t.Fatal(err)

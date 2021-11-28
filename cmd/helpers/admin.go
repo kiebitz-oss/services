@@ -17,13 +17,11 @@
 package helpers
 
 import (
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
-	kbForms "github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/helpers"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiprotect/go-helpers/forms"
@@ -101,13 +99,13 @@ func generateMediatorKeys(settings *services.Settings) func(c *cli.Context) erro
 		keyData := map[string]interface{}{}
 
 		for name, keyType := range keys {
-			queueDataKey, err := crypto.GenerateKey()
+			key, err := crypto.GenerateKey()
 
 			if err != nil {
 				services.Log.Fatal(err)
 			}
 
-			webKey, err := crypto.AsWebKey(queueDataKey, keyType)
+			webKey, err := crypto.AsWebKey(key, keyType)
 
 			if err != nil {
 				services.Log.Fatal(err)
@@ -117,7 +115,8 @@ func generateMediatorKeys(settings *services.Settings) func(c *cli.Context) erro
 
 		}
 
-		for _, name := range []string{"queue", "provider"} {
+		// mediators get a copy of the public/private provider data key
+		for _, name := range []string{"provider"} {
 			key := settings.Admin.Signing.Key(name)
 			publicKey, err := crypto.LoadPublicKey(key.PublicKey)
 			if err != nil {
@@ -146,113 +145,10 @@ func generateMediatorKeys(settings *services.Settings) func(c *cli.Context) erro
 			services.Log.Fatal(err)
 		}
 
+		// we print the key data to stdout
 		fmt.Println(string(jsonData))
 
 		return nil
-	}
-}
-
-var queueAreas = []string{"01", "02", "03", "04", "06", "07", "08", "09", "10", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "44", "45", "46", "47", "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59", "60", "61", "63", "64", "65", "66", "67", "68", "69", "70", "71", "72", "73", "74", "75", "76", "77", "78", "79", "80", "81", "82", "83", "84", "85", "86", "87", "88", "89", "90", "91", "92", "93", "94", "95", "96", "97", "98", "99"}
-
-func generateQueues(settings *services.Settings) func(c *cli.Context) error {
-
-	return func(c *cli.Context) error {
-
-		queues := []*services.Queue{}
-
-		queueEncryptionKey := settings.Admin.Signing.Key("queue")
-		queueEncryptionPublicKey, err := crypto.LoadPublicKey(queueEncryptionKey.PublicKey)
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		for _, area := range queueAreas {
-
-			ephemeralKey, err := crypto.GenerateKey()
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			ephemeralWebKey, err := crypto.AsWebKey(ephemeralKey, "ecdh")
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			queueKey, err := crypto.GenerateKey()
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			queueWebKey, err := crypto.AsWebKey(queueKey, "ecdh")
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			sharedKey := crypto.DeriveKey(queueEncryptionPublicKey, ephemeralKey)
-
-			jsonKey, err := json.Marshal(queueWebKey.PrivateKey)
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			encryptedData, err := crypto.Encrypt(jsonKey, sharedKey)
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			id, err := crypto.RandomBytes(32)
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			decodedEphKey, err := base64.StdEncoding.DecodeString(ephemeralWebKey.PublicKey)
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			decodedQueueKey, err := base64.StdEncoding.DecodeString(queueWebKey.PublicKey)
-
-			if err != nil {
-				services.Log.Fatal(err)
-			}
-
-			queueData := &services.Queue{
-				EncryptedPrivateKey: &services.ECDHEncryptedData{
-					IV:        encryptedData.IV,
-					Data:      encryptedData.Data,
-					PublicKey: decodedEphKey,
-				},
-				PublicKey: decodedQueueKey,
-				Name:      area,
-				Type:      "zipArea",
-				ID:        id,
-				Data: map[string]interface{}{
-					"zipArea": area,
-				},
-			}
-
-			queues = append(queues, queueData)
-
-		}
-
-		jsonData, err := json.MarshalIndent(map[string]interface{}{"queues": queues}, "", "  ")
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		fmt.Println(string(jsonData))
-
-		return nil
-
 	}
 }
 
@@ -268,17 +164,16 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			"token":        "ecdsa",
 			"notification": "ecdh",
 			"provider":     "ecdh",
-			"queue":        "ecdh",
 		}
 
 		for name, keyType := range keys {
-			queueDataKey, err := crypto.GenerateKey()
+			key, err := crypto.GenerateKey()
 
 			if err != nil {
 				services.Log.Fatal(err)
 			}
 
-			settingsKey, err := crypto.AsSettingsKey(queueDataKey, name, keyType)
+			settingsKey, err := crypto.AsSettingsKey(key, name, keyType)
 
 			if err != nil {
 				services.Log.Fatal(err)
@@ -628,96 +523,6 @@ func uploadCodes(settings *services.Settings) func(c *cli.Context) error {
 	}
 }
 
-var QueuesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "queues",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &kbForms.QueueForm,
-						},
-					},
-				},
-			},
-		},
-	},
-}
-
-type Queues struct {
-	Queues []*services.Queue `json:"queues"`
-}
-
-func uploadQueueData(settings *services.Settings) func(c *cli.Context) error {
-	return func(c *cli.Context) error {
-
-		if settings.Admin == nil {
-			services.Log.Fatal("admin settings missing")
-		}
-
-		filename := c.Args().Get(0)
-
-		if filename == "" {
-			services.Log.Fatal("please specify a filename")
-		}
-
-		jsonBytes, err := ioutil.ReadFile(filename)
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		queues := &Queues{}
-		var rawQueues map[string]interface{}
-
-		if err := json.Unmarshal(jsonBytes, &rawQueues); err != nil {
-			services.Log.Fatal(err)
-		}
-
-		if params, err := QueuesForm.Validate(rawQueues); err != nil {
-			services.Log.Fatal(err)
-		} else if QueuesForm.Coerce(queues, params); err != nil {
-			services.Log.Fatal(err)
-		}
-
-		client := jsonrpc.MakeClient(settings.Admin.Client.AppointmentsEndpoint)
-
-		data := map[string]interface{}{
-			"queues":    queues.Queues,
-			"timestamp": time.Now(),
-		}
-
-		signingKey := settings.Admin.Signing.Key("root")
-
-		if signingKey == nil {
-			services.Log.Fatal("can't find signing key")
-		}
-
-		bytes, err := json.Marshal(data)
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		signedData, err := signingKey.SignString(string(bytes))
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		request := jsonrpc.MakeRequest("setQueues", "", signedData.AsMap())
-
-		if response, err := client.Call(request); err != nil {
-			services.Log.Fatal(err)
-		} else {
-			services.Log.Info(response.AsJSON())
-		}
-
-		return nil
-	}
-}
-
 var KeyPairsForm = forms.Form{
 	Fields: []forms.Field{
 		{
@@ -969,25 +774,6 @@ func Admin(settings *services.Settings) ([]cli.Command, error) {
 							Flags:  []cli.Flag{},
 							Usage:  "upload distances from a file to the backend",
 							Action: uploadDistances(settings),
-						},
-					},
-				},
-				{
-					Name:  "queues",
-					Flags: []cli.Flag{},
-					Usage: "Queues-related command.",
-					Subcommands: []cli.Command{
-						{
-							Name:   "generate",
-							Flags:  []cli.Flag{},
-							Usage:  "generate queues for all relevant zip codes",
-							Action: generateQueues(settings),
-						},
-						{
-							Name:   "upload",
-							Flags:  []cli.Flag{},
-							Usage:  "upload queue data from a file to the backend",
-							Action: uploadQueueData(settings),
 						},
 					},
 				},
