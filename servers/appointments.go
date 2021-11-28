@@ -429,7 +429,7 @@ var ProviderQueueDataForm = forms.Form{
 }
 
 // { id, key, providerData, keyData }, keyPair
-func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *services.ConfirmProviderParams) *jsonrpc.Response {
+func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *services.ConfirmProviderSignedParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -596,7 +596,7 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 
 // { keys }, keyPair
 // add the mediator key to the list of keys (only for testing)
-func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysParams) *jsonrpc.Response {
+func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysSignedParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -863,7 +863,7 @@ func (c *Appointments) getDistance(distanceType, from, to string) (float64, erro
 
 }
 
-func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *services.UploadDistancesParams) *jsonrpc.Response {
+func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *services.UploadDistancesSignedParams) *jsonrpc.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -1462,7 +1462,7 @@ var GetProviderAppointmentsDataForm = forms.Form{
 	},
 }
 
-func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params *services.GetProviderAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params *services.GetProviderAppointmentsSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -1698,7 +1698,7 @@ var SlotForm = forms.Form{
 	},
 }
 
-func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -1961,7 +1961,7 @@ var GetBookedAppointmentsForm = forms.Form{
 	},
 }
 
-func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *services.GetBookedAppointmentsParams) *jsonrpc.Response {
+func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *services.GetBookedAppointmentsSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2061,7 +2061,7 @@ var CancelBookingForm = forms.Form{
 	},
 }
 
-func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.CancelBookingParams) *jsonrpc.Response {
+func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.CancelBookingSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2174,7 +2174,7 @@ var BookSlotDataForm = forms.Form{
 	},
 }
 
-func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookSlotParams) *jsonrpc.Response {
+func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookSlotSignedParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -2388,7 +2388,7 @@ var CancelSlotDataForm = forms.Form{
 	},
 }
 
-func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.CancelSlotParams) *jsonrpc.Response {
+func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.CancelSlotSignedParams) *jsonrpc.Response {
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Error(err)
@@ -2536,7 +2536,7 @@ var CheckProviderDataDataForm = forms.Form{
 }
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *services.CheckProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *services.CheckProviderDataSignedParams) *jsonrpc.Response {
 
 	// make sure this is a valid provider
 	resp, _ := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
@@ -2659,7 +2659,7 @@ func (c *Appointments) transaction(success *bool) (services.Transaction, func(),
 }
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *services.StoreProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *services.StoreProviderDataSignedParams) *jsonrpc.Response {
 
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
@@ -2900,7 +2900,7 @@ var GetVerifiedProviderDataDataForm = forms.Form{
 
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params *services.GetVerifiedProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params *services.GetVerifiedProviderDataSignedParams) *jsonrpc.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp
@@ -2933,7 +2933,7 @@ func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params 
 
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *services.GetPendingProviderDataParams) *jsonrpc.Response {
+func (c *Appointments) getPendingProviderData(context *jsonrpc.Context, params *services.GetPendingProviderDataSignedParams) *jsonrpc.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp

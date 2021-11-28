@@ -7,16 +7,16 @@ import (
 
 // ConfirmProvider
 
-type ConfirmProviderParams struct {
-	JSON      string               `json:"json"`
-	Data      *ConfirmProviderData `json:"data"`
-	Signature []byte               `json:"signature"`
-	PublicKey []byte               `json:"publicKey"`
+type ConfirmProviderSignedParams struct {
+	JSON      string                 `json:"json"`
+	Data      *ConfirmProviderParams `json:"data"`
+	Signature []byte                 `json:"signature"`
+	PublicKey []byte                 `json:"publicKey"`
 }
 
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
-type ConfirmProviderData struct {
+type ConfirmProviderParams struct {
 	ID                    []byte              `json:"id"`
 	PublicProviderData    *SignedProviderData `json:"publicProviderData"`
 	EncryptedProviderData *ECDHEncryptedData  `json:"encryptedProviderData"`
@@ -43,14 +43,14 @@ type ProviderQueueData struct {
 
 // AddMediatorPublicKeys
 
-type AddMediatorPublicKeysParams struct {
-	JSON      string                     `json:"json"`
-	Data      *AddMediatorPublicKeysData `json:"data"`
-	Signature []byte                     `json:"signature"`
-	PublicKey []byte                     `json:"publicKey"`
+type AddMediatorPublicKeysSignedParams struct {
+	JSON      string                       `json:"json"`
+	Data      *AddMediatorPublicKeysParams `json:"data"`
+	Signature []byte                       `json:"signature"`
+	PublicKey []byte                       `json:"publicKey"`
 }
 
-type AddMediatorPublicKeysData struct {
+type AddMediatorPublicKeysParams struct {
 	Timestamp  *time.Time `json:"timestamp"`
 	Encryption []byte     `json:"encryption"`
 	Signing    []byte     `json:"signing"`
@@ -73,14 +73,14 @@ type CodesData struct {
 
 // UploadDistances
 
-type UploadDistancesParams struct {
-	JSON      string         `json:"json"`
-	Data      *DistancesData `json:"data"`
-	Signature []byte         `json:"signature"`
-	PublicKey []byte         `json:"publicKey"`
+type UploadDistancesSignedParams struct {
+	JSON      string                 `json:"json"`
+	Data      *UploadDistancesParams `json:"data"`
+	Signature []byte                 `json:"signature"`
+	PublicKey []byte                 `json:"publicKey"`
 }
 
-type DistancesData struct {
+type UploadDistancesParams struct {
 	Timestamp *time.Time `json:"timestamp"`
 	Type      string     `json:"type"`
 	Distances []Distance `json:"distances"`
@@ -209,27 +209,27 @@ type ProviderData struct {
 
 // GetProviderAppointments
 
-type GetProviderAppointmentsParams struct {
-	JSON      string                       `json:"json"`
-	Data      *GetProviderAppointmentsData `json:"data"`
-	Signature []byte                       `json:"signature"`
-	PublicKey []byte                       `json:"publicKey"`
+type GetProviderAppointmentsSignedParams struct {
+	JSON      string                         `json:"json"`
+	Data      *GetProviderAppointmentsParams `json:"data"`
+	Signature []byte                         `json:"signature"`
+	PublicKey []byte                         `json:"publicKey"`
 }
 
-type GetProviderAppointmentsData struct {
+type GetProviderAppointmentsParams struct {
 	Timestamp *time.Time `json:"timestamp"`
 }
 
 // PublishAppointments
 
-type PublishAppointmentsParams struct {
-	JSON      string                   `json:"json"`
-	Data      *PublishAppointmentsData `json:"data"`
-	Signature []byte                   `json:"signature"`
-	PublicKey []byte                   `json:"publicKey"`
+type PublishAppointmentsSignedParams struct {
+	JSON      string                     `json:"json"`
+	Data      *PublishAppointmentsParams `json:"data"`
+	Signature []byte                     `json:"signature"`
+	PublicKey []byte                     `json:"publicKey"`
 }
 
-type PublishAppointmentsData struct {
+type PublishAppointmentsParams struct {
 	Timestamp *time.Time           `json:"timestamp"`
 	Offers    []*SignedAppointment `json:"offers"`
 	Reset     bool                 `json:"reset"`
@@ -258,41 +258,41 @@ type Slot struct {
 
 // GetBookedAppointments
 
-type GetBookedAppointmentsParams struct {
-	JSON      string                     `json:"json"`
-	Data      *GetBookedAppointmentsData `json:"data"`
-	Signature []byte                     `json:"signature"`
-	PublicKey []byte                     `json:"publicKey"`
+type GetBookedAppointmentsSignedParams struct {
+	JSON      string                       `json:"json"`
+	Data      *GetBookedAppointmentsParams `json:"data"`
+	Signature []byte                       `json:"signature"`
+	PublicKey []byte                       `json:"publicKey"`
 }
 
-type GetBookedAppointmentsData struct {
+type GetBookedAppointmentsParams struct {
 	Timestamp *time.Time `json:"timestamp"`
 }
 
 // CancelBooking
 
-type CancelBookingParams struct {
-	JSON      string             `json:"json"`
-	Data      *CancelBookingData `json:"data"`
-	Signature []byte             `json:"signature"`
-	PublicKey []byte             `json:"publicKey"`
+type CancelBookingSignedParams struct {
+	JSON      string               `json:"json"`
+	Data      *CancelBookingParams `json:"data"`
+	Signature []byte               `json:"signature"`
+	PublicKey []byte               `json:"publicKey"`
 }
 
-type CancelBookingData struct {
+type CancelBookingParams struct {
 	Timestamp *time.Time `json:"timestamp"`
 	ID        []byte     `json:"id"`
 }
 
 // BookSlot
 
-type BookSlotParams struct {
-	JSON      string        `json:"json"`
-	Data      *BookSlotData `json:"data"`
-	Signature []byte        `json:"signature"`
-	PublicKey []byte        `json:"publicKey"`
+type BookSlotSignedParams struct {
+	JSON      string          `json:"json"`
+	Data      *BookSlotParams `json:"data"`
+	Signature []byte          `json:"signature"`
+	PublicKey []byte          `json:"publicKey"`
 }
 
-type BookSlotData struct {
+type BookSlotParams struct {
 	ProviderID      []byte             `json:"providerID"`
 	ID              []byte             `json:"id"`
 	EncryptedData   *ECDHEncryptedData `json:"encryptedData"`
@@ -309,14 +309,14 @@ type Booking struct {
 
 // CancelSlot
 
-type CancelSlotParams struct {
-	JSON      string          `json:"json"`
-	Data      *CancelSlotData `json:"data"`
-	Signature []byte          `json:"signature"`
-	PublicKey []byte          `json:"publicKey"`
+type CancelSlotSignedParams struct {
+	JSON      string            `json:"json"`
+	Data      *CancelSlotParams `json:"data"`
+	Signature []byte            `json:"signature"`
+	PublicKey []byte            `json:"publicKey"`
 }
 
-type CancelSlotData struct {
+type CancelSlotParams struct {
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`
@@ -324,54 +324,54 @@ type CancelSlotData struct {
 
 // CheckProviderData
 
-type CheckProviderDataParams struct {
-	JSON      string                 `json:"json"`
-	Data      *CheckProviderDataData `json:"data"`
-	Signature []byte                 `json:"signature"`
-	PublicKey []byte                 `json:"publicKey"`
+type CheckProviderDataSignedParams struct {
+	JSON      string                   `json:"json"`
+	Data      *CheckProviderDataParams `json:"data"`
+	Signature []byte                   `json:"signature"`
+	PublicKey []byte                   `json:"publicKey"`
 }
 
-type CheckProviderDataData struct {
+type CheckProviderDataParams struct {
 	Timestamp *time.Time `json:"timestamp"`
 }
 
 // StoreProviderData
 
-type StoreProviderDataParams struct {
-	JSON      string                 `json:"json"`
-	Data      *StoreProviderDataData `json:"data"`
-	Signature []byte                 `json:"signature"`
-	PublicKey []byte                 `json:"publicKey"`
+type StoreProviderDataSignedParams struct {
+	JSON      string                   `json:"json"`
+	Data      *StoreProviderDataParams `json:"data"`
+	Signature []byte                   `json:"signature"`
+	PublicKey []byte                   `json:"publicKey"`
 }
 
-type StoreProviderDataData struct {
+type StoreProviderDataParams struct {
 	EncryptedData *ECDHEncryptedData `json:"encryptedData"`
 	Code          []byte             `json:"code"`
 }
 
 // GetPendingProviderData
 
-type GetPendingProviderDataParams struct {
-	JSON      string                      `json:"json"`
-	Data      *GetPendingProviderDataData `json:"data"`
-	Signature []byte                      `json:"signature"`
-	PublicKey []byte                      `json:"publicKey"`
+type GetPendingProviderDataSignedParams struct {
+	JSON      string                        `json:"json"`
+	Data      *GetPendingProviderDataParams `json:"data"`
+	Signature []byte                        `json:"signature"`
+	PublicKey []byte                        `json:"publicKey"`
 }
 
-type GetPendingProviderDataData struct {
+type GetPendingProviderDataParams struct {
 	N int64 `json:"n"`
 }
 
 // GetVerifiedProviderData
 
-type GetVerifiedProviderDataParams struct {
-	JSON      string                       `json:"json"`
-	Data      *GetVerifiedProviderDataData `json:"data"`
-	Signature []byte                       `json:"signature"`
-	PublicKey []byte                       `json:"publicKey"`
+type GetVerifiedProviderDataSignedParams struct {
+	JSON      string                         `json:"json"`
+	Data      *GetVerifiedProviderDataParams `json:"data"`
+	Signature []byte                         `json:"signature"`
+	PublicKey []byte                         `json:"publicKey"`
 }
 
-type GetVerifiedProviderDataData struct {
+type GetVerifiedProviderDataParams struct {
 	N int64 `json:"n"`
 }
 
