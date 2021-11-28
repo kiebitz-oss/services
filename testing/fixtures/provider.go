@@ -53,8 +53,10 @@ func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		return nil, err
 	}
 
+	services.Log.Info(provider)
+
 	// we add the provider public keys to the backend
-	if _, err := client.Appointments.ConfirmProvider(provider, mediator); err != nil {
+	if _, err := client.Appointments.ConfirmProvider(nil, mediator); err != nil {
 		return nil, err
 	}
 

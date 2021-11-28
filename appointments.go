@@ -236,14 +236,16 @@ type PublishAppointmentsParams struct {
 }
 
 type SignedAppointment struct {
-	JSON      string       `json:"data" coerce:"name:json"`
-	Data      *Appointment `json:"-" coerce:"name:data"`
-	Signature []byte       `json:"signature"`
-	PublicKey []byte       `json:"publicKey"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
+	Bookings    []*Booking   `json:"bookings"`    // only for providers
+	BookedSlots []*Slot      `json:"bookedSlots"` // for users
+	JSON        string       `json:"data" coerce:"name:json"`
+	Data        *Appointment `json:"-" coerce:"name:data"`
+	Signature   []byte       `json:"signature"`
+	PublicKey   []byte       `json:"publicKey"`
 }
 
 type Appointment struct {
-	UpdatedAt  time.Time              `json:"updatedAt"`
 	Timestamp  time.Time              `json:"timestamp"`
 	Duration   int64                  `json:"duration"`
 	Properties map[string]interface{} `json:"properties"`
@@ -256,43 +258,16 @@ type Slot struct {
 	ID []byte `json:"id"`
 }
 
-// GetBookedAppointments
+// BookAppointment
 
-type GetBookedAppointmentsSignedParams struct {
-	JSON      string                       `json:"json"`
-	Data      *GetBookedAppointmentsParams `json:"data"`
-	Signature []byte                       `json:"signature"`
-	PublicKey []byte                       `json:"publicKey"`
+type BookAppointmentSignedParams struct {
+	JSON      string                 `json:"json"`
+	Data      *BookAppointmentParams `json:"data"`
+	Signature []byte                 `json:"signature"`
+	PublicKey []byte                 `json:"publicKey"`
 }
 
-type GetBookedAppointmentsParams struct {
-	Timestamp *time.Time `json:"timestamp"`
-}
-
-// CancelBooking
-
-type CancelBookingSignedParams struct {
-	JSON      string               `json:"json"`
-	Data      *CancelBookingParams `json:"data"`
-	Signature []byte               `json:"signature"`
-	PublicKey []byte               `json:"publicKey"`
-}
-
-type CancelBookingParams struct {
-	Timestamp *time.Time `json:"timestamp"`
-	ID        []byte     `json:"id"`
-}
-
-// BookSlot
-
-type BookSlotSignedParams struct {
-	JSON      string          `json:"json"`
-	Data      *BookSlotParams `json:"data"`
-	Signature []byte          `json:"signature"`
-	PublicKey []byte          `json:"publicKey"`
-}
-
-type BookSlotParams struct {
+type BookAppointmentParams struct {
 	ProviderID      []byte             `json:"providerID"`
 	ID              []byte             `json:"id"`
 	EncryptedData   *ECDHEncryptedData `json:"encryptedData"`
@@ -307,16 +282,16 @@ type Booking struct {
 	EncryptedData *ECDHEncryptedData `json:"encryptedData"`
 }
 
-// CancelSlot
+// CancelAppointment
 
-type CancelSlotSignedParams struct {
-	JSON      string            `json:"json"`
-	Data      *CancelSlotParams `json:"data"`
-	Signature []byte            `json:"signature"`
-	PublicKey []byte            `json:"publicKey"`
+type CancelAppointmentSignedParams struct {
+	JSON      string                   `json:"json"`
+	Data      *CancelAppointmentParams `json:"data"`
+	Signature []byte                   `json:"signature"`
+	PublicKey []byte                   `json:"publicKey"`
 }
 
-type CancelSlotParams struct {
+type CancelAppointmentParams struct {
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`

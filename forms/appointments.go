@@ -815,8 +815,66 @@ var AppointmentPropertiesForm = forms.Form{
 	},
 }
 
+var BookingForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "id",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "publicKey",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+		{
+			Name: "token",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "encryptedData",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &ECDHEncryptedDataForm,
+				},
+			},
+		},
+	},
+}
+
 var AppointmentForm = forms.Form{
 	Fields: []forms.Field{
+		{
+			Name: "updatedAt",
+			Validators: []forms.Validator{
+				forms.IsOptional{}, // only for reading, not for submitting
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+		{
+			Name: "bookings",
+			Validators: []forms.Validator{
+				forms.IsOptional{}, // only for reading, not for submitting
+				forms.IsList{
+					Validators: []forms.Validator{
+						forms.IsStringMap{
+							Form: &BookingForm,
+						},
+					},
+				},
+			},
+		},
 		{
 			Name: "data",
 			Validators: []forms.Validator{
@@ -855,14 +913,6 @@ var AppointmentForm = forms.Form{
 
 var AppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "updatedAt",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
 		{
 			Name: "timestamp",
 			Validators: []forms.Validator{
@@ -1033,7 +1083,7 @@ var CancelBookingForm = forms.Form{
 	},
 }
 
-var BookSlotForm = forms.Form{
+var BookAppointmentForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "data",
@@ -1043,7 +1093,7 @@ var BookSlotForm = forms.Form{
 					Key: "json",
 				},
 				forms.IsStringMap{
-					Form: &BookSlotDataForm,
+					Form: &BookAppointmentDataForm,
 				},
 			},
 		},
@@ -1071,7 +1121,7 @@ var BookSlotForm = forms.Form{
 	},
 }
 
-var BookSlotDataForm = forms.Form{
+var BookAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "providerID",
@@ -1112,7 +1162,7 @@ var BookSlotDataForm = forms.Form{
 	},
 }
 
-var CancelSlotForm = forms.Form{
+var CancelAppointmentForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "data",
@@ -1122,7 +1172,7 @@ var CancelSlotForm = forms.Form{
 					Key: "json",
 				},
 				forms.IsStringMap{
-					Form: &CancelSlotDataForm,
+					Form: &CancelAppointmentDataForm,
 				},
 			},
 		},
@@ -1150,7 +1200,7 @@ var CancelSlotForm = forms.Form{
 	},
 }
 
-var CancelSlotDataForm = forms.Form{
+var CancelAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "id",

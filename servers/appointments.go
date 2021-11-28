@@ -88,21 +88,13 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 			Form:    &kbForms.PublishAppointmentsForm,
 			Handler: Appointments.publishAppointments,
 		},
-		"getBookedAppointments": {
-			Form:    &kbForms.GetBookedAppointmentsForm,
-			Handler: Appointments.getBookedAppointments,
+		"bookAppointment": {
+			Form:    &kbForms.BookAppointmentForm,
+			Handler: Appointments.bookAppointment,
 		},
-		"cancelBooking": {
-			Form:    &kbForms.CancelBookingForm,
-			Handler: Appointments.cancelBooking,
-		},
-		"bookSlot": {
-			Form:    &kbForms.BookSlotForm,
-			Handler: Appointments.bookSlot,
-		},
-		"cancelSlot": {
-			Form:    &kbForms.CancelSlotForm,
-			Handler: Appointments.cancelSlot,
+		"cancelAppointment": {
+			Form:    &kbForms.CancelAppointmentForm,
+			Handler: Appointments.cancelAppointment,
 		},
 		"getToken": {
 			Form:    &kbForms.GetTokenForm,
@@ -687,50 +679,49 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 		providerData.ID = hash
 
-		bookings := c.db.Map("bookings", hash)
-
-		allBookings, err := bookings.GetAll()
-
-		if err != nil {
-			services.Log.Error(err)
-			continue
-		}
-
-		appointmentsMap := c.db.Map("appointments", hash)
-		allAppointments, err := appointmentsMap.GetAll()
+		// appointments are stored in a provider-specific key
+		appointmentsByID := c.db.Map("appointmentsByID", hash)
+		allDates, err := appointmentsByID.GetAll()
 
 		if err != nil {
 			services.Log.Error(err)
+			return context.InternalError()
 		}
 
-		appointments := []*services.SignedAppointment{}
+		signedAppointments := make([]*services.SignedAppointment, 0)
 
-		for _, data := range allAppointments {
-			var appointment *services.SignedAppointment
-			if err := json.Unmarshal(data, &appointment); err != nil {
+		for _, date := range allDates {
+			dateKey := append(hash, date...)
+			appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+			allAppointments, err := appointmentsByDate.GetAll()
+			if err != nil {
 				services.Log.Error(err)
-				continue
+				return context.InternalError()
 			}
 
-			if err := json.Unmarshal([]byte(appointment.JSON), &appointment.Data); err != nil {
-				continue
-			}
+			for _, appointment := range allAppointments {
+				var signedAppointment *services.SignedAppointment
+				if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
+					services.Log.Error(err)
+					continue
+				}
 
-			if appointment.JSON == "" || appointment.PublicKey == nil || appointment.Signature == nil || appointment.Data == nil || appointment.Data.Timestamp.Before(time.Now()) {
-				continue
-			}
+				slots := make([]*services.Slot, len(signedAppointment.Bookings))
 
-			appointments = append(appointments, appointment)
+				for i, booking := range signedAppointment.Bookings {
+					slots[i] = &services.Slot{ID: booking.ID}
+				}
+
+				// we remove the bookings as the user is not allowed to see them
+				signedAppointment.Bookings = nil
+				signedAppointment.BookedSlots = slots
+
+				signedAppointments = append(signedAppointments, signedAppointment)
+			}
 		}
 
-		if len(appointments) == 0 {
+		if len(signedAppointments) == 0 {
 			continue
-		}
-
-		bookedSlots := [][]byte{}
-
-		for k, _ := range allBookings {
-			bookedSlots = append(bookedSlots, []byte(k))
 		}
 
 		mediatorKey, err := findActorKey(keys.Mediators, providerKey.PublicKey)
@@ -747,8 +738,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 		providerAppointments := &services.ProviderAppointments{
 			Provider: providerData,
-			Offers:   appointments,
-			Booked:   bookedSlots,
+			Offers:   signedAppointments,
 			KeyChain: keyChain,
 		}
 
@@ -783,22 +773,42 @@ func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params 
 	hash := crypto.Hash(pkd.Signing)
 
 	// appointments are stored in a provider-specific key
-	appointments := c.db.Map("appointments", hash)
-	allAppointments, err := appointments.GetAll()
+	appointmentsByID := c.db.Map("appointmentsByID", hash)
+	allDates, err := appointmentsByID.GetAll()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
 
 	signedAppointments := make([]*services.SignedAppointment, 0)
 
-	for _, appointment := range allAppointments {
-		var signedAppointment *services.SignedAppointment
-		if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
+	for _, date := range allDates {
+		dateKey := append(hash, date...)
+		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+		allAppointments, err := appointmentsByDate.GetAll()
+		if err != nil {
 			services.Log.Error(err)
-			continue
+			return context.InternalError()
 		}
-		signedAppointments = append(signedAppointments, signedAppointment)
+
+		for _, appointment := range allAppointments {
+			var signedAppointment *services.SignedAppointment
+			if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
+				services.Log.Error(err)
+				continue
+			}
+			signedAppointments = append(signedAppointments, signedAppointment)
+		}
 	}
 
 	return context.Result(signedAppointments)
 }
+
+/*
+appointmentsByDate::providerID map[ID]date // maps appointments to dates
+appoinments::providerID::date map[ID]appointment // contains bookings
+*/
 
 func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
 
@@ -835,24 +845,10 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 	hexUID := hex.EncodeToString(hash)
 
 	// appointments are stored in a provider-specific key
-	appointments := transaction.Map("appointments", hash)
-	allAppointments, err := appointments.GetAll()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
+	appointmentsByID := transaction.Map("appointmentsByID", hash)
 
 	// appointments expire automatically after 120 days
 	if err := transaction.Expire("appointments", hash, time.Hour*24*120); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	bookings := c.db.Map("bookings", hash)
-	allBookings, err := bookings.GetAll()
-
-	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
@@ -863,16 +859,26 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 
 	for _, appointment := range params.Data.Offers {
 
-		deletedSlots := make([][]byte, 0)
-
 		// check if there's an existing appointment
-		if data, err := appointments.Get(appointment.Data.ID); err == nil {
+		if date, err := appointmentsByID.Get(appointment.Data.ID); err == nil {
+
+			if err := appointmentsByID.Del(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
+			appointmentsByDate := transaction.Map("appointmentsByDate", append(hash, date...))
 
 			existingAppointment := &services.SignedAppointment{}
-
 			var mapData map[string]interface{}
 
-			if err := json.Unmarshal(data, &mapData); err != nil {
+			if data, err := appointmentsByDate.Get(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := appointmentsByDate.Del(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := json.Unmarshal(data, &mapData); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
 			} else if params, err := kbForms.AppointmentForm.Validate(mapData); err != nil {
@@ -880,6 +886,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 			} else if err := kbForms.AppointmentForm.Coerce(existingAppointment, params); err != nil {
 				services.Log.Error(err)
 			} else {
+				bookings := make([]*services.Booking, 0)
 				for _, existingSlotData := range existingAppointment.Data.SlotData {
 					found := false
 					for _, slotData := range appointment.Data.SlotData {
@@ -888,85 +895,64 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 							break
 						}
 					}
-					if !found {
-						deletedSlots = append(deletedSlots, existingSlotData.ID)
-					}
-				}
-			}
-
-			// we delete slots that have been removed from the new appointment
-			if !params.Data.Reset && len(deletedSlots) > 0 {
-
-				// we delete all bookings for slots that have been removed by the provider
-				for _, slotID := range deletedSlots {
-
-					existingBooking := &services.Booking{}
-
-					if data, err := bookings.Get(slotID); err == nil {
-						// this slot was already booked, we re-enable the associated token
-						if err := json.Unmarshal(data, &existingBooking); err != nil {
-							services.Log.Error(err)
-						} else if err := usedTokens.Del(existingBooking.Token); err != nil {
-							services.Log.Error(err)
+					if found {
+						// this slot has been preserved, if there's any booking for it we migrate it
+						for _, booking := range existingAppointment.Bookings {
+							if bytes.Equal(booking.ID, existingSlotData.ID) {
+								bookings = append(bookings, booking)
+								break
+							}
+						}
+					} else {
+						// this slot has been deleted, if there's any booking for it we delete it
+						for _, booking := range existingAppointment.Bookings {
+							if bytes.Equal(booking.ID, existingSlotData.ID) {
+								// we re-enable the associated token
+								if err := usedTokens.Del(booking.Token); err != nil {
+									services.Log.Error(err)
+									return context.InternalError()
+								}
+								break
+							}
 						}
 					}
-
-					// we delete the booking, if any exists
-					if err := bookings.Del(slotID); err != nil {
-						services.Log.Error(err)
-						return context.InternalError()
-					}
-
 				}
-
+				appointment.Bookings = bookings
 			}
-
 		}
 
-		delete(allAppointments, string(appointment.Data.ID))
-		for _, slot := range appointment.Data.SlotData {
-			if _, ok := allBookings[string(slot.ID)]; ok {
-				bookedSlots += 1
-			} else {
-				openSlots += 1
-			}
-			delete(allBookings, string(slot.ID))
+		date := []byte(appointment.Data.Timestamp.Format("2006-01-02"))
+		// the hash is under our control so it's safe to concatenate it directly with the date
+		dateKey := append(hash, date...)
+
+		appointmentsByDate := transaction.Map("appointmentsByDate", dateKey)
+
+		// appointments will auto-delete one day after their timestamp
+		if err := transaction.Expire("appointmentsByDate", dateKey, appointment.Data.Timestamp.Sub(time.Now())+time.Hour*24); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
 		}
+
+		// ID map will auto-delete after one year (purely for storage reasons, it does not contain sensitive data)
+		if err := transaction.Expire("appointmentsByID", hash, time.Hour*24*365); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+
+		if err := appointmentsByID.Set(appointment.Data.ID, date); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+
+		appointment.UpdatedAt = time.Now()
+
 		if jsonData, err := json.Marshal(appointment); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
-		} else if err := appointments.Set(appointment.Data.ID, jsonData); err != nil {
+		} else if err := appointmentsByDate.Set(appointment.Data.ID, jsonData); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
-	}
-
-	if params.Data.Reset {
-		// we delete appointments that are not referenced in the new data
-		for k, _ := range allAppointments {
-			if err := appointments.Del([]byte(k)); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			}
-		}
-
-		// we delete all bookings for slots that have been removed by the provider
-		for k, data := range allBookings {
-
-			existingBooking := &services.Booking{}
-
-			if err := json.Unmarshal(data, &existingBooking); err != nil {
-				services.Log.Error(err)
-			} else if err := usedTokens.Del(existingBooking.Token); err != nil {
-				services.Log.Error(err)
-			}
-
-			if err := bookings.Del([]byte(k)); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			}
-		}
-
 	}
 
 	success = true
@@ -1015,87 +1001,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 	return context.Acknowledge()
 }
 
-func (c *Appointments) getBookedAppointments(context *jsonrpc.Context, params *services.GetBookedAppointmentsSignedParams) *jsonrpc.Response {
-
-	// make sure this is a valid provider asking for tokens
-	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
-
-	if resp != nil {
-		return resp
-	}
-
-	if expired(params.Data.Timestamp) {
-		return context.Error(410, "signature expired", nil)
-	}
-
-	pkd, err := providerKey.ProviderKeyData()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	// the provider "ID" is the hash of the signing key
-	hash := crypto.Hash(pkd.Signing)
-
-	bookings := c.db.Map("bookings", hash)
-
-	allBookings, err := bookings.GetAll()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	bookingsList := []*services.Booking{}
-
-	for _, v := range allBookings {
-		var booking *services.Booking
-		if err := json.Unmarshal(v, &booking); err != nil {
-			services.Log.Error(err)
-			continue
-		}
-		bookingsList = append(bookingsList, booking)
-	}
-
-	return context.Result(bookingsList)
-}
-
-func (c *Appointments) cancelBooking(context *jsonrpc.Context, params *services.CancelBookingSignedParams) *jsonrpc.Response {
-
-	// make sure this is a valid provider asking for tokens
-	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
-
-	if resp != nil {
-		return resp
-	}
-
-	if expired(params.Data.Timestamp) {
-		return context.Error(410, "signature expired", nil)
-	}
-
-	pkd, err := providerKey.ProviderKeyData()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	// the provider "ID" is the hash of the signing key
-	hash := crypto.Hash(pkd.Signing)
-
-	bookings := c.db.Map("bookings", hash)
-
-	if err := bookings.Del(params.Data.ID); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	return context.Acknowledge()
-
-}
-
-func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookSlotSignedParams) *jsonrpc.Response {
+func (c *Appointments) bookAppointment(context *jsonrpc.Context, params *services.BookAppointmentSignedParams) *jsonrpc.Response {
 
 	success := false
 	transaction, finalize, err := c.transaction(&success)
@@ -1106,6 +1012,8 @@ func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookS
 	}
 
 	defer finalize()
+
+	var result interface{}
 
 	usedTokens := transaction.Set("bookings", []byte("tokens"))
 
@@ -1136,92 +1044,96 @@ func (c *Appointments) bookSlot(context *jsonrpc.Context, params *services.BookS
 
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
-		services.Log.Error(err)
+		services.Log.Errorf("Cannot verify with bytes: %s", err)
 		return context.InternalError()
 	} else if !ok {
 		return context.Error(400, "invalid signature", nil)
 	}
 
-	appointmentsMap := c.db.Map("appointments", params.Data.ProviderID)
-	allAppointments, err := appointmentsMap.GetAll()
+	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
 
-	if err != nil {
-		services.Log.Error(err)
-	}
-
-	appointments := []*services.SignedAppointment{}
-
-	for _, data := range allAppointments {
-		var appointment *services.SignedAppointment
-		if err := json.Unmarshal(data, &appointment); err != nil {
-			services.Log.Error(err)
-			continue
-		}
-		if err := json.Unmarshal([]byte(appointment.JSON), &appointment.Data); err != nil {
-			services.Log.Error(err)
-			continue
-		}
-		appointments = append(appointments, appointment)
-	}
-
-	var appointment *services.Appointment
-
-	// we find the right appointment
-findAppointment:
-	for _, appt := range appointments {
-		for _, slot := range appt.Data.SlotData {
-			if bytes.Equal(slot.ID, params.Data.ID) {
-				appointment = appt.Data
-				break findAppointment
-			}
-		}
-	}
-
-	if appointment == nil {
-		return context.NotFound()
-	}
-
-	bookings := transaction.Map("bookings", params.Data.ProviderID)
-
-	// booking expire automatically after 120 days
-	if err := transaction.Expire("bookings", params.Data.ProviderID, time.Hour*24*120); err != nil {
-		services.Log.Error(err)
+	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {
+		services.Log.Errorf("Cannot get appointment by ID: %v", err)
 		return context.InternalError()
-	}
+	} else {
 
-	existingBooking := &services.Booking{}
+		dateKey := append(params.Data.ProviderID, date...)
+		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 
-	if existingBookingData, err := bookings.Get(params.Data.ID); err != nil {
-		if err != databases.NotFound {
-			services.Log.Error(err)
+		if appointment, err := appointmentsByDate.Get(params.Data.ID); err != nil {
+			services.Log.Errorf("Cannot get appointment by date: %v", err)
 			return context.InternalError()
+		} else {
+			signedAppointment := &services.SignedAppointment{}
+			var mapData map[string]interface{}
+			if err := json.Unmarshal(appointment, &mapData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if params, err := kbForms.AppointmentForm.Validate(mapData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := kbForms.AppointmentForm.Coerce(signedAppointment, params); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+			// we try to find an open slot
+
+			foundSlot := false
+			for _, slotData := range signedAppointment.Data.SlotData {
+
+				found := false
+
+				for _, booking := range signedAppointment.Bookings {
+					if bytes.Equal(booking.ID, slotData.ID) {
+						found = true
+						break
+					}
+				}
+
+				if found {
+					continue
+				}
+
+				// this slot is open, we book it!
+
+				booking := &services.Booking{
+					PublicKey:     params.PublicKey,
+					ID:            slotData.ID,
+					Token:         token,
+					EncryptedData: params.Data.EncryptedData,
+				}
+
+				signedAppointment.Bookings = append(signedAppointment.Bookings, booking)
+				foundSlot = true
+
+				result = booking
+
+				break
+			}
+
+			if !foundSlot {
+				return context.NotFound()
+			}
+
+			// we mark the token as used
+			if err := usedTokens.Add(token); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
+			signedAppointment.UpdatedAt = time.Now()
+
+			// we update the appointment
+			if jsonData, err := json.Marshal(signedAppointment); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := appointmentsByDate.Set(signedAppointment.Data.ID, jsonData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
 		}
-	} else if err := json.Unmarshal(existingBookingData, &existingBooking); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !bytes.Equal(existingBooking.PublicKey, params.PublicKey) {
-		// the public key does not match
-		return context.Error(401, "permission denied", nil)
-	}
 
-	booking := &services.Booking{
-		PublicKey:     params.PublicKey,
-		ID:            params.Data.ID,
-		Token:         token,
-		EncryptedData: params.Data.EncryptedData,
-	}
-
-	if data, err := json.Marshal(booking); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if err := bookings.Set(params.Data.ID, data); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	if err := usedTokens.Add(token); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
 	}
 
 	if c.meter != nil {
@@ -1242,11 +1154,11 @@ findAppointment:
 
 	}
 
-	return context.Acknowledge()
+	return context.Result(result)
 
 }
 
-func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.CancelSlotSignedParams) *jsonrpc.Response {
+func (c *Appointments) cancelAppointment(context *jsonrpc.Context, params *services.CancelAppointmentSignedParams) *jsonrpc.Response {
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Error(err)
@@ -1254,43 +1166,6 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.Can
 	} else if !ok {
 		return context.Error(400, "invalid signature", nil)
 	}
-
-	success := false
-	transaction, finalize, err := c.transaction(&success)
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer finalize()
-
-	bookings := transaction.Map("bookings", params.Data.ProviderID)
-
-	existingBooking := &services.Booking{}
-
-	if existingBookingData, err := bookings.Get(params.Data.ID); err != nil {
-		if err == databases.NotFound {
-			return context.NotFound()
-		}
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if err := json.Unmarshal(existingBookingData, &existingBooking); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !bytes.Equal(existingBooking.PublicKey, params.PublicKey) {
-		// the public key does not match
-		return context.Error(401, "permission denied", nil)
-	}
-
-	if err := bookings.Del(params.Data.ID); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	// we reenabe the token
-
-	usedTokens := transaction.Set("bookings", []byte("tokens"))
 
 	signedData := &crypto.SignedStringData{
 		Data:      params.Data.SignedTokenData.JSON,
@@ -1306,30 +1181,80 @@ func (c *Appointments) cancelSlot(context *jsonrpc.Context, params *services.Can
 		return context.Error(400, "invalid signature", nil)
 	}
 
-	token := params.Data.SignedTokenData.Data.Token
+	success := false
+	transaction, finalize, err := c.transaction(&success)
 
-	if ok, err := usedTokens.Has(token); err != nil {
-		services.Log.Error()
+	if err != nil {
+		services.Log.Error(err)
 		return context.InternalError()
-	} else if ok {
-		if err := usedTokens.Del(token); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
 	}
 
-	if c.meter != nil {
+	defer finalize()
+	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
 
-		now := time.Now().UTC().UnixNano()
+	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {
+		services.Log.Errorf("Cannot get appointment by ID: %v", err)
+		return context.InternalError()
+	} else {
 
-		for _, twt := range tws {
+		dateKey := append(params.Data.ProviderID, date...)
+		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 
-			// generate the time window
-			tw := twt(now)
-
-			// we add the info that a booking was made
-			if err := c.meter.Add("queues", "cancellations", map[string]string{}, tw, 1); err != nil {
+		if appointment, err := appointmentsByDate.Get(params.Data.ID); err != nil {
+			services.Log.Errorf("Cannot get appointment by date: %v", err)
+			return context.InternalError()
+		} else {
+			signedAppointment := &services.SignedAppointment{}
+			var mapData map[string]interface{}
+			if err := json.Unmarshal(appointment, &mapData); err != nil {
 				services.Log.Error(err)
+				return context.InternalError()
+			} else if params, err := kbForms.AppointmentForm.Validate(mapData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := kbForms.AppointmentForm.Coerce(signedAppointment, params); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
+			// we try to find an open slot
+
+			newBookings := make([]*services.Booking, 0)
+
+			token := params.Data.SignedTokenData.Data.Token
+
+			found := false
+			for _, booking := range signedAppointment.Bookings {
+				if bytes.Equal(booking.Token, token) {
+					found = true
+					continue
+				}
+				newBookings = append(newBookings, booking)
+			}
+
+			if !found {
+				return context.NotFound()
+			}
+
+			signedAppointment.Bookings = newBookings
+
+			usedTokens := transaction.Set("bookings", []byte("tokens"))
+
+			// we mark the token as unused
+			if err := usedTokens.Del(token); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
+			signedAppointment.UpdatedAt = time.Now()
+
+			// we update the appointment
+			if jsonData, err := json.Marshal(signedAppointment); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := appointmentsByDate.Set(signedAppointment.Data.ID, jsonData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
 			}
 
 		}

@@ -141,27 +141,27 @@ func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Res
 
 }
 
-func (a *AppointmentsClient) ConfirmProvider(provider interface{}, mediator *crypto.Actor) (*Response, error) {
+func (a *AppointmentsClient) ConfirmProvider(params *services.ConfirmProviderParams, mediator *crypto.Actor) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) AddCodes(codes interface{}) (*Response, error) {
+func (a *AppointmentsClient) AddCodes(params *services.AddCodesParams) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) UploadDistances(distances interface{}) (*Response, error) {
+func (a *AppointmentsClient) UploadDistances(params *services.UploadDistancesParams) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) GetStats(params interface{}) (*Response, error) {
+func (a *AppointmentsClient) GetStats(params *services.GetStatsParams) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) GetAppointmentsByZipCode(params interface{}) (*Response, error) {
+func (a *AppointmentsClient) GetAppointmentsByZipCode(params *services.GetAppointmentsByZipCodeParams) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) GetProviderAppointments(params interface{}) (*Response, error) {
+func (a *AppointmentsClient) GetProviderAppointments(params *services.GetProviderAppointmentsParams) (*Response, error) {
 	return nil, nil
 }
 
@@ -169,19 +169,11 @@ func (a *AppointmentsClient) PublishAppointments(params interface{}) (*Response,
 	return nil, nil
 }
 
-func (a *AppointmentsClient) GetBookedAppointments(params interface{}) (*Response, error) {
+func (a *AppointmentsClient) BookAppointment(params interface{}) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) CancelBooking(params interface{}) (*Response, error) {
-	return nil, nil
-}
-
-func (a *AppointmentsClient) BookSlot(params interface{}) (*Response, error) {
-	return nil, nil
-}
-
-func (a *AppointmentsClient) CancelSlot(params interface{}) (*Response, error) {
+func (a *AppointmentsClient) CancelAppointment(params interface{}) (*Response, error) {
 	return nil, nil
 }
 
