@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-type ConfirmProviderResponse struct {
+type ConfirmProviderResult struct {
 	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
 	SignedKeyData         *SignedKeyData         `json:"signedKeyData"`
 }
@@ -86,13 +86,13 @@ func TestConfirmProvider(t *testing.T) {
 		t.Fatalf("expected a 200 status code, got %d instead", resp.StatusCode)
 	}
 
-	response := &ConfirmProviderResponse{}
+	result := &ConfirmProviderResult{}
 
-	if err := resp.CoerceResult(response); err != nil {
+	if err := resp.CoerceResult(result); err != nil {
 		t.Fatal(err)
 	}
 
-	if keyData, err := response.SignedKeyData.KeyData(); err != nil {
+	if keyData, err := result.SignedKeyData.KeyData(); err != nil {
 		t.Fatal(err)
 	} else if keyData.QueueData.ZipCode != "10707" {
 		t.Fatalf("zip code does not match")
