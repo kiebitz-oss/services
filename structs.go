@@ -16,17 +16,15 @@
 
 package services
 
-type Queue struct {
-	Name                string                 `json:"name"`
-	ID                  []byte                 `json:"id"`
-	Type                string                 `json:"type"`
-	Data                map[string]interface{} `json:"data"`
-	PublicKey           []byte                 `json:"publicKey"`
-	EncryptedPrivateKey *ECDHEncryptedData     `json:"encryptedPrivateKey,omitempty"`
-}
+import (
+	"github.com/kiebitz-oss/services/crypto"
+)
 
-type ECDHEncryptedData struct {
-	IV        []byte `json:"iv"`
-	Data      []byte `json:"data"`
-	PublicKey []byte `json:"publicKey"`
+type Queue struct {
+	Name                string                    `json:"name"`
+	ID                  []byte                    `json:"id"`
+	Type                string                    `json:"type"`
+	Data                map[string]interface{}    `json:"data"`
+	PublicKey           []byte                    `json:"publicKey"`
+	EncryptedPrivateKey *crypto.ECDHEncryptedData `json:"encryptedPrivateKey,omitempty"`
 }

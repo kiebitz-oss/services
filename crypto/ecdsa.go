@@ -33,6 +33,14 @@ func GenerateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }
 
+func GenerateWebKey(name, keyType string) (*Key, error) {
+	if key, err := GenerateKey(); err != nil {
+		return nil, err
+	} else {
+		return AsSettingsKey(key, name, keyType)
+	}
+}
+
 type JWKPrivateKey struct {
 	Curve       string   `json:"crv"`
 	D           string   `json:"d"`

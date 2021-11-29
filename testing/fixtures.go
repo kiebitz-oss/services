@@ -50,7 +50,7 @@ func SetupFixtures(fixtureConfigs []FC) (map[string]interface{}, error) {
 		var err error
 		if result, err = fixtureConfig.F.Setup(fixtures); err != nil {
 			services.Log.Errorf("error creating fixture %s", fixtureConfig.Name)
-			return nil, err
+			return fixtures, err
 		}
 		if fixtureConfig.Name == "" {
 			// we skip fixtures with empty names (they only provide side-effects)

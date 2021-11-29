@@ -24,15 +24,24 @@ import (
 )
 
 type Provider struct {
-	Name       string
-	Street     string
-	City       string
-	ZipCode    string
-	Accessible bool
+	Name        string
+	Street      string
+	City        string
+	ZipCode     string
+	Description string
+	Accessible  bool
+	Confirm     bool
+	StoreData   bool
 }
 
 // Creates a new provider and
 func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
+
+	settings, ok := fixtures["settings"].(*services.Settings)
+
+	if !ok {
+		return nil, fmt.Errorf("settings missing")
+	}
 
 	client, ok := fixtures["client"].(*helpers.Client)
 
@@ -46,8 +55,6 @@ func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("mediator missing")
 	}
 
-	services.Log.Info(client)
-
 	actor, err := crypto.MakeActor("provider")
 
 	if err != nil {
@@ -56,15 +63,41 @@ func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
 	provider := &helpers.Provider{
 		Actor: actor,
+		PublicData: &services.ProviderData{
+			Name:        c.Name,
+			Street:      c.Street,
+			City:        c.City,
+			ZipCode:     c.ZipCode,
+			Description: c.Description,
+		},
 		QueueData: &services.ProviderQueueData{
 			ZipCode:    c.ZipCode,
 			Accessible: c.Accessible,
 		},
 	}
 
-	// we add the provider public keys to the backend
-	if _, err := client.Appointments.ConfirmProvider(provider, mediator); err != nil {
-		return nil, err
+	providerDataKey := settings.Appointments.Key("provider")
+
+	if providerDataKey == nil {
+		return nil, fmt.Errorf("provider data key missing")
+	}
+
+	if c.StoreData {
+		// we store the provider data in the backend
+		if resp, err := client.Appointments.StoreProviderData(provider, providerDataKey); err != nil {
+			return nil, err
+		} else if resp.StatusCode != 200 {
+			return nil, fmt.Errorf("cannot store provider data")
+		}
+	}
+
+	if c.Confirm {
+		// we confirm the provider data
+		if resp, err := client.Appointments.ConfirmProvider(provider, mediator); err != nil {
+			return nil, err
+		} else if resp.StatusCode != 200 {
+			return nil, fmt.Errorf("cannot confirm provider data")
+		}
 	}
 
 	return provider, nil

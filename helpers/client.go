@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
+	"github.com/kiebitz-oss/services/jsonrpc"
+	"github.com/kiprotect/go-helpers/forms"
 	"io"
 	"net/http"
 	"time"
@@ -20,20 +22,58 @@ type Client struct {
 
 type Response struct {
 	*http.Response
+	body []byte
+}
+
+func (r *Response) read() error {
+	if r.body != nil {
+		return nil // already read the body
+	}
+
+	defer r.Response.Body.Close()
+
+	if body, err := io.ReadAll(r.Response.Body); err != nil {
+		return err
+	} else {
+		r.body = body
+		return nil
+	}
+}
+
+func (r *Response) CoerceResult(target interface{}) error {
+	if bytes, err := r.Bytes(); err != nil {
+		return err
+	} else {
+		response := &jsonrpc.Response{}
+		if err := json.Unmarshal(bytes, response); err != nil {
+			return err
+		}
+		if response.Result == nil {
+			return fmt.Errorf("no result")
+		}
+		return forms.Coerce(target, response.Result)
+	}
 }
 
 func (r *Response) JSON() (map[string]interface{}, error) {
 	var value map[string]interface{}
 
-	defer r.Response.Body.Close()
-
-	if body, err := io.ReadAll(r.Response.Body); err != nil {
+	if err := r.read(); err != nil {
 		return nil, err
-	} else if err = json.Unmarshal(body, &value); err != nil {
+	}
+
+	if err := json.Unmarshal(r.body, &value); err != nil {
 		return nil, err
 	}
 
 	return value, nil
+}
+
+func (r *Response) Bytes() ([]byte, error) {
+	if err := r.read(); err != nil {
+		return nil, err
+	}
+	return r.body, nil
 }
 
 func MakeClient(settings *services.Settings) *Client {
@@ -142,16 +182,50 @@ func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Res
 }
 
 type Provider struct {
-	Actor     *crypto.Actor
-	QueueData *services.ProviderQueueData
+	Actor      *crypto.Actor
+	DataKey    *crypto.Key
+	QueueData  *services.ProviderQueueData
+	PublicData *services.ProviderData
 }
 
 func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypto.Actor) (*Response, error) {
 
+	keyData := &services.KeyData{
+		Signing:    provider.Actor.SigningKey.PublicKey,
+		Encryption: provider.Actor.EncryptionKey.PublicKey,
+		QueueData:  provider.QueueData,
+	}
+
+	signedKeyData, err := keyData.Sign(mediator.SigningKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	providerData := []byte("test")
+
+	ephemeralKey, err := crypto.GenerateWebKey("ephemeral-mediator", "ecdh")
+
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedProviderData, err := ephemeralKey.Encrypt(providerData, provider.Actor.EncryptionKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	signedProviderData, err := provider.PublicData.Sign(mediator.SigningKey)
+
+	if err != nil {
+		return nil, err
+	}
+
 	params := &services.ConfirmProviderParams{
-		PublicProviderData:    &services.SignedProviderData{},
-		EncryptedProviderData: &services.ECDHEncryptedData{},
-		SignedKeyData:         &services.SignedKeyData{},
+		PublicProviderData:    signedProviderData,
+		EncryptedProviderData: encryptedProviderData,
+		SignedKeyData:         signedKeyData,
 	}
 
 	return a.requester("confirmProvider", params, mediator.SigningKey)
@@ -193,11 +267,58 @@ func (a *AppointmentsClient) GetToken(params interface{}) (*Response, error) {
 	return nil, nil
 }
 
-func (a *AppointmentsClient) StoreProviderData(params interface{}) (*Response, error) {
-	return nil, nil
+type ConfirmProviderData struct {
+	Data       *services.ProviderData `json:"data"`
+	PublicKeys *PublicKeys            `json:"publicKeys"`
 }
 
-func (a *AppointmentsClient) CheckProviderData(params interface{}) (*Response, error) {
+type PublicKeys struct {
+	Signing    []byte `json:"signing"`
+	Encryption []byte `json:"encryption"`
+}
+
+func (a *AppointmentsClient) StoreProviderData(provider *Provider, dataKey *crypto.Key) (*Response, error) {
+
+	var err error
+	provider.DataKey, err = crypto.GenerateWebKey("ephemeral-provider", "ecdh")
+
+	if err != nil {
+		return nil, err
+	}
+
+	confirmProviderData := &ConfirmProviderData{
+		Data: provider.PublicData,
+		PublicKeys: &PublicKeys{
+			Signing:    provider.Actor.SigningKey.PublicKey,
+			Encryption: provider.Actor.EncryptionKey.PublicKey,
+		},
+	}
+
+	data, err := json.Marshal(confirmProviderData)
+
+	if err != nil {
+		return nil, err
+	}
+
+	encryptedProviderData, err := provider.DataKey.Encrypt(data, dataKey)
+	storeProviderDataParams := &services.StoreProviderDataParams{
+		EncryptedData: encryptedProviderData,
+		Code:          nil,
+	}
+
+	return a.requester("storeProviderData", storeProviderDataParams, provider.Actor.SigningKey)
+}
+
+func (a *AppointmentsClient) CheckProviderData(provider *Provider) (*Response, error) {
+
+	t := time.Now()
+
+	params := &services.CheckProviderDataParams{
+		Timestamp: &t,
+	}
+
+	return a.requester("checkProviderData", params, provider.Actor.SigningKey)
+
 	return nil, nil
 }
 

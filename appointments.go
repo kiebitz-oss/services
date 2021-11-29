@@ -2,14 +2,15 @@ package services
 
 import (
 	"encoding/json"
+	"github.com/kiebitz-oss/services/crypto"
 	"time"
 )
 
 // ConfirmProvider
 
 type ConfirmProviderSignedParams struct {
-	JSON      string                 `json:"json"`
-	Data      *ConfirmProviderParams `json:"data"`
+	JSON      string                 `json:"data" coerce:"name:json"`
+	Data      *ConfirmProviderParams `json:"-" coerce:"name:data"`
 	Signature []byte                 `json:"signature"`
 	PublicKey []byte                 `json:"publicKey"`
 }
@@ -17,16 +18,31 @@ type ConfirmProviderSignedParams struct {
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
 type ConfirmProviderParams struct {
-	PublicProviderData    *SignedProviderData `json:"publicProviderData"`
-	EncryptedProviderData *ECDHEncryptedData  `json:"encryptedProviderData"`
-	SignedKeyData         *SignedKeyData      `json:"signedKeyData"`
+	PublicProviderData    *SignedProviderData       `json:"publicProviderData"`
+	EncryptedProviderData *crypto.ECDHEncryptedData `json:"encryptedProviderData"`
+	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
 }
 
 type SignedKeyData struct {
-	JSON      string   `json:"json"`
-	Data      *KeyData `json:"data"`
+	JSON      string   `json:"data" coerce:"name:json"`
+	Data      *KeyData `json:"-" coerce:"name:data"`
 	Signature []byte   `json:"signature"`
 	PublicKey []byte   `json:"publicKey"`
+}
+
+func (k *KeyData) Sign(key *crypto.Key) (*SignedKeyData, error) {
+	if data, err := json.Marshal(k); err != nil {
+		return nil, err
+	} else if signedData, err := key.Sign(data); err != nil {
+		return nil, err
+	} else {
+		return &SignedKeyData{
+			JSON:      string(data),
+			Signature: signedData.Signature,
+			PublicKey: signedData.PublicKey,
+			Data:      k,
+		}, nil
+	}
 }
 
 type KeyData struct {
@@ -43,8 +59,8 @@ type ProviderQueueData struct {
 // AddMediatorPublicKeys
 
 type AddMediatorPublicKeysSignedParams struct {
-	JSON      string                       `json:"json"`
-	Data      *AddMediatorPublicKeysParams `json:"data"`
+	JSON      string                       `json:"data" coerce:"name:json"`
+	Data      *AddMediatorPublicKeysParams `json:"-" coerce:"name:data"`
 	Signature []byte                       `json:"signature"`
 	PublicKey []byte                       `json:"publicKey"`
 }
@@ -58,8 +74,8 @@ type AddMediatorPublicKeysParams struct {
 // AddCodes
 
 type AddCodesParams struct {
-	JSON      string     `json:"json"`
-	Data      *CodesData `json:"data"`
+	JSON      string     `json:"data" coerce:"name:json"`
+	Data      *CodesData `json:"-" coerce:"name:data"`
 	Signature []byte     `json:"signature"`
 	PublicKey []byte     `json:"publicKey"`
 }
@@ -73,8 +89,8 @@ type CodesData struct {
 // UploadDistances
 
 type UploadDistancesSignedParams struct {
-	JSON      string                 `json:"json"`
-	Data      *UploadDistancesParams `json:"data"`
+	JSON      string                 `json:"data" coerce:"name:json"`
+	Data      *UploadDistancesParams `json:"-" coerce:"name:data"`
 	Signature []byte                 `json:"signature"`
 	PublicKey []byte                 `json:"publicKey"`
 }
@@ -159,10 +175,25 @@ type GetTokenParams struct {
 }
 
 type SignedTokenData struct {
-	JSON      string     `json:"json"`
-	Data      *TokenData `json:"data"`
+	JSON      string     `json:"data" coerce:"name:json"`
+	Data      *TokenData `json:"-" coerce:"name:data"`
 	Signature []byte     `json:"signature"`
 	PublicKey []byte     `json:"publicKey"`
+}
+
+func (k *TokenData) Sign(key *crypto.Key) (*SignedTokenData, error) {
+	if data, err := json.Marshal(k); err != nil {
+		return nil, err
+	} else if signedData, err := key.Sign(data); err != nil {
+		return nil, err
+	} else {
+		return &SignedTokenData{
+			JSON:      string(data),
+			Signature: signedData.Signature,
+			PublicKey: signedData.PublicKey,
+			Data:      k,
+		}, nil
+	}
 }
 
 type TokenData struct {
@@ -197,6 +228,21 @@ type SignedProviderData struct {
 	PublicKey []byte        `json:"publicKey"`
 }
 
+func (k *ProviderData) Sign(key *crypto.Key) (*SignedProviderData, error) {
+	if data, err := json.Marshal(k); err != nil {
+		return nil, err
+	} else if signedData, err := key.Sign(data); err != nil {
+		return nil, err
+	} else {
+		return &SignedProviderData{
+			JSON:      string(data),
+			Signature: signedData.Signature,
+			PublicKey: signedData.PublicKey,
+			Data:      k,
+		}, nil
+	}
+}
+
 type ProviderData struct {
 	Name        string `json:"name"`
 	Street      string `json:"street"`
@@ -208,8 +254,8 @@ type ProviderData struct {
 // GetProviderAppointments
 
 type GetProviderAppointmentsSignedParams struct {
-	JSON      string                         `json:"json"`
-	Data      *GetProviderAppointmentsParams `json:"data"`
+	JSON      string                         `json:"data" coerce:"name:json"`
+	Data      *GetProviderAppointmentsParams `json:"-" coerce:"name:data"`
 	Signature []byte                         `json:"signature"`
 	PublicKey []byte                         `json:"publicKey"`
 }
@@ -221,8 +267,8 @@ type GetProviderAppointmentsParams struct {
 // PublishAppointments
 
 type PublishAppointmentsSignedParams struct {
-	JSON      string                     `json:"json"`
-	Data      *PublishAppointmentsParams `json:"data"`
+	JSON      string                     `json:"data" coerce:"name:json"`
+	Data      *PublishAppointmentsParams `json:"-" coerce:"name:data"`
 	Signature []byte                     `json:"signature"`
 	PublicKey []byte                     `json:"publicKey"`
 }
@@ -259,32 +305,32 @@ type Slot struct {
 // BookAppointment
 
 type BookAppointmentSignedParams struct {
-	JSON      string                 `json:"json"`
-	Data      *BookAppointmentParams `json:"data"`
+	JSON      string                 `json:"data" coerce:"name:json"`
+	Data      *BookAppointmentParams `json:"-" coerce:"name:data"`
 	Signature []byte                 `json:"signature"`
 	PublicKey []byte                 `json:"publicKey"`
 }
 
 type BookAppointmentParams struct {
-	ProviderID      []byte             `json:"providerID"`
-	ID              []byte             `json:"id"`
-	EncryptedData   *ECDHEncryptedData `json:"encryptedData"`
-	SignedTokenData *SignedTokenData   `json:"signedTokenData"`
-	Timestamp       *time.Time         `json:"timestamp"`
+	ProviderID      []byte                    `json:"providerID"`
+	ID              []byte                    `json:"id"`
+	EncryptedData   *crypto.ECDHEncryptedData `json:"encryptedData"`
+	SignedTokenData *SignedTokenData          `json:"signedTokenData"`
+	Timestamp       *time.Time                `json:"timestamp"`
 }
 
 type Booking struct {
-	ID            []byte             `json:"id"`
-	PublicKey     []byte             `json:"publicKey"`
-	Token         []byte             `json:"token"`
-	EncryptedData *ECDHEncryptedData `json:"encryptedData"`
+	ID            []byte                    `json:"id"`
+	PublicKey     []byte                    `json:"publicKey"`
+	Token         []byte                    `json:"token"`
+	EncryptedData *crypto.ECDHEncryptedData `json:"encryptedData"`
 }
 
 // GetAppointment
 
 type GetAppointmentSignedParams struct {
-	JSON      string                `json:"json"`
-	Data      *GetAppointmentParams `json:"data"`
+	JSON      string                `json:"data" coerce:"name:json"`
+	Data      *GetAppointmentParams `json:"-" coerce:"name:data"`
 	Signature []byte                `json:"signature"`
 	PublicKey []byte                `json:"publicKey"`
 }
@@ -298,8 +344,8 @@ type GetAppointmentParams struct {
 // CancelAppointment
 
 type CancelAppointmentSignedParams struct {
-	JSON      string                   `json:"json"`
-	Data      *CancelAppointmentParams `json:"data"`
+	JSON      string                   `json:"data" coerce:"name:json"`
+	Data      *CancelAppointmentParams `json:"-" coerce:"name:data"`
 	Signature []byte                   `json:"signature"`
 	PublicKey []byte                   `json:"publicKey"`
 }
@@ -313,8 +359,8 @@ type CancelAppointmentParams struct {
 // CheckProviderData
 
 type CheckProviderDataSignedParams struct {
-	JSON      string                   `json:"json"`
-	Data      *CheckProviderDataParams `json:"data"`
+	JSON      string                   `json:"data" coerce:"name:json"`
+	Data      *CheckProviderDataParams `json:"-" coerce:"name:data"`
 	Signature []byte                   `json:"signature"`
 	PublicKey []byte                   `json:"publicKey"`
 }
@@ -326,22 +372,22 @@ type CheckProviderDataParams struct {
 // StoreProviderData
 
 type StoreProviderDataSignedParams struct {
-	JSON      string                   `json:"json"`
-	Data      *StoreProviderDataParams `json:"data"`
+	JSON      string                   `json:"data" coerce:"name:json"`
+	Data      *StoreProviderDataParams `json:"-" coerce:"name:data"`
 	Signature []byte                   `json:"signature"`
 	PublicKey []byte                   `json:"publicKey"`
 }
 
 type StoreProviderDataParams struct {
-	EncryptedData *ECDHEncryptedData `json:"encryptedData"`
-	Code          []byte             `json:"code"`
+	EncryptedData *crypto.ECDHEncryptedData `json:"encryptedData"`
+	Code          []byte                    `json:"code"`
 }
 
 // GetPendingProviderData
 
 type GetPendingProviderDataSignedParams struct {
-	JSON      string                        `json:"json"`
-	Data      *GetPendingProviderDataParams `json:"data"`
+	JSON      string                        `json:"data" coerce:"name:json"`
+	Data      *GetPendingProviderDataParams `json:"-" coerce:"name:data"`
 	Signature []byte                        `json:"signature"`
 	PublicKey []byte                        `json:"publicKey"`
 }
@@ -353,8 +399,8 @@ type GetPendingProviderDataParams struct {
 // GetVerifiedProviderData
 
 type GetVerifiedProviderDataSignedParams struct {
-	JSON      string                         `json:"json"`
-	Data      *GetVerifiedProviderDataParams `json:"data"`
+	JSON      string                         `json:"data" coerce:"name:json"`
+	Data      *GetVerifiedProviderDataParams `json:"-" coerce:"name:data"`
 	Signature []byte                         `json:"signature"`
 	PublicKey []byte                         `json:"publicKey"`
 }

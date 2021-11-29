@@ -27,6 +27,25 @@ type Key struct {
 	PrivateKey []byte `json:"private_key,omitempty"`
 }
 
+func (k *Key) Encrypt(data []byte, recipient *Key) (*ECDHEncryptedData, error) {
+	if privateKey, err := LoadPrivateKey(k.PrivateKey); err != nil {
+		return nil, err
+	} else if publicKey, err := LoadPublicKey(recipient.PublicKey); err != nil {
+		return nil, err
+	} else {
+		key := DeriveKey(publicKey, privateKey)
+		if encryptedData, err := Encrypt(data, key); err != nil {
+			return nil, err
+		} else {
+			return &ECDHEncryptedData{
+				IV:        encryptedData.IV,
+				Data:      encryptedData.Data,
+				PublicKey: k.PublicKey,
+			}, nil
+		}
+	}
+}
+
 func (k *Key) SignString(data string) (*SignedStringData, error) {
 	if signature, err := k.Sign([]byte(data)); err != nil {
 		return nil, err

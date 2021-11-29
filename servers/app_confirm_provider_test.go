@@ -1,12 +1,46 @@
 package servers_test
 
 import (
-	"github.com/kiebitz-oss/services"
+	"encoding/json"
 	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
 )
+
+type ConfirmProviderResponse struct {
+	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
+	SignedKeyData         *SignedKeyData         `json:"signedKeyData"`
+}
+
+type SignedKeyData struct {
+	Data      string `json:"data"`
+	Signature string `json:"signature"`
+	PublicKey string `json:"publicKey"`
+}
+
+func (s *SignedKeyData) KeyData() (*KeyData, error) {
+	keyData := &KeyData{}
+	if err := json.Unmarshal([]byte(s.Data), keyData); err != nil {
+		return nil, err
+	} else {
+		return keyData, nil
+	}
+}
+
+type KeyData struct {
+	QueueData *QueueData `json:"queueData"`
+}
+
+type QueueData struct {
+	ZipCode string `json:"zipCode"`
+}
+
+type EncryptedProviderData struct {
+	Data      string `json:"data"`
+	IV        string `json:"iv"`
+	PublicKey string `json:"publicKey"`
+}
 
 func TestConfirmProvider(t *testing.T) {
 
@@ -25,29 +59,43 @@ func TestConfirmProvider(t *testing.T) {
 		at.FC{af.Mediator{}, "mediator"},
 
 		// we create a mediator
-		at.FC{af.Provider{}, "provider"},
+		at.FC{af.Provider{
+			ZipCode:   "10707",
+			StoreData: true,
+			Confirm:   true,
+		}, "provider"},
 	}
 
 	fixtures, err := at.SetupFixtures(fixturesConfig)
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	defer at.TeardownFixtures(fixturesConfig, fixtures)
 
-	client := fixtures["client"].(*helpers.Client)
-
-	resp, err := client.Appointments.GetKeys()
-
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	services.Log.Info(resp.JSON())
+	client := fixtures["client"].(*helpers.Client)
+	provider := fixtures["provider"].(*helpers.Provider)
+
+	resp, err := client.Appointments.CheckProviderData(provider)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if resp.StatusCode != 200 {
 		t.Fatalf("expected a 200 status code, got %d instead", resp.StatusCode)
+	}
+
+	response := &ConfirmProviderResponse{}
+
+	if err := resp.CoerceResult(response); err != nil {
+		t.Fatal(err)
+	}
+
+	if keyData, err := response.SignedKeyData.KeyData(); err != nil {
+		t.Fatal(err)
+	} else if keyData.QueueData.ZipCode != "10707" {
+		t.Fatalf("zip code does not match")
 	}
 
 }

@@ -20,6 +20,12 @@ import (
 	"crypto/ecdsa"
 )
 
+type ECDHEncryptedData struct {
+	IV        []byte `json:"iv"`
+	Data      []byte `json:"data"`
+	PublicKey []byte `json:"publicKey"`
+}
+
 func pad(bytes []byte, n int) []byte {
 	for len(bytes) < n {
 		// we pad the number with zeros, most significant bits first!

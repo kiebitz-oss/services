@@ -26,12 +26,11 @@ func TestAppointmentsApi(t *testing.T) {
 	}
 
 	fixtures, err := at.SetupFixtures(fixturesConfig)
+	defer at.TeardownFixtures(fixturesConfig, fixtures)
 
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	defer at.TeardownFixtures(fixturesConfig, fixtures)
 
 	client := fixtures["client"].(*helpers.Client)
 

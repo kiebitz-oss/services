@@ -82,7 +82,8 @@ func NotFound(c *http.Context) {
 func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string) (*JSONRPCServer, error) {
 
 	server := &JSONRPCServer{
-		settings: settings,
+		settings:      settings,
+		metricsPrefix: metricsPrefix,
 	}
 
 	routeGroups := []*http.RouteGroup{
@@ -114,7 +115,7 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 		BindAddress: settings.BindAddress,
 	}
 
-	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups, metricsPrefix); err != nil {
+	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups, fmt.Sprintf("%s_http", metricsPrefix)); err != nil {
 		return nil, err
 	} else {
 		server.server = httpServer
@@ -134,7 +135,7 @@ func (s *JSONRPCServer) Start() error {
 	)
 
 	if err := prometheus.Register(s.httpDurations); err != nil {
-		return err
+		return fmt.Errorf("error registering collector for jsonRPC server (%s): %v", s.metricsPrefix, err)
 	}
 
 	return s.server.Start()
