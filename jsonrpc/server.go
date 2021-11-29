@@ -28,23 +28,14 @@ import (
 type Handler func(*Context) *Response
 
 type JSONRPCServer struct {
-	settings *services.JSONRPCServerSettings
-	server   *http.HTTPServer
-	handler  Handler
+	metricsPrefix string
+	httpDurations *prometheus.HistogramVec
+	settings      *services.JSONRPCServerSettings
+	server        *http.HTTPServer
+	handler       Handler
 }
 
-func JSONRPC(handler Handler, metricsPrefix string) http.Handler {
-
-	httpDurations := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    fmt.Sprintf("%s_%s", metricsPrefix, "rpc_durations_seconds"),
-			Help:    "RPC latency distributions",
-			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
-		},
-		[]string{"method", "code"},
-	)
-
-	prometheus.MustRegister(httpDurations)
+func (s *JSONRPCServer) JSONRPC(handler Handler) http.Handler {
 
 	return func(c *http.Context) {
 
@@ -79,7 +70,8 @@ func JSONRPC(handler Handler, metricsPrefix string) http.Handler {
 
 		elapsedTime := time.Since(startTime)
 		codeString := strconv.Itoa(code)
-		httpDurations.WithLabelValues(request.Method, codeString).Observe(elapsedTime.Seconds())
+
+		s.httpDurations.WithLabelValues(request.Method, codeString).Observe(elapsedTime.Seconds())
 	}
 }
 
@@ -88,6 +80,11 @@ func NotFound(c *http.Context) {
 }
 
 func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string) (*JSONRPCServer, error) {
+
+	server := &JSONRPCServer{
+		settings: settings,
+	}
+
 	routeGroups := []*http.RouteGroup{
 		{
 			// these handlers will be executed for all routes in the group
@@ -99,7 +96,7 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 					Pattern: "^/jsonrpc$",
 					Handlers: []http.Handler{
 						ExtractJSONRequest,
-						JSONRPC(handler, metricsPrefix),
+						server.JSONRPC(handler),
 					},
 				},
 				{
@@ -120,18 +117,30 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups, metricsPrefix); err != nil {
 		return nil, err
 	} else {
-		return &JSONRPCServer{
-			settings: settings,
-			server:   httpServer,
-		}, nil
+		server.server = httpServer
+		return server, nil
 	}
 }
 
 func (s *JSONRPCServer) Start() error {
+
+	s.httpDurations = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    fmt.Sprintf("%s_%s", s.metricsPrefix, "rpc_durations_seconds"),
+			Help:    "RPC latency distributions",
+			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
+		},
+		[]string{"method", "code"},
+	)
+
+	if err := prometheus.Register(s.httpDurations); err != nil {
+		return err
+	}
+
 	return s.server.Start()
 }
 
 func (s *JSONRPCServer) Stop() error {
-	services.Log.Debugf("Stopping down JSONRPC server...")
+	prometheus.Unregister(s.httpDurations)
 	return s.server.Stop()
 }

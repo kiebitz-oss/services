@@ -53,5 +53,13 @@ func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 }
 
 func (c Settings) Teardown(fixture interface{}) error {
+	if fixture == nil {
+		return nil
+	}
+	settings := fixture.(*services.Settings)
+	// we close the database
+	if err := settings.DatabaseObj.Close(); err != nil {
+		return err
+	}
 	return nil
 }

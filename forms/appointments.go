@@ -92,12 +92,6 @@ var ConfirmProviderForm = forms.Form{
 var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
 			Name: "encryptedProviderData",
 			Validators: []forms.Validator{
 				forms.IsStringMap{

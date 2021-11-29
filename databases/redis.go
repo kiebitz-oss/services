@@ -31,12 +31,14 @@ import (
 )
 
 type Redis struct {
-	client   redis.UniversalClient
-	options  redis.UniversalOptions
-	pipeline redis.Pipeliner
-	mutex    sync.Mutex
-	channel  chan bool
-	ctx      context.Context
+	metricsPrefix  string
+	redisDurations *prometheus.HistogramVec
+	client         redis.UniversalClient
+	options        redis.UniversalOptions
+	pipeline       redis.Pipeliner
+	mutex          sync.Mutex
+	channel        chan bool
+	ctx            context.Context
 }
 
 type RedisLock struct {
@@ -178,20 +180,7 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 		DB:           int(redisSettings.Database),
 	}
 
-	redisDurations := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "redis_durations_seconds",
-			Help:    "Redis command durations",
-			Buckets: []float64{0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0},
-		},
-		[]string{"command"},
-	)
-
-	prometheus.MustRegister(redisDurations)
-
 	client := redis.NewUniversalClient(&options)
-	metricHook := MetricHook{redisDurations: redisDurations}
-	client.AddHook(metricHook)
 
 	if _, err := client.Ping(ctx).Result(); err != nil {
 		return nil, err
@@ -241,10 +230,27 @@ func (d *Redis) Client() redis.Cmdable {
 }
 
 func (d *Redis) Open() error {
+	d.redisDurations = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "redis_durations_seconds",
+			Help:    "Redis command durations",
+			Buckets: []float64{0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0},
+		},
+		[]string{"command"},
+	)
+
+	if err := prometheus.Register(d.redisDurations); err != nil {
+		return err
+	}
+
+	metricHook := MetricHook{redisDurations: d.redisDurations}
+	d.client.AddHook(metricHook)
+
 	return nil
 }
 
 func (d *Redis) Close() error {
+	prometheus.Unregister(d.redisDurations)
 	return d.client.Close()
 }
 

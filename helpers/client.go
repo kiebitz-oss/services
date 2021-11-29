@@ -141,8 +141,20 @@ func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Res
 
 }
 
-func (a *AppointmentsClient) ConfirmProvider(params *services.ConfirmProviderParams, mediator *crypto.Actor) (*Response, error) {
-	return nil, nil
+type Provider struct {
+	Actor     *crypto.Actor
+	QueueData *services.ProviderQueueData
+}
+
+func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypto.Actor) (*Response, error) {
+
+	params := &services.ConfirmProviderParams{
+		PublicProviderData:    &services.SignedProviderData{},
+		EncryptedProviderData: &services.ECDHEncryptedData{},
+		SignedKeyData:         &services.SignedKeyData{},
+	}
+
+	return a.requester("confirmProvider", params, mediator.SigningKey)
 }
 
 func (a *AppointmentsClient) AddCodes(params *services.AddCodesParams) (*Response, error) {

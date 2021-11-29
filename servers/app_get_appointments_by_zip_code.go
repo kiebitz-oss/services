@@ -80,8 +80,6 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			continue
 		}
 
-		providerData.ID = hash
-
 		// appointments are stored in a provider-specific key
 		appointmentsByID := c.db.Map("appointmentsByID", hash)
 		allDates, err := appointmentsByID.GetAll()

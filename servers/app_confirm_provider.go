@@ -17,13 +17,15 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 
 	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
 
-	lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
+	/*
+		lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
+		if err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
 
-	defer lock.Release()
+		defer lock.Release()
+	*/
 
 	keys := c.db.Map("keys", []byte("providers"))
 
@@ -49,12 +51,12 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 	checkedProviderData := c.db.Map("providerData", []byte("checked"))
 	publicProviderData := c.db.Map("providerData", []byte("public"))
 
-	oldPd, err := unverifiedProviderData.Get(params.Data.ID)
+	oldPd, err := unverifiedProviderData.Get(hash)
 
 	if err != nil {
 		if err == databases.NotFound {
 			// maybe this provider has already been verified before...
-			if oldPd, err = verifiedProviderData.Get(params.Data.ID); err != nil {
+			if oldPd, err = verifiedProviderData.Get(hash); err != nil {
 				if err == databases.NotFound {
 					return context.NotFound()
 				} else {
@@ -68,20 +70,20 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 		}
 	}
 
-	if err := unverifiedProviderData.Del(params.Data.ID); err != nil {
+	if err := unverifiedProviderData.Del(hash); err != nil {
 		if err != databases.NotFound {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
 	}
 
-	if err := verifiedProviderData.Set(params.Data.ID, oldPd); err != nil {
+	if err := verifiedProviderData.Set(hash, oldPd); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
 	// we store a copy of the signed data for the provider to check
-	if err := checkedProviderData.Set(params.Data.ID, []byte(params.JSON)); err != nil {
+	if err := checkedProviderData.Set(hash, []byte(params.JSON)); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

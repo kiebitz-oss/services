@@ -55,6 +55,7 @@ type HTTPServer struct {
 	err           error
 	server        *http.Server
 	routeGroups   []*RouteGroup
+	metricsPrefix string
 	httpDurations *prometheus.HistogramVec
 }
 
@@ -88,25 +89,14 @@ func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteG
 		}
 	}
 
-	httpDurations := prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    fmt.Sprintf("%s_%s", metricsPrefix, "http_durations_seconds"),
-			Help:    "HTTP latency distributions",
-			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
-		},
-		[]string{"path", "code"},
-	)
-
-	prometheus.MustRegister(httpDurations)
-
 	s := &HTTPServer{
-		settings:    settings,
-		routeGroups: routeGroups,
-		mutex:       sync.Mutex{},
+		metricsPrefix: metricsPrefix,
+		settings:      settings,
+		routeGroups:   routeGroups,
+		mutex:         sync.Mutex{},
 		server: &http.Server{
 			Addr: settings.BindAddress,
 		},
-		httpDurations: httpDurations,
 	}
 
 	// we add the handler
@@ -175,6 +165,19 @@ func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 
 func (s *HTTPServer) Start() error {
 
+	s.httpDurations = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    fmt.Sprintf("%s_%s", s.metricsPrefix, "http_durations_seconds"),
+			Help:    "HTTP latency distributions",
+			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
+		},
+		[]string{"path", "code"},
+	)
+
+	if err := prometheus.Register(s.httpDurations); err != nil {
+		return err
+	}
+
 	var listener func() error
 
 	if s.settings.TLS != nil {
@@ -229,6 +232,6 @@ func (s *HTTPServer) Start() error {
 }
 
 func (s *HTTPServer) Stop() error {
-	services.Log.Debugf("Shutting down HTTP server...")
+	prometheus.Unregister(s.httpDurations)
 	return s.server.Shutdown(context.TODO())
 }

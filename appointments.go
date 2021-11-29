@@ -17,7 +17,6 @@ type ConfirmProviderSignedParams struct {
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
 type ConfirmProviderParams struct {
-	ID                    []byte              `json:"id"`
 	PublicProviderData    *SignedProviderData `json:"publicProviderData"`
 	EncryptedProviderData *ECDHEncryptedData  `json:"encryptedProviderData"`
 	SignedKeyData         *SignedKeyData      `json:"signedKeyData"`
@@ -192,7 +191,6 @@ type ProviderAppointments struct {
 }
 
 type SignedProviderData struct {
-	ID        []byte        `json:"id"`
 	JSON      string        `json:"data" coerce:"name:json"`
 	Data      *ProviderData `json:"-" coerce:"name:data"`
 	Signature []byte        `json:"signature"`

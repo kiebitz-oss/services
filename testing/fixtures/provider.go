@@ -24,10 +24,11 @@ import (
 )
 
 type Provider struct {
-	Name    string
-	Street  string
-	City    string
-	ZipCode string
+	Name       string
+	Street     string
+	City       string
+	ZipCode    string
+	Accessible bool
 }
 
 // Creates a new provider and
@@ -47,16 +48,22 @@ func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
 	services.Log.Info(client)
 
-	provider, err := crypto.MakeActor("provider")
+	actor, err := crypto.MakeActor("provider")
 
 	if err != nil {
 		return nil, err
 	}
 
-	services.Log.Info(provider)
+	provider := &helpers.Provider{
+		Actor: actor,
+		QueueData: &services.ProviderQueueData{
+			ZipCode:    c.ZipCode,
+			Accessible: c.Accessible,
+		},
+	}
 
 	// we add the provider public keys to the backend
-	if _, err := client.Appointments.ConfirmProvider(nil, mediator); err != nil {
+	if _, err := client.Appointments.ConfirmProvider(provider, mediator); err != nil {
 		return nil, err
 	}
 

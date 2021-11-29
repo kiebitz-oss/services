@@ -157,11 +157,11 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 		adminKeys := []*crypto.Key{}
 		apptKeys := []*crypto.Key{}
-		
+
 		keys := map[string]string{
-			"root":         "ecdsa",
-			"token":        "ecdsa",
-			"provider":     "ecdh",
+			"root":     "ecdsa",
+			"token":    "ecdsa",
+			"provider": "ecdh",
 		}
 
 		for name, keyType := range keys {
