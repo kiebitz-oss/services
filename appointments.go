@@ -276,7 +276,6 @@ type PublishAppointmentsSignedParams struct {
 type PublishAppointmentsParams struct {
 	Timestamp *time.Time           `json:"timestamp"`
 	Offers    []*SignedAppointment `json:"offers"`
-	Reset     bool                 `json:"reset"`
 }
 
 type SignedAppointment struct {
@@ -296,6 +295,21 @@ type Appointment struct {
 	SlotData   []*Slot                `json:"slotData"`
 	ID         []byte                 `json:"id"`
 	PublicKey  []byte                 `json:"publicKey"`
+}
+
+func (k *Appointment) Sign(key *crypto.Key) (*SignedAppointment, error) {
+	if data, err := json.Marshal(k); err != nil {
+		return nil, err
+	} else if signedData, err := key.Sign(data); err != nil {
+		return nil, err
+	} else {
+		return &SignedAppointment{
+			JSON:      string(data),
+			Signature: signedData.Signature,
+			PublicKey: signedData.PublicKey,
+			Data:      k,
+		}, nil
+	}
 }
 
 type Slot struct {

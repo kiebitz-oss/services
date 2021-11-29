@@ -2,13 +2,12 @@ package servers_test
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
 )
 
-func TestAppointmentsApi(t *testing.T) {
+func TestPublishAppointments(t *testing.T) {
 
 	var fixturesConfig = []at.FC{
 
@@ -23,6 +22,21 @@ func TestAppointmentsApi(t *testing.T) {
 
 		// we create a mediator
 		at.FC{af.Mediator{}, "mediator"},
+
+		// we create a mediator
+		at.FC{af.Provider{
+			ZipCode:   "10707",
+			StoreData: true,
+			Confirm:   true,
+		}, "provider"},
+
+		at.FC{af.Appointments{
+			Appointments: []*services.Appointment{
+				//				{
+				//					Duration: 30,
+				//				},
+			},
+		}, "appointments"},
 	}
 
 	fixtures, err := at.SetupFixtures(fixturesConfig)
@@ -30,20 +44,6 @@ func TestAppointmentsApi(t *testing.T) {
 
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	client := fixtures["client"].(*helpers.Client)
-
-	resp, err := client.Appointments.GetKeys()
-
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	services.Log.Info(resp.JSON())
-
-	if resp.StatusCode != 200 {
-		t.Fatalf("expected a 200 status code, got %d instead", resp.StatusCode)
 	}
 
 }

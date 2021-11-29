@@ -20,40 +20,54 @@ import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/helpers"
-	"github.com/kiebitz-oss/services/servers"
+	"time"
 )
 
 type Appointments struct {
+	Appointments []*services.Appointment
 }
 
 func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
-	sett := fixtures["settings"]
-
-	if sett == nil {
-		return nil, fmt.Errorf("no settings found")
-	}
-
-	settingsObj, ok := sett.(*services.Settings)
+	client, ok := fixtures["client"].(*helpers.Client)
 
 	if !ok {
-		return nil, fmt.Errorf("not a real settings object")
+		return nil, fmt.Errorf("client missing")
 	}
 
-	if appointments, err := helpers.InitializeAppointmentsServer(settingsObj); err != nil {
-		return nil, err
-	} else if err := appointments.Start(); err != nil {
-		return nil, err
-	} else {
-		return appointments, nil
+	provider, ok := fixtures["provider"].(*helpers.Provider)
+
+	if !ok {
+		return nil, fmt.Errorf("provider missing")
 	}
+
+	offers := make([]*services.SignedAppointment, len(c.Appointments))
+
+	for i, appointment := range c.Appointments {
+		if signedAppointment, err := appointment.Sign(provider.Actor.SigningKey); err != nil {
+			return nil, err
+		} else {
+			offers[i] = signedAppointment
+		}
+	}
+
+	t := time.Now()
+	params := &services.PublishAppointmentsParams{
+		Timestamp: &t,
+		Offers:    offers,
+	}
+
+	// we confirm the provider data
+	if resp, err := client.Appointments.PublishAppointments(params, provider); err != nil {
+		return nil, err
+	} else if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("cannot publish appointments")
+	}
+
+	return provider, nil
 
 }
 
 func (c Appointments) Teardown(fixture interface{}) error {
-	if fixture == nil {
-		return nil
-	}
-	appointments := fixture.(*servers.Appointments)
-	return appointments.Stop()
+	return nil
 }

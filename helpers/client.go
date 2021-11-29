@@ -251,8 +251,8 @@ func (a *AppointmentsClient) GetProviderAppointments(params *services.GetProvide
 	return nil, nil
 }
 
-func (a *AppointmentsClient) PublishAppointments(params interface{}) (*Response, error) {
-	return nil, nil
+func (a *AppointmentsClient) PublishAppointments(params *services.PublishAppointmentsParams, provider *Provider) (*Response, error) {
+	return a.requester("publishAppointments", params, provider.Actor.SigningKey)
 }
 
 func (a *AppointmentsClient) BookAppointment(params interface{}) (*Response, error) {

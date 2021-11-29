@@ -777,13 +777,6 @@ var PublishAppointmentsDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "reset",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
 			Name: "offers",
 			Validators: []forms.Validator{
 				forms.IsList{

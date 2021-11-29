@@ -50,7 +50,7 @@ func TestConfirmProvider(t *testing.T) {
 		at.FC{af.Settings{}, "settings"},
 
 		// we create the appointments API
-		at.FC{af.Appointments{}, "appointments"},
+		at.FC{af.AppointmentsServer{}, "appointmentsServer"},
 
 		// we create a client (without a key)
 		at.FC{af.Client{}, "client"},
