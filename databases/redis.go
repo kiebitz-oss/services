@@ -211,6 +211,10 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 // Makes sure, that Redis implements Database
 var _ services.Database = &Redis{}
 
+func (d *Redis) Reset() error {
+	return d.client.FlushDB(d.ctx).Err()
+}
+
 func (d *Redis) Lock(lockKey string) (services.Lock, error) {
 
 	redisLock, err := MakeRedisLock(d.ctx, lockKey, d.client)

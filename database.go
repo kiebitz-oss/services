@@ -48,6 +48,7 @@ type Lock interface {
 type Database interface {
 	Close() error
 	Open() error
+	Reset() error
 	Lock(lockKey string) (Lock, error)
 
 	DatabaseOps
