@@ -176,22 +176,21 @@ func (c *Appointments) priorityToken() (uint64, []byte, error) {
 // { id, key, providerData, keyData }, keyPair
 func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *services.ConfirmProviderSignedParams) *jsonrpc.Response {
 
-	success := false
-	transaction, finalize, err := c.transaction(&success)
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer finalize()
-
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp
 	}
 
 	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
-	keys := transaction.Map("keys", []byte("providers"))
+
+	lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	defer lock.Release()
+
+	keys := c.db.Map("keys", []byte("providers"))
 
 	providerKey := &services.ActorKey{
 		Data:      params.Data.SignedKeyData.JSON,
@@ -210,10 +209,10 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 		return context.InternalError()
 	}
 
-	unverifiedProviderData := transaction.Map("providerData", []byte("unverified"))
-	verifiedProviderData := transaction.Map("providerData", []byte("verified"))
-	checkedProviderData := transaction.Map("providerData", []byte("checked"))
-	publicProviderData := transaction.Map("providerData", []byte("public"))
+	unverifiedProviderData := c.db.Map("providerData", []byte("unverified"))
+	verifiedProviderData := c.db.Map("providerData", []byte("verified"))
+	checkedProviderData := c.db.Map("providerData", []byte("checked"))
+	publicProviderData := c.db.Map("providerData", []byte("public"))
 
 	oldPd, err := unverifiedProviderData.Get(params.Data.ID)
 
@@ -266,8 +265,6 @@ func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *service
 			return context.InternalError()
 		}
 	}
-
-	success = true
 
 	return context.Acknowledge()
 }
@@ -821,16 +818,6 @@ func (c *Appointments) getProviderAppointments(context *jsonrpc.Context, params 
 
 func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
 
-	success := false
-	transaction, finalize, err := c.transaction(&success)
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer finalize()
-
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
 
@@ -853,16 +840,24 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 	hash := crypto.Hash(pkd.Signing)
 	hexUID := hex.EncodeToString(hash)
 
-	// appointments are stored in a provider-specific key
-	appointmentsByID := transaction.Map("appointmentsByID", hash)
-
-	// appointments expire automatically after 120 days
-	if err := transaction.Expire("appointments", hash, time.Hour*24*120); err != nil {
+	lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
+	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	usedTokens := transaction.Set("bookings", []byte("tokens"))
+	defer lock.Release()
+
+	// appointments are stored in a provider-specific key
+	appointmentsByID := c.db.Map("appointmentsByID", hash)
+
+	// appointments expire automatically after 120 days
+	if err := c.db.Expire("appointments", hash, time.Hour*24*120); err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	usedTokens := c.db.Set("bookings", []byte("tokens"))
 
 	var bookedSlots, openSlots int64
 
@@ -876,7 +871,7 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 				return context.InternalError()
 			}
 
-			appointmentsByDate := transaction.Map("appointmentsByDate", append(hash, date...))
+			appointmentsByDate := c.db.Map("appointmentsByDate", append(hash, date...))
 
 			existingAppointment := &services.SignedAppointment{}
 			var mapData map[string]interface{}
@@ -934,16 +929,16 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 		// the hash is under our control so it's safe to concatenate it directly with the date
 		dateKey := append(hash, date...)
 
-		appointmentsByDate := transaction.Map("appointmentsByDate", dateKey)
+		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 
 		// appointments will auto-delete one day after their timestamp
-		if err := transaction.Expire("appointmentsByDate", dateKey, appointment.Data.Timestamp.Sub(time.Now())+time.Hour*24); err != nil {
+		if err := c.db.Expire("appointmentsByDate", dateKey, appointment.Data.Timestamp.Sub(time.Now())+time.Hour*24); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
 
 		// ID map will auto-delete after one year (purely for storage reasons, it does not contain sensitive data)
-		if err := transaction.Expire("appointmentsByID", hash, time.Hour*24*365); err != nil {
+		if err := c.db.Expire("appointmentsByID", hash, time.Hour*24*365); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
@@ -963,8 +958,6 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 			return context.InternalError()
 		}
 	}
-
-	success = true
 
 	if c.meter != nil {
 
@@ -1012,19 +1005,18 @@ func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *ser
 
 func (c *Appointments) bookAppointment(context *jsonrpc.Context, params *services.BookAppointmentSignedParams) *jsonrpc.Response {
 
-	success := false
-	transaction, finalize, err := c.transaction(&success)
-
+	// Not sure, if this lock makes any sense.
+	lock, err := c.db.Lock("bookAppointment_" + string(params.Data.ID[:]))
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	defer finalize()
+	defer lock.Release()
 
 	var result interface{}
 
-	usedTokens := transaction.Set("bookings", []byte("tokens"))
+	usedTokens := c.db.Set("bookings", []byte("tokens"))
 
 	notAuthorized := context.Error(401, "not authorized", nil)
 
@@ -1258,15 +1250,14 @@ func (c *Appointments) cancelAppointment(context *jsonrpc.Context, params *servi
 		return context.Error(400, "invalid signature", nil)
 	}
 
-	success := false
-	transaction, finalize, err := c.transaction(&success)
-
+	lock, err := c.db.Lock("cancelAppointment_" + string(params.Data.ProviderID[:]))
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	defer finalize()
+	defer lock.Release()
+
 	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
 
 	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {
@@ -1315,7 +1306,7 @@ func (c *Appointments) cancelAppointment(context *jsonrpc.Context, params *servi
 
 			signedAppointment.Bookings = newBookings
 
-			usedTokens := transaction.Set("bookings", []byte("tokens"))
+			usedTokens := c.db.Set("bookings", []byte("tokens"))
 
 			// we mark the token as unused
 			if err := usedTokens.Del(token); err != nil {
@@ -1380,31 +1371,6 @@ func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *servi
 	return context.Acknowledge()
 }
 
-// store provider data
-
-func (c *Appointments) transaction(success *bool) (services.Transaction, func(), error) {
-	transaction, err := c.db.Begin()
-
-	if err != nil {
-		return nil, nil, err
-	}
-
-	finalize := func() {
-		if *success {
-			if err := transaction.Commit(); err != nil {
-				services.Log.Error(err)
-			}
-		} else {
-			if err := transaction.Rollback(); err != nil {
-				services.Log.Error(err)
-			}
-		}
-	}
-
-	return transaction, finalize, nil
-
-}
-
 // { id, encryptedData, code }, keyPair
 func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *services.StoreProviderDataSignedParams) *jsonrpc.Response {
 
@@ -1416,22 +1382,20 @@ func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *servi
 		return context.Error(400, "invalid signature", nil)
 	}
 
-	success := false
-	transaction, finalize, err := c.transaction(&success)
+	hash := crypto.Hash(params.PublicKey)
 
+	lock, err := c.db.Lock("storeProviderData_" + string(hash[:]))
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	defer finalize()
+	defer lock.Release()
 
-	verifiedProviderData := transaction.Map("providerData", []byte("verified"))
-	providerData := transaction.Map("providerData", []byte("unverified"))
-	codes := transaction.Set("codes", []byte("provider"))
+	verifiedProviderData := c.db.Map("providerData", []byte("verified"))
+	providerData := c.db.Map("providerData", []byte("unverified"))
+	codes := c.db.Set("codes", []byte("provider"))
 	codeScores := c.db.SortedSet("codeScores", []byte("provider"))
-
-	hash := crypto.Hash(params.PublicKey)
 
 	existingData := false
 	if result, err := verifiedProviderData.Get(hash); err != nil {
@@ -1481,8 +1445,6 @@ func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *servi
 			return context.InternalError()
 		}
 	}
-
-	success = true
 
 	return context.Acknowledge()
 }

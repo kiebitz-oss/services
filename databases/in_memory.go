@@ -60,7 +60,9 @@ func MakeInMemory(settings interface{}) (services.Database, error) {
 	}, nil
 }
 
-func (d *InMemory) Reset() error {
+var _ services.Database = &InMemory{}
+
+func (d *InMemory) Close() error {
 	return nil
 }
 
@@ -68,11 +70,7 @@ func (d *InMemory) Open() error {
 	return nil
 }
 
-func (d *InMemory) Close() error {
-	return nil
-}
-
-func (d *InMemory) Begin() (services.Transaction, error) {
+func (d *InMemory) Lock(lockKey string) (services.Lock, error) {
 	return nil, nil
 }
 
