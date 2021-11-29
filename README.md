@@ -143,14 +143,6 @@ kiebitz run storage
 kiebitz run all
 ```
 
-### Notification service
-Start MailHog
-```bash
-echo "test:\$2a\$04\$qxRo.ftFoNep7ld/5jfKtuBTnGqff/fZVyj53mUC5sVf9dtDLAi/S" > /tmp/example-auth
-#pw: test
-docker run -d -p 1025:1025 -p 8025:8025 -v /tmp/example-auth:/example/example-auth mailhog/mailhog -auth-file=/example/example-auth
-```
-
 ## Testing
 
 Here's how you can send a request to the storage server via `curl` (this assumes you have `jq` installed for parsing of the JSON result):

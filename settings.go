@@ -40,19 +40,8 @@ type AppointmentsSettings struct {
 	ProviderCodesReuseLimit int64                  `json:"provider_codes_reuse_limit"`
 }
 
-type NotificationSettings struct {
-	RPC    *JSONRPCServerSettings `json:"rpc"`
-	Mail   *MailSettings          `json:"mail"`
-	Secret []byte                 `json:"secret"`
-	Keys   []*crypto.Key          `json:"keys"`
-}
-
 func (a *AppointmentsSettings) Key(name string) *crypto.Key {
 	return key(a.Keys, name)
-}
-
-func (n *NotificationSettings) Key(name string) *crypto.Key {
-	return key(n.Keys, name)
 }
 
 func key(keys []*crypto.Key, name string) *crypto.Key {
@@ -87,7 +76,6 @@ type Settings struct {
 	Definitions  *Definitions          `json:"definitions,omitempty"`
 	Storage      *StorageSettings      `json:"storage,omitempty"`
 	Appointments *AppointmentsSettings `json:"appointments,omitempty"`
-	Notification *NotificationSettings `json:"notification"`
 	Database     *DatabaseSettings     `json:"database,omitempty"`
 	Meter        *MeterSettings        `json:"meter,omitempty"`
 	Metrics      *MetricSettings       `json:"metrics,omitempty"`

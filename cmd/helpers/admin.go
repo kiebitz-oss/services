@@ -157,12 +157,10 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 		adminKeys := []*crypto.Key{}
 		apptKeys := []*crypto.Key{}
-		notificationKeys := []*crypto.Key{}
-
+		
 		keys := map[string]string{
 			"root":         "ecdsa",
 			"token":        "ecdsa",
-			"notification": "ecdh",
 			"provider":     "ecdh",
 		}
 
@@ -190,10 +188,6 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 			apptKeys = append(apptKeys, &keyCopy)
 
-			if name == "notification" {
-				notificationKeys = append(notificationKeys, &keyCopy)
-			}
-
 		}
 
 		adminSettings := &services.Settings{
@@ -217,26 +211,7 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			},
 		}
 
-		notificationSecret, err := crypto.RandomBytes(32)
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		notificationSettings := &services.Settings{
-			Notification: &services.NotificationSettings{
-				Keys:   notificationKeys,
-				Secret: notificationSecret,
-			},
-		}
-
 		apptJson, err := json.MarshalIndent(apptSettings, "", "  ")
-
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		notificationJson, err := json.MarshalIndent(notificationSettings, "", "  ")
 
 		if err != nil {
 			services.Log.Fatal(err)
@@ -263,10 +238,6 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 		}
 
 		if err := ioutil.WriteFile(fmt.Sprintf("%s/003_appt.json", settingsPaths[0]), apptJson, 0644); err != nil {
-			services.Log.Fatal(err)
-		}
-
-		if err := ioutil.WriteFile(fmt.Sprintf("%s/004_notification.json", settingsPaths[0]), notificationJson, 0644); err != nil {
 			services.Log.Fatal(err)
 		}
 

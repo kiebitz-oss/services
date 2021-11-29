@@ -203,50 +203,6 @@ var StorageForm = forms.Form{
 	},
 }
 
-var NotificationForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "rpc",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &JSONRPCServerSettingsForm,
-				},
-			},
-		},
-		{
-			Name: "secret",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MinLength: 16,
-					MaxLength: 64,
-				},
-			},
-		},
-		{
-			Name: "keys",
-			Validators: []forms.Validator{
-				forms.IsList{
-					Validators: []forms.Validator{
-						forms.IsStringMap{
-							Form: &KeyForm,
-						},
-					},
-				},
-			},
-		},
-		{
-			Name: "mail",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &MailForm,
-				},
-			},
-		},
-	},
-}
-
 var ECDSAParamsForm = forms.Form{
 	Fields: []forms.Field{
 		{
@@ -471,15 +427,6 @@ var SettingsForm = forms.Form{
 				forms.IsOptional{},
 				forms.IsStringMap{
 					Form: &AppointmentsForm,
-				},
-			},
-		},
-		{
-			Name: "notification",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsStringMap{
-					Form: &NotificationForm,
 				},
 			},
 		},
