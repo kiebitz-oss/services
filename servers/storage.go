@@ -17,13 +17,10 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/databases"
 	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
-	"time"
 )
 
 type Storage struct {
@@ -67,57 +64,6 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		Storage.server = jsonrpcServer
 		return Storage, nil
 	}
-}
-
-type StoreSettingsParams struct {
-	ID   []byte      `json:"id"`
-	Data interface{} `json:"data"`
-}
-
-// store the settings in the database by ID
-func (c *Storage) storeSettings(context *jsonrpc.Context, params *StoreSettingsParams) *jsonrpc.Response {
-	value := c.db.Value("settings", params.ID)
-	if dv, err := json.Marshal(params.Data); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if err := value.Set(dv, time.Duration(c.settings.SettingsTTLDays*24)*time.Hour); err != nil {
-		return context.InternalError()
-	}
-	return context.Acknowledge()
-}
-
-type GetSettingsParams struct {
-	ID []byte `json:"id"`
-}
-
-func (c *Storage) getSettings(context *jsonrpc.Context, params *GetSettingsParams) *jsonrpc.Response {
-	value := c.db.Value("settings", params.ID)
-	if data, err := value.Get(); err != nil {
-		if err == databases.NotFound {
-			return context.NotFound()
-		} else {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
-	} else if i, err := toInterface(data); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else {
-		return context.Result(i)
-	}
-}
-
-type DeleteSettingsParams struct {
-	ID []byte `json:"id"`
-}
-
-func (c *Storage) deleteSettings(context *jsonrpc.Context, params *GetSettingsParams) *jsonrpc.Response {
-	value := c.db.Value("settings", params.ID)
-	if err := value.Del(); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	return context.Acknowledge()
 }
 
 func (c *Storage) Start() error {

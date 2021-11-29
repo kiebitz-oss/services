@@ -1,0 +1,199 @@
+package servers
+
+import (
+	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/crypto"
+	"github.com/kiebitz-oss/services/forms"
+	"github.com/kiebitz-oss/services/jsonrpc"
+	"time"
+)
+
+func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
+
+	// make sure this is a valid provider asking for tokens
+	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
+
+	if resp != nil {
+		return resp
+	}
+
+	if expired(params.Data.Timestamp) {
+		return context.Error(410, "signature expired", nil)
+	}
+
+	pkd, err := providerKey.ProviderKeyData()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	// the provider "ID" is the hash of the signing key
+	hash := crypto.Hash(pkd.Signing)
+	hexUID := hex.EncodeToString(hash)
+
+	lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	defer lock.Release()
+
+	// appointments are stored in a provider-specific key
+	appointmentsByID := c.db.Map("appointmentsByID", hash)
+
+	// appointments expire automatically after 120 days
+	if err := c.db.Expire("appointments", hash, time.Hour*24*120); err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+
+	usedTokens := c.db.Set("bookings", []byte("tokens"))
+
+	var bookedSlots, openSlots int64
+
+	for _, appointment := range params.Data.Offers {
+
+		// check if there's an existing appointment
+		if date, err := appointmentsByID.Get(appointment.Data.ID); err == nil {
+
+			if err := appointmentsByID.Del(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			}
+
+			appointmentsByDate := c.db.Map("appointmentsByDate", append(hash, date...))
+
+			existingAppointment := &services.SignedAppointment{}
+			var mapData map[string]interface{}
+
+			if data, err := appointmentsByDate.Get(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := appointmentsByDate.Del(appointment.Data.ID); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if err := json.Unmarshal(data, &mapData); err != nil {
+				services.Log.Error(err)
+				return context.InternalError()
+			} else if params, err := forms.AppointmentForm.Validate(mapData); err != nil {
+				services.Log.Error(err)
+			} else if err := forms.AppointmentForm.Coerce(existingAppointment, params); err != nil {
+				services.Log.Error(err)
+			} else {
+				bookings := make([]*services.Booking, 0)
+				for _, existingSlotData := range existingAppointment.Data.SlotData {
+					found := false
+					for _, slotData := range appointment.Data.SlotData {
+						if bytes.Equal(slotData.ID, existingSlotData.ID) {
+							found = true
+							break
+						}
+					}
+					if found {
+						// this slot has been preserved, if there's any booking for it we migrate it
+						for _, booking := range existingAppointment.Bookings {
+							if bytes.Equal(booking.ID, existingSlotData.ID) {
+								bookings = append(bookings, booking)
+								break
+							}
+						}
+					} else {
+						// this slot has been deleted, if there's any booking for it we delete it
+						for _, booking := range existingAppointment.Bookings {
+							if bytes.Equal(booking.ID, existingSlotData.ID) {
+								// we re-enable the associated token
+								if err := usedTokens.Del(booking.Token); err != nil {
+									services.Log.Error(err)
+									return context.InternalError()
+								}
+								break
+							}
+						}
+					}
+				}
+				appointment.Bookings = bookings
+			}
+		}
+
+		date := []byte(appointment.Data.Timestamp.Format("2006-01-02"))
+		// the hash is under our control so it's safe to concatenate it directly with the date
+		dateKey := append(hash, date...)
+
+		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+
+		// appointments will auto-delete one day after their timestamp
+		if err := c.db.Expire("appointmentsByDate", dateKey, appointment.Data.Timestamp.Sub(time.Now())+time.Hour*24); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+
+		// ID map will auto-delete after one year (purely for storage reasons, it does not contain sensitive data)
+		if err := c.db.Expire("appointmentsByID", hash, time.Hour*24*365); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+
+		if err := appointmentsByID.Set(appointment.Data.ID, date); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+
+		appointment.UpdatedAt = time.Now()
+
+		if jsonData, err := json.Marshal(appointment); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		} else if err := appointmentsByDate.Set(appointment.Data.ID, jsonData); err != nil {
+			services.Log.Error(err)
+			return context.InternalError()
+		}
+	}
+
+	if c.meter != nil {
+
+		now := time.Now().UTC().UnixNano()
+
+		addTokenStats := func(tw services.TimeWindow, data map[string]string) error {
+			// we add the maximum of the open appointments
+			if err := c.meter.AddMax("queues", "open", hexUID, data, tw, openSlots); err != nil {
+				return err
+			}
+			// we add the maximum of the booked appointments
+			if err := c.meter.AddMax("queues", "booked", hexUID, data, tw, bookedSlots); err != nil {
+				return err
+			}
+			// we add the info that this provider is active
+			if err := c.meter.AddOnce("queues", "active", hexUID, data, tw, 1); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		for _, twt := range tws {
+
+			// generate the time window
+			tw := twt(now)
+
+			// global statistics
+			if err := addTokenStats(tw, map[string]string{}); err != nil {
+				services.Log.Error(err)
+			}
+
+			// statistics by zip code
+			if err := addTokenStats(tw, map[string]string{
+				"zipCode": pkd.QueueData.ZipCode,
+			}); err != nil {
+				services.Log.Error(err)
+			}
+
+		}
+
+	}
+
+	return context.Acknowledge()
+}
