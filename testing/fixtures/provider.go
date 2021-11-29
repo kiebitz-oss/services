@@ -37,12 +37,6 @@ type Provider struct {
 // Creates a new provider and
 func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
-	settings, ok := fixtures["settings"].(*services.Settings)
-
-	if !ok {
-		return nil, fmt.Errorf("settings missing")
-	}
-
 	client, ok := fixtures["client"].(*helpers.Client)
 
 	if !ok {
@@ -76,15 +70,9 @@ func (c Provider) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		},
 	}
 
-	providerDataKey := settings.Appointments.Key("provider")
-
-	if providerDataKey == nil {
-		return nil, fmt.Errorf("provider data key missing")
-	}
-
 	if c.StoreData {
 		// we store the provider data in the backend
-		if resp, err := client.Appointments.StoreProviderData(provider, providerDataKey); err != nil {
+		if resp, err := client.Appointments.StoreProviderData(provider); err != nil {
 			return nil, err
 		} else if resp.StatusCode != 200 {
 			return nil, fmt.Errorf("cannot store provider data")

@@ -277,7 +277,13 @@ type PublicKeys struct {
 	Encryption []byte `json:"encryption"`
 }
 
-func (a *AppointmentsClient) StoreProviderData(provider *Provider, dataKey *crypto.Key) (*Response, error) {
+func (a *AppointmentsClient) StoreProviderData(provider *Provider) (*Response, error) {
+
+	dataKey := a.settings.Appointments.Key("provider")
+
+	if dataKey == nil {
+		return nil, fmt.Errorf("provider data key missing")
+	}
 
 	var err error
 	provider.DataKey, err = crypto.GenerateWebKey("ephemeral-provider", "ecdh")
