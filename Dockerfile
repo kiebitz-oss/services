@@ -1,27 +1,16 @@
-FROM golang:1.16 as base
+FROM golang:1.16 as builder 
 
-# Set Timezone
-RUN echo "Europe/Berlin" > /etc/timezone
-RUN ln -snf /usr/share/zoneinfo/Europe/Berlin /etc/localtime
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install
 
-# Copy Source
-COPY . /srv/backend
-RUN rm -rf /srv/backend/.git*
-WORKDIR /srv/backend
-RUN ls -la
+FROM scratch
 
-# Compile
-RUN make
+ENV KIEBITZ_SETTINGS=/settings
 
-# Set Environment & Service
-ARG environment
-ENV environment "${environment}"
-ARG service
-ENV service "${service}"
+CMD [ "/kiebitz","run","all" ]
+#CMD ["sleep","86400"]
 
-# Entrypoint
-ENTRYPOINT [ "/srv/backend/entrypoint.sh" ]
+COPY --from=builder /go/bin/kiebitz kiebitz
 
 # Ports
-EXPOSE 8888
-EXPOSE 9999
+EXPOSE 11111
+EXPOSE 22222

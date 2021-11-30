@@ -3,22 +3,22 @@ meter:
   name: meter
   type: redis
   settings:
-    addresses: [ "localhost:6379" ]
+    addresses: ["meter-redis-ha:6379"]
     database: 1
     password: ""
 database:
   name: db
   type: redis
   settings:
-    addresses: [ "localhost:6379" ]
+    addresses: ["db-redis-ha:6379"]
     database: 0
     password: ""
 metrics:
-  bind_address: "localhost:9090"
+  bind_address: "localhost:9091"
 storage:
   settings_ttl_days: 60
   rpc:
-    bind_address: localhost:9999
+    bind_address: localhost:11111
     cors:
       allowed_hosts: [ "http://localhost:8080" ]
       allowed_headers: [ "*" ]
@@ -31,8 +31,8 @@ admin:
   signing:
     keys: [ ]
   client:
-    appointments_endpoint: http://localhost:8888/jsonrpc
-    storage_endpoint: http://localhost:8888/jsonrpc
+    appointments_endpoint: http://localhost:22222/jsonrpc
+    storage_endpoint: http://localhost:11111/jsonrpc
 #    appointments_endpoint: "https://appointments.sofort-impfen.de/jsonrpc"
 #    storage_endpoint: "https://storage.sofort-impfen.de/jsonrpc"
 appointments:
@@ -40,7 +40,7 @@ appointments:
   user_codes_enabled: false
   keys: [ ]
   rpc:
-    bind_address: localhost:8888
+    bind_address: localhost:22222
     cors:
       allowed_hosts: [ "http://localhost:8080" ]
       allowed_headers: [ "*" ]
