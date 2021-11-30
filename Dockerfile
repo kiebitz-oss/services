@@ -1,5 +1,8 @@
 FROM golang:1.16 as builder 
 
+WORKDIR /go/src/app
+COPY * .
+
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install ./...
 
 FROM scratch
