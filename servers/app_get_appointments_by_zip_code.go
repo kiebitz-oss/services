@@ -98,6 +98,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 		// appointments are stored in a provider-specific key
 		appointmentsByID := c.db.Map("appointmentsByID", hash)
+		// complexity: O(n) where n is the number of appointments of the provider
 		allDates, err := appointmentsByID.GetAll()
 
 		if err != nil {

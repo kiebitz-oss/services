@@ -17,21 +17,14 @@
 package servers_test
 
 import (
+	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
-	"time"
 )
 
-func ts(dt string) time.Time {
-	if t, err := time.Parse(time.RFC3339, dt); err != nil {
-		panic(err)
-	} else {
-		return t
-	}
-}
-
-func TestPublishAppointments(t *testing.T) {
+func BenchmarkAppointmentsEndpoints(b *testing.B) {
 
 	var fixturesConfig = []at.FC{
 
@@ -47,29 +40,44 @@ func TestPublishAppointments(t *testing.T) {
 		// we create a mediator
 		at.FC{af.Mediator{}, "mediator"},
 
-		// we create a mediator
-		at.FC{af.Provider{
-			ZipCode:   "10707",
-			StoreData: true,
-			Confirm:   true,
-		}, "provider"},
-
-		at.FC{af.Appointments{
-			N:        1000,
-			Start:    ts("2022-10-01T12:00:00Z"),
-			Duration: 30,
-			Slots:    20,
-			Properties: map[string]interface{}{
-				"vaccine": "moderna",
+		at.FC{af.ProvidersAndAppointments{
+			Providers: 100,
+			BaseProvider: af.Provider{
+				ZipCode:   "10707",
+				StoreData: true,
+				Confirm:   true,
 			},
-		}, "appointments"},
+			BaseAppointments: af.Appointments{
+				N:        100,
+				Start:    ts("2022-10-01T12:00:00Z"),
+				Duration: 30,
+				Slots:    20,
+				Properties: map[string]interface{}{
+					"vaccine": "moderna",
+				},
+			},
+		}, "providersAndAppointments"},
 	}
 
 	fixtures, err := at.SetupFixtures(fixturesConfig)
 	defer at.TeardownFixtures(fixturesConfig, fixtures)
 
 	if err != nil {
-		t.Fatal(err)
+		b.Fatal(err)
+	}
+
+	client := fixtures["client"].(*helpers.Client)
+
+	// we reset the timer
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if _, err := client.Appointments.GetAppointmentsByZipCode(&services.GetAppointmentsByZipCodeParams{
+			ZipCode: "10707",
+			Radius:  20,
+		}); err != nil {
+			b.Fatal(err)
+		}
 	}
 
 }

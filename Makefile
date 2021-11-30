@@ -3,6 +3,7 @@
 SHELL := /bin/bash
 
 GOFLAGS ?= -ldflags=\"-extldflags=-static\" $(GOFLAGS:)
+BENCHARGS ?= -run=NONE -bench=.
 
 export KIEBITZ_TEST = yes
 
@@ -32,7 +33,7 @@ test-races: test-setup
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test -race $(testargs) `go list ./...`
 
 bench: test-setup
-	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test -run=NONE -bench=. $(GOFLAGS) `go list ./... | grep -v api/`
+	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) go test $(BENCHARGS) $(GOFLAGS) `go list ./... | grep -v api/`
 
 clean:
 	@go clean $(GOFLAGS) -i ./...

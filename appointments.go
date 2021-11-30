@@ -304,6 +304,29 @@ type SignedAppointment struct {
 	PublicKey   []byte       `json:"publicKey"`
 }
 
+func MakeAppointment(timestamp time.Time, slots, duration int64) (*Appointment, error) {
+	if id, err := crypto.RandomBytes(32); err != nil {
+		return nil, err
+	} else {
+		slotData := make([]*Slot, slots)
+		for i, _ := range slotData {
+			sd := &Slot{}
+			if id, err := crypto.RandomBytes(32); err != nil {
+				return nil, err
+			} else {
+				sd.ID = id
+			}
+			slotData[i] = sd
+		}
+		return &Appointment{
+			Timestamp: timestamp,
+			Duration:  duration,
+			ID:        id,
+			SlotData:  slotData,
+		}, nil
+	}
+}
+
 type Appointment struct {
 	Timestamp  time.Time              `json:"timestamp"`
 	Duration   int64                  `json:"duration"`

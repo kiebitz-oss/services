@@ -49,22 +49,16 @@ type RedisLock struct {
 	dLock       *redislock.Lock
 }
 
-func MakeRedisLock(ctx context.Context, lockKey string, client redis.UniversalClient) (RedisLock, error) {
-
-	rL := RedisLock{
+func MakeRedisLock(ctx context.Context, lockKey string, client redis.UniversalClient) *RedisLock {
+	return &RedisLock{
 		client:      client,
 		lockKey:     lockKey,
 		ctx:         ctx,
 		dLockClient: redislock.New(client),
 	}
-
-	return rL, nil
 }
 
-// Makes sure, that RedisLock implements services.Lock
-var _ services.Lock = RedisLock{}
-
-func (r RedisLock) Lock() error {
+func (r *RedisLock) Lock() error {
 
 	lock, err := r.dLockClient.Obtain(r.ctx, r.lockKey, 100*time.Millisecond, nil)
 
@@ -76,9 +70,9 @@ func (r RedisLock) Lock() error {
 	return nil
 }
 
-func (r RedisLock) Release() error {
+func (r *RedisLock) Release() error {
 	if r.dLock == nil {
-		services.Log.Error("Unable to release lock, which was never locked.")
+		services.Log.Errorf("Unable to release lock %s, which was never locked.", r.lockKey)
 		return errors.New("no lock")
 	}
 
@@ -206,22 +200,13 @@ func (d *Redis) Reset() error {
 
 func (d *Redis) Lock(lockKey string) (services.Lock, error) {
 
-	redisLock, err := MakeRedisLock(d.ctx, lockKey, d.client)
+	redisLock := MakeRedisLock(d.ctx, lockKey, d.client)
 
-	if err != nil {
+	if err := redisLock.Lock(); err != nil {
 		return nil, err
 	}
 
-	err = redisLock.Lock()
-
-	if err != nil {
-		return nil, err
-	}
-
-	var sLock services.Lock
-	sLock = redisLock
-
-	return sLock, nil
+	return redisLock, nil
 
 }
 

@@ -66,7 +66,7 @@ func (c *Appointments) bookAppointment(context *jsonrpc.Context, params *service
 		return notAuthorized
 	}
 
-	// we verify the signature (without veryfing e.g. the provenance of the key)
+	// we verify the signature (without verifying e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Errorf("Cannot verify with bytes: %s", err)
 		return context.InternalError()

@@ -41,7 +41,8 @@ type Response struct {
 	body []byte
 }
 
-func (r *Response) read() error {
+func (r *Response) Read() error {
+
 	if r.body != nil {
 		return nil // already read the body
 	}
@@ -74,7 +75,7 @@ func (r *Response) CoerceResult(target interface{}) error {
 func (r *Response) JSON() (map[string]interface{}, error) {
 	var value map[string]interface{}
 
-	if err := r.read(); err != nil {
+	if err := r.Read(); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +87,7 @@ func (r *Response) JSON() (map[string]interface{}, error) {
 }
 
 func (r *Response) Bytes() ([]byte, error) {
-	if err := r.read(); err != nil {
+	if err := r.Read(); err != nil {
 		return nil, err
 	}
 	return r.body, nil
@@ -150,6 +151,10 @@ func Request(url, method string, params interface{}, key *crypto.Key, client *ht
 
 	req, err := http.NewRequest("POST", url, reader)
 
+	// this is important, Golang won't close requests otherwise...
+	// https://github.com/golang/go/issues/28012
+	req.Close = true
+
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +164,10 @@ func Request(url, method string, params interface{}, key *crypto.Key, client *ht
 	if resp, err := client.Do(req); err != nil {
 		return nil, err
 	} else {
-		return &Response{Response: resp}, nil
+		response := &Response{Response: resp}
+		// we always read the body as otherwise the connection can stay open
+		// and will not be freed properly...
+		return response, response.Read()
 	}
 
 }
@@ -260,7 +268,7 @@ func (a *AppointmentsClient) GetStats(params *services.GetStatsParams) (*Respons
 }
 
 func (a *AppointmentsClient) GetAppointmentsByZipCode(params *services.GetAppointmentsByZipCodeParams) (*Response, error) {
-	return nil, nil
+	return a.requester("getAppointmentsByZipCode", params, nil)
 }
 
 func (a *AppointmentsClient) GetProviderAppointments(params *services.GetProviderAppointmentsParams) (*Response, error) {

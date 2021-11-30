@@ -24,7 +24,11 @@ import (
 )
 
 type Appointments struct {
-	Appointments []*services.Appointment
+	Start      time.Time
+	Duration   int64
+	N          int64
+	Slots      int64
+	Properties map[string]interface{}
 }
 
 func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error) {
@@ -41,14 +45,21 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("provider missing")
 	}
 
-	offers := make([]*services.SignedAppointment, len(c.Appointments))
+	offers := make([]*services.SignedAppointment, c.N)
 
-	for i, appointment := range c.Appointments {
-		if signedAppointment, err := appointment.Sign(provider.Actor.SigningKey); err != nil {
+	ct := c.Start
+	for i := int64(0); i < c.N; i++ {
+		if appointment, err := services.MakeAppointment(ct, c.Slots, c.Duration); err != nil {
 			return nil, err
 		} else {
-			offers[i] = signedAppointment
+			appointment.Properties = c.Properties
+			if signedAppointment, err := appointment.Sign(provider.Actor.SigningKey); err != nil {
+				return nil, err
+			} else {
+				offers[i] = signedAppointment
+			}
 		}
+		ct = ct.Add(time.Duration(c.Duration) * time.Minute)
 	}
 
 	t := time.Now()
@@ -64,7 +75,7 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("cannot publish appointments")
 	}
 
-	return provider, nil
+	return offers, nil
 
 }
 

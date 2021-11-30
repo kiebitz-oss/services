@@ -118,12 +118,6 @@ type JSONRPCServerSettings struct {
 	BindAddress string        `json:"bind_address"`
 }
 
-// Settings for the JSON-RPC server
-type HTTPServerSettings struct {
-	TLS         *TLSSettings `json:"tls,omitempty"`
-	BindAddress string       `json:"bind_address"`
-}
-
 type MetricSettings struct {
 	BindAddress string `json:"bind_address"`
 }

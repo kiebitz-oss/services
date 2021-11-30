@@ -110,7 +110,7 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 		},
 	}
 
-	httpServerSettings := &services.HTTPServerSettings{
+	httpServerSettings := &http.HTTPServerSettings{
 		TLS:         settings.TLS,
 		BindAddress: settings.BindAddress,
 	}

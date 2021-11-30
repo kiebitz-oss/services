@@ -18,10 +18,14 @@ package http
 
 import (
 	"context"
+	cryptoTls "crypto/tls"
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/metrics"
+	kiebitzNet "github.com/kiebitz-oss/services/net"
+	"github.com/kiebitz-oss/services/tls"
 	"github.com/prometheus/client_golang/prometheus"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -48,10 +52,17 @@ type Route struct {
 
 type H map[string]interface{}
 
+type Hooks struct {
+	Finished Handler
+}
+
 type HTTPServer struct {
-	settings      *services.HTTPServerSettings
+	settings      *HTTPServerSettings
+	tlsConfig     *cryptoTls.Config
+	listener      net.Listener
 	mutex         sync.Mutex
 	running       bool
+	hooks         *Hooks
 	err           error
 	server        *http.Server
 	routeGroups   []*RouteGroup
@@ -81,7 +92,7 @@ func initializeRouteGroup(routeGroup *RouteGroup) error {
 	return nil
 }
 
-func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteGroup, metricsPrefix string) (*HTTPServer, error) {
+func MakeHTTPServer(settings *HTTPServerSettings, routeGroups []*RouteGroup, metricsPrefix string) (*HTTPServer, error) {
 
 	for _, routeGroup := range routeGroups {
 		if err := initializeRouteGroup(routeGroup); err != nil {
@@ -90,12 +101,19 @@ func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteG
 	}
 
 	s := &HTTPServer{
-		metricsPrefix: metricsPrefix,
 		settings:      settings,
 		routeGroups:   routeGroups,
 		mutex:         sync.Mutex{},
+		hooks:         &Hooks{},
+		metricsPrefix: metricsPrefix,
 		server: &http.Server{
 			Addr: settings.BindAddress,
+			// we disable HTTP/2 for all servers as there seems to be a bug in the Golang
+			// HTTP/2 implementation that causes EOF errors when reading from the server
+			// response, which in turn causes trouble with our proxy server when terminating
+			// This can be re-eneabled once the bug is fixed upstream...
+			// more info: https://github.com/golang/go/issues/46071
+			TLSNextProto: make(map[string]func(*http.Server, *cryptoTls.Conn, http.Handler)),
 		},
 	}
 
@@ -103,6 +121,18 @@ func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteG
 	s.server.Handler = s
 
 	return s, nil
+}
+
+func (h *HTTPServer) SetHooks(hooks *Hooks) {
+	h.hooks = hooks
+}
+
+func (h *HTTPServer) SetListener(listener net.Listener) {
+	h.listener = listener
+}
+
+func (h *HTTPServer) SetTLSConfig(config *cryptoTls.Config) {
+	h.tlsConfig = config
 }
 
 func handleRouteGroup(context *Context, group *RouteGroup, handlers []Handler) {
@@ -123,6 +153,9 @@ func handleRouteGroup(context *Context, group *RouteGroup, handlers []Handler) {
 				}
 			}
 		}
+		if context.Aborted {
+			break
+		}
 	}
 
 	for _, subgroup := range group.Subgroups {
@@ -130,7 +163,6 @@ func handleRouteGroup(context *Context, group *RouteGroup, handlers []Handler) {
 	}
 
 }
-
 func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	startHandleTime := time.Now()
@@ -161,6 +193,7 @@ func (s *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 	}
 
 	s.httpDurations.WithLabelValues(u.Path, statusCodeString).Observe(handleDuration.Seconds())
+
 }
 
 func (s *HTTPServer) Start() error {
@@ -180,16 +213,37 @@ func (s *HTTPServer) Start() error {
 
 	var listener func() error
 
-	if s.settings.TLS != nil {
-		// we listen via a TLS connection
-		listener = func() error {
-			return s.server.ListenAndServeTLS(s.settings.TLS.CertificateFile, s.settings.TLS.KeyFile)
+	useTLS := false
+	if s.settings.TLS != nil && s.tlsConfig == nil {
+
+		var err error
+		s.tlsConfig, err = tls.TLSServerConfig(s.settings.TLS)
+
+		if err != nil {
+			return err
 		}
-	} else {
-		// we listen without TLS (e.g. when we're behind a reverse proxy with TLS termination)
-		listener = func() error {
-			return s.server.ListenAndServe()
+	}
+
+	if s.tlsConfig != nil {
+		useTLS = true
+		s.server.TLSConfig = s.tlsConfig
+	}
+
+	if s.listener == nil {
+		if listener, err := net.Listen("tcp", s.settings.BindAddress); err != nil {
+			return err
+		} else if s.settings.TCPRateLimits != nil {
+			s.listener = kiebitzNet.MakeRateLimitedListener(listener, s.settings.TCPRateLimits)
+		} else {
+			s.listener = listener
 		}
+	}
+
+	listener = func() error {
+		if useTLS {
+			return s.server.ServeTLS(s.listener, "", "")
+		}
+		return s.server.Serve(s.listener)
 	}
 
 	go func() {
