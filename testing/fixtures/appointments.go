@@ -23,6 +23,14 @@ import (
 	"time"
 )
 
+func TS(dt string) time.Time {
+	if t, err := time.Parse(time.RFC3339, dt); err != nil {
+		panic(err)
+	} else {
+		return t
+	}
+}
+
 type Appointments struct {
 	Start      time.Time
 	Duration   int64
@@ -52,6 +60,7 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		if appointment, err := services.MakeAppointment(ct, c.Slots, c.Duration); err != nil {
 			return nil, err
 		} else {
+			appointment.PublicKey = provider.Actor.EncryptionKey.PublicKey
 			appointment.Properties = c.Properties
 			if signedAppointment, err := appointment.Sign(provider.Actor.SigningKey); err != nil {
 				return nil, err

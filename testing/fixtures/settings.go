@@ -18,26 +18,20 @@ package fixtures
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/definitions"
 	"github.com/kiebitz-oss/services/helpers"
 )
 
 type Settings struct {
+	Definitions services.Definitions
 }
 
 func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 	// we set the loglevel to 'debug' so we can see which settings files are being loaded
 	services.Log.SetLevel(services.DebugLogLevel)
 
-	defs, ok := fixtures["definitions"].(services.Definitions)
-
-	if !ok {
-		defs = definitions.Default
-	}
-
 	paths := helpers.SettingsPaths()
 
-	if settings, err := helpers.Settings(paths, &defs); err != nil {
+	if settings, err := helpers.Settings(paths, &c.Definitions); err != nil {
 		return nil, err
 	} else if db, err := helpers.InitializeDatabase(settings); err != nil {
 		return nil, err

@@ -18,6 +18,7 @@ package servers_test
 
 import (
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/definitions"
 	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
@@ -29,7 +30,7 @@ func BenchmarkAppointmentsEndpoints(b *testing.B) {
 	var fixturesConfig = []at.FC{
 
 		// we create the settings
-		at.FC{af.Settings{}, "settings"},
+		at.FC{af.Settings{definitions.Default}, "settings"},
 
 		// we create the appointments API
 		at.FC{af.AppointmentsServer{}, "appointmentsServer"},
@@ -49,7 +50,7 @@ func BenchmarkAppointmentsEndpoints(b *testing.B) {
 			},
 			BaseAppointments: af.Appointments{
 				N:        100,
-				Start:    ts("2022-10-01T12:00:00Z"),
+				Start:    af.TS("2022-10-01T12:00:00Z"),
 				Duration: 30,
 				Slots:    20,
 				Properties: map[string]interface{}{

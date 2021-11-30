@@ -944,7 +944,6 @@ var AppointmentDataForm = forms.Form{
 		{
 			Name: "publicKey",
 			Validators: []forms.Validator{
-				forms.IsOptional{},
 				forms.IsBytes{
 					Encoding:  "base64",
 					MaxLength: 1000,

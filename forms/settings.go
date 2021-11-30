@@ -381,6 +381,13 @@ var MetricsForm = forms.Form{
 var SettingsForm = forms.Form{
 	Fields: []forms.Field{
 		{
+			Name: "test",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: false},
+				forms.IsBoolean{},
+			},
+		},
+		{
 			Name: "admin",
 			Validators: []forms.Validator{
 				forms.IsOptional{},

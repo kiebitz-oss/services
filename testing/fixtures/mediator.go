@@ -18,7 +18,6 @@ package fixtures
 
 import (
 	"fmt"
-	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/helpers"
 )
@@ -34,8 +33,6 @@ func (c Mediator) Setup(fixtures map[string]interface{}) (interface{}, error) {
 	if !ok {
 		return nil, fmt.Errorf("client missing")
 	}
-
-	services.Log.Info(client)
 
 	mediator, err := crypto.MakeActor("mediator")
 

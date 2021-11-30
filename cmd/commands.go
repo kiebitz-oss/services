@@ -27,6 +27,10 @@ var Commands = services.CommandsDefinitions{
 		Maker: helpers.Admin,
 	},
 	services.CommandsDefinition{
+		Name:  "testing",
+		Maker: helpers.Testing,
+	},
+	services.CommandsDefinition{
 		Name:  "run",
 		Maker: helpers.Run,
 	},

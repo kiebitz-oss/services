@@ -1,4 +1,5 @@
 name: kiebitz
+test: true
 meter:
   name: meter
   type: redis

@@ -18,6 +18,7 @@ package servers_test
 
 import (
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/definitions"
 	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
@@ -29,7 +30,7 @@ func TestAppointmentsApi(t *testing.T) {
 	var fixturesConfig = []at.FC{
 
 		// we create the settings
-		at.FC{af.Settings{}, "settings"},
+		at.FC{af.Settings{definitions.Default}, "settings"},
 
 		// we create the appointments API
 		at.FC{af.AppointmentsServer{}, "appointmentsServer"},

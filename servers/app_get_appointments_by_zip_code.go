@@ -51,7 +51,12 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 	providerAppointmentsList := []*services.ProviderAppointments{}
 
-	for _, providerKey := range keys.Providers {
+	for i, providerKey := range keys.Providers {
+
+		// max 10 providers
+		if i > 10 {
+			break
+		}
 
 		pkd, err := providerKey.ProviderKeyData()
 		if err != nil {
@@ -76,7 +81,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			if err != databases.NotFound {
 				services.Log.Error(err)
 			}
-			services.Log.Info("provider data not found")
+			services.Log.Warning("provider data not found")
 			continue
 		}
 
@@ -110,6 +115,7 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 
 		visitedDates := make(map[string]bool)
 
+	getAppointments:
 		for _, date := range allDates {
 
 			if _, ok := visitedDates[string(date)]; ok {
@@ -144,6 +150,10 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 				signedAppointment.BookedSlots = slots
 
 				signedAppointments = append(signedAppointments, signedAppointment)
+
+				if len(signedAppointments) > 10 {
+					break getAppointments
+				}
 			}
 		}
 
@@ -162,6 +172,9 @@ func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params
 			Provider: providerKey,
 			Mediator: mediatorKey,
 		}
+
+		// we add the hash for convenience
+		providerData.ID = hash
 
 		providerAppointments := &services.ProviderAppointments{
 			Provider: providerData,

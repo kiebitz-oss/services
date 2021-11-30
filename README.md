@@ -162,6 +162,18 @@ make test-races
 make bench
 ```
 
+### Load Testing
+
+**Careful, the following commands will create massive amounts of fake data via the API client, never run this against the production system, except for initial load testing!** 
+
+You can simulate providers, appointments and bookings in the backend using the `testing benchmark` command. The following command will create 1.000 providers with 1.000 appointments with 20 slots each, hence a total of 20.000.000 appointments:
+
+```bash
+kiebitz testing benchmark --providers 1000 --appointments 1000 --slots 20
+```
+
+This command will use the given settings and connect to a running API server, hence to run it you need to also run the Kiebitz API. Probably you want to use the `test` settings for this
+
 ## Development
 
 To auto-generate copyright headers for Golang files, simply run

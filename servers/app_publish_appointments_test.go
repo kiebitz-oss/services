@@ -17,26 +17,18 @@
 package servers_test
 
 import (
+	"github.com/kiebitz-oss/services/definitions"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
-	"time"
 )
-
-func ts(dt string) time.Time {
-	if t, err := time.Parse(time.RFC3339, dt); err != nil {
-		panic(err)
-	} else {
-		return t
-	}
-}
 
 func TestPublishAppointments(t *testing.T) {
 
 	var fixturesConfig = []at.FC{
 
 		// we create the settings
-		at.FC{af.Settings{}, "settings"},
+		at.FC{af.Settings{definitions.Default}, "settings"},
 
 		// we create the appointments API
 		at.FC{af.AppointmentsServer{}, "appointmentsServer"},
@@ -56,7 +48,7 @@ func TestPublishAppointments(t *testing.T) {
 
 		at.FC{af.Appointments{
 			N:        1000,
-			Start:    ts("2022-10-01T12:00:00Z"),
+			Start:    af.TS("2022-10-01T12:00:00Z"),
 			Duration: 30,
 			Slots:    20,
 			Properties: map[string]interface{}{
