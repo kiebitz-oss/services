@@ -152,6 +152,42 @@ func generateMediatorKeys(settings *services.Settings) func(c *cli.Context) erro
 	}
 }
 
+type ExportKeys struct {
+	RootPublicKey string `json:"rootPublicKey"`
+}
+
+func exportRootPublicKey(settings *services.Settings) func(c *cli.Context) error {
+	return func(c *cli.Context) error {
+		key := settings.Admin.Signing.Key("root")
+
+		publicKey, err := crypto.LoadPublicKey(key.PublicKey)
+		if err != nil {
+			services.Log.Fatal(err)
+		}
+
+		privateKey, err := crypto.LoadPrivateKey(key.PrivateKey)
+		if err != nil {
+			services.Log.Fatal(err)
+		}
+
+		privateKey.PublicKey = *publicKey
+
+		webKey, err := crypto.AsWebKey(privateKey, key.Type)
+		if err != nil {
+			services.Log.Fatal(err)
+		}
+
+		exportKeys := &ExportKeys{
+			RootPublicKey: webKey.PublicKey,
+		}
+
+		jsonData, err := json.MarshalIndent(exportKeys, "", "  ")
+
+		fmt.Println(string(jsonData))
+		return nil
+	}
+}
+
 func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 	return func(c *cli.Context) error {
 
@@ -732,6 +768,12 @@ func Admin(settings *services.Settings) ([]cli.Command, error) {
 							Flags:  []cli.Flag{},
 							Usage:  "generate a new set of mediator keys",
 							Action: generateMediatorKeys(settings),
+						},
+						{
+							Name:   "exportRootPublic",
+							Flags:  []cli.Flag{},
+							Usage:  "export the root public key",
+							Action: exportRootPublicKey(settings),
 						},
 					},
 				},
