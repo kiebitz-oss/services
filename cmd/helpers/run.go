@@ -74,6 +74,7 @@ func initializeAppointments(settings *services.Settings) (Server, error) {
 func initializeMetrics(settings *services.Settings) (Server, error) {
 	services.Log.Debug("Starting metrics server...")
 	if settings.Metrics == nil {
+		return nil, nil
 		return nil, fmt.Errorf("Metrics settings undefined")
 	}
 	return helpers.InitializeMetricsServer(settings)
@@ -89,6 +90,10 @@ func startServer(settings *services.Settings, initializer Initializer) Server {
 		services.Log.Fatal(err)
 	}
 
+	if server == nil {
+		return nil
+	}
+
 	if err := server.Start(); err != nil {
 		services.Log.Fatal(err)
 	}
@@ -101,7 +106,9 @@ func run(settings *services.Settings, initializers []Initializer) func(c *cli.Co
 	return func(c *cli.Context) error {
 		servers := make([]Server, 0)
 		for _, initializer := range initializers {
-			servers = append(servers, startServer(settings, initializer))
+			if server := startServer(settings, initializer); server != nil {
+				servers = append(servers, server)
+			}
 		}
 		return waitAndStop(servers)
 	}
