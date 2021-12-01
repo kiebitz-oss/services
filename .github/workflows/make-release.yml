@@ -47,11 +47,16 @@ jobs:
           name: kiebitz-${{matrix.arch}}
           path: |
             /tmp/go/bin/${{matrix.arch}}/*
-      - name: rename binaries for non-Linux platforms
+      - name: rename binaries for Mac platforms
         if: ${{ matrix.arch != 'linux_amd64' && matrix.arch != 'windows_amd64' }}
         run: |
           mv /tmp/go/bin/${{matrix.arch}}/kiebitz /tmp/go/bin/${{matrix.arch}}/kiebitz-${{matrix.arch}}
-      - name: rename binaries for non-Linux platforms
+      - name: rename binaries for Linux platforms
+        if: ${{ matrix.arch == 'linux_amd64' }}
+        run: |
+          mkdir -p /tmp/go/bin/${{matrix.arch}}
+          mv /tmp/go/bin/kiebitz /tmp/go/bin/${{matrix.arch}}/kiebitz-${{matrix.arch}}
+      - name: rename binaries for Windows platforms
         if: ${{ matrix.arch == 'windows_amd64' }}
         run: |
           mv /tmp/go/bin/${{matrix.arch}}/kiebitz.exe /tmp/go/bin/${{matrix.arch}}/kiebitz-${{matrix.arch}}.exe
@@ -60,6 +65,5 @@ jobs:
         with:
           files: |
             /tmp/go/bin/*/*
-            /tmp/go/bin/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
