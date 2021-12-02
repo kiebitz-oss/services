@@ -3,7 +3,7 @@
 SHELL := /bin/bash
 
 GOFLAGS ?= -ldflags=\"-extldflags=-static\" $(GOFLAGS:)
-BENCHARGS ?= -run=NONE -bench=.
+BENCHARGS ?= -run=NONE -bench=. -benchmem
 
 export KIEBITZ_TEST = yes
 

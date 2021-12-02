@@ -28,7 +28,7 @@ func TestPublishAppointments(t *testing.T) {
 	var fixturesConfig = []at.FC{
 
 		// we create the settings
-		at.FC{af.Settings{definitions.Default}, "settings"},
+		at.FC{af.Settings{Definitions: definitions.Default}, "settings"},
 
 		// we create the appointments API
 		at.FC{af.AppointmentsServer{}, "appointmentsServer"},

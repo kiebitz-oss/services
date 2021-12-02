@@ -72,7 +72,7 @@ type MeterSettings struct {
 }
 
 type Settings struct {
-	Test         bool                  `json:"test"`
+	Test         *bool                 `json:"test,omitempty"`
 	Admin        *AdminSettings        `json:"admin,omitempty"`
 	Definitions  *Definitions          `json:"definitions,omitempty"`
 	Storage      *StorageSettings      `json:"storage,omitempty"`

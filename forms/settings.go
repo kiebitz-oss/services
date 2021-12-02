@@ -405,6 +405,7 @@ var SettingsForm = forms.Form{
 		{
 			Name: "database",
 			Validators: []forms.Validator{
+				forms.IsOptional{},
 				forms.IsStringMap{
 					Form: &DatabaseForm,
 				},

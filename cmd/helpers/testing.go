@@ -44,7 +44,7 @@ func benchmark(settings *services.Settings) func(c *cli.Context) error {
 		providers := c.Int("providers")
 		slots := c.Int("slots")
 
-		if !settings.Test && !safetyOff {
+		if !*settings.Test && !safetyOff {
 			return fmt.Errorf("Non-test system detected, aborting! Override this by setting --safetyOff.")
 		}
 

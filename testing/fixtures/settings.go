@@ -23,11 +23,15 @@ import (
 
 type Settings struct {
 	Definitions services.Definitions
+	LogLevel    services.Level
 }
 
 func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
-	// we set the loglevel to 'debug' so we can see which settings files are being loaded
-	services.Log.SetLevel(services.DebugLogLevel)
+	if c.LogLevel == services.PanicLogLevel {
+		// panic log level is the default but we want debug as default
+		c.LogLevel = services.DebugLogLevel
+	}
+	services.Log.SetLevel(c.LogLevel)
 
 	paths := helpers.SettingsPaths()
 
@@ -37,9 +41,12 @@ func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		return nil, err
 	} else if meter, err := helpers.InitializeMeter(settings); err != nil {
 		return nil, err
-	} else if err := db.Reset(); err != nil {
-		return nil, err
 	} else {
+		if db != nil {
+			if err := db.Reset(); err != nil {
+				return nil, err
+			}
+		}
 		settings.DatabaseObj = db
 		settings.MeterObj = meter
 		return settings, nil

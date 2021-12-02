@@ -21,6 +21,9 @@ import (
 )
 
 func InitializeDatabase(settings *services.Settings) (services.Database, error) {
+	if settings.Database == nil {
+		return nil, nil
+	}
 	definition := settings.Definitions.DatabaseDefinitions[settings.Database.Type]
 	if db, err := definition.Maker(settings.Database.Settings); err != nil {
 		return nil, err
