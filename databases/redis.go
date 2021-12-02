@@ -362,7 +362,6 @@ func (d *Redis) getShardForKey(key string) uint32 {
 }
 
 func (d *Redis) Client(key string) redis.UniversalClient {
-	return d.clients[0]
 	return d.clients[d.getShardForKey(key)]
 }
 
