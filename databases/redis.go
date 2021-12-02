@@ -34,7 +34,6 @@ type Redis struct {
 	metricsPrefix  string
 	redisDurations *prometheus.HistogramVec
 	client         redis.UniversalClient
-	options        redis.UniversalOptions
 	pipeline       redis.Pipeliner
 	mutex          sync.Mutex
 	channel        chan bool
@@ -80,10 +79,13 @@ func (r *RedisLock) Release() error {
 }
 
 type RedisSettings struct {
-	MasterName string   `json:"master_name"`
-	Addresses  []string `json:"addresses`
-	Database   int64    `json:"database"`
-	Password   string   `json:"password"`
+	MasterName        string   `json:"master_name"`
+	Addresses         []string `json:"addresses`
+	SentinelAddresses []string `json:"sentinel_addresses`
+	Database          int64    `json:"database"`
+	Password          string   `json:"password"`
+	SentinelUsername  string   `json:"sentinel_username"`
+	SentinelPassword  string   `json:"sentinel_password"`
 }
 
 type MetricHook struct {
@@ -120,7 +122,14 @@ var RedisForm = forms.Form{
 		{
 			Name: "addresses",
 			Validators: []forms.Validator{
-				forms.IsRequired{},
+				forms.IsOptional{Default: []string{}},
+				forms.IsStringList{},
+			},
+		},
+		{
+			Name: "sentinel_addresses",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: []string{}},
 				forms.IsStringList{},
 			},
 		},
@@ -145,6 +154,20 @@ var RedisForm = forms.Form{
 				forms.IsString{},
 			},
 		},
+		{
+			Name: "sentinel_username",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsString{},
+			},
+		},
+		{
+			Name: "sentinel_password",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsString{},
+			},
+		},
 	},
 }
 
@@ -165,23 +188,43 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 	redisSettings := settings.(RedisSettings)
 	ctx := context.TODO()
 
-	options := redis.UniversalOptions{
-		MasterName:   redisSettings.MasterName,
-		Password:     redisSettings.Password,
-		ReadTimeout:  time.Second * 1.0,
-		WriteTimeout: time.Second * 1.0,
-		Addrs:        redisSettings.Addresses,
-		DB:           int(redisSettings.Database),
-	}
+	var client redis.UniversalClient
 
-	client := redis.NewUniversalClient(&options)
+	if len(redisSettings.Addresses) > 0 {
+		options := redis.UniversalOptions{
+			MasterName:   redisSettings.MasterName,
+			Password:     redisSettings.Password,
+			ReadTimeout:  time.Second * 1.0,
+			WriteTimeout: time.Second * 1.0,
+			Addrs:        redisSettings.Addresses,
+			DB:           int(redisSettings.Database),
+		}
+
+		client = redis.NewUniversalClient(&options)
+
+	} else if len(redisSettings.SentinelAddresses) > 0 {
+		options := redis.FailoverOptions{
+			MasterName:       redisSettings.MasterName,
+			Password:         redisSettings.Password,
+			ReadTimeout:      time.Second * 1.0,
+			WriteTimeout:     time.Second * 1.0,
+			DB:               int(redisSettings.Database),
+			SentinelAddrs:    redisSettings.SentinelAddresses,
+			SentinelUsername: redisSettings.SentinelUsername,
+			SentinelPassword: redisSettings.SentinelPassword,
+		}
+
+		client = redis.NewFailoverClient(&options)
+
+	} else {
+		return nil, errors.New("invalid database configuration, needed addresses or sentinelAddresses")
+	}
 
 	if _, err := client.Ping(ctx).Result(); err != nil {
 		return nil, err
 	}
 
 	database := &Redis{
-		options: options,
 		client:  client,
 		channel: make(chan bool),
 		ctx:     ctx,
