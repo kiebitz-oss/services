@@ -74,6 +74,13 @@ func (c *Appointments) bookAppointment(context *jsonrpc.Context, params *service
 		return context.Error(400, "invalid signature", nil)
 	}
 
+	// test if provider of the appointment is still active
+	if res, isActive := c.isActiveProviderID(context, params.Data.ProviderID); res != nil {
+		return res
+	} else if !isActive {
+		return context.Error(404, "invalid provider id", nil)
+	}
+
 	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
 
 	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {

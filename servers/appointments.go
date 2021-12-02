@@ -278,6 +278,19 @@ func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, pub
 	return c.isOnKeyList(context, data, signature, publicKey, keys.Providers)
 }
 
+func (c *Appointments) isActiveProviderID(context *jsonrpc.Context, publicKey []byte) (*jsonrpc.Response, bool) {
+	activeProvider, err := c.db.Map("keys", []byte("providers")).Get([]byte(publicKey))
+
+	if len(activeProvider) == 0 {
+		return context.Error(404, "provider not found", nil), false
+	} else if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), false
+	}
+
+	return nil, true
+}
+
 func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (*jsonrpc.Response, *services.ActorKey) {
 
 	actorKey, err := findActorKey(keyList, publicKey)
