@@ -42,9 +42,10 @@ func benchmark(settings *services.Settings) func(c *cli.Context) error {
 		safetyOff := c.Bool("safetyOff")
 		appointments := c.Int("appointments")
 		providers := c.Int("providers")
+		concurrency := c.Int("concurrency")
 		slots := c.Int("slots")
 
-		if !*settings.Test && !safetyOff {
+		if !settings.Test && !safetyOff {
 			return fmt.Errorf("Non-test system detected, aborting! Override this by setting --safetyOff.")
 		}
 
@@ -54,13 +55,16 @@ func benchmark(settings *services.Settings) func(c *cli.Context) error {
 			at.FC{SettingsFixture{settings: settings}, "settings"},
 
 			// we create a client (without a key)
-			at.FC{af.Client{}, "client"},
+			at.FC{af.Client{
+				ResetDB: true,
+			}, "client"},
 
 			// we create a mediator
 			at.FC{af.Mediator{}, "mediator"},
 
 			at.FC{af.ProvidersAndAppointments{
-				Providers: int64(providers),
+				Providers:   int64(providers),
+				Concurrency: int64(concurrency),
 				BaseProvider: af.Provider{
 					ZipCode:   "10707",
 					Name:      "Dr. Maier Müller",
@@ -111,6 +115,11 @@ func Testing(settings *services.Settings) ([]cli.Command, error) {
 							Name:  "providers",
 							Value: 1000,
 							Usage: "number of providers to create",
+						},
+						&cli.IntFlag{
+							Name:  "concurrency",
+							Value: 10,
+							Usage: "number of concurrent API calls to make",
 						},
 						&cli.IntFlag{
 							Name:  "appointments",

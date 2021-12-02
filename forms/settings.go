@@ -181,6 +181,18 @@ var MailForm = forms.Form{
 var StorageForm = forms.Form{
 	Fields: []forms.Field{
 		{
+			Name: "keys",
+			Validators: []forms.Validator{
+				forms.IsList{
+					Validators: []forms.Validator{
+						forms.IsStringMap{
+							Form: &KeyForm,
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: "rpc",
 			Validators: []forms.Validator{
 				forms.IsStringMap{

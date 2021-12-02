@@ -21,6 +21,7 @@ import (
 	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
+	"time"
 )
 
 type Storage struct {
@@ -28,6 +29,7 @@ type Storage struct {
 	server        *jsonrpc.JSONRPCServer
 	metricsServer *metrics.PrometheusMetricsServer
 	db            services.Database
+	test          bool
 }
 
 func MakeStorage(settings *services.Settings) (*Storage, error) {
@@ -35,9 +37,14 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 	Storage := &Storage{
 		db:       settings.DatabaseObj,
 		settings: settings.Storage,
+		test:     settings.Test,
 	}
 
 	methods := map[string]*jsonrpc.Method{
+		"resetDB": {
+			Form:    &forms.ResetDBForm,
+			Handler: Storage.resetDB,
+		},
 		"storeSettings": {
 			Form:    &forms.StoreSettingsForm,
 			Handler: Storage.storeSettings,
@@ -64,6 +71,10 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		Storage.server = jsonrpcServer
 		return Storage, nil
 	}
+}
+
+func (c *Storage) isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time) *jsonrpc.Response {
+	return isRoot(context, data, signature, timestamp, c.settings.Keys)
 }
 
 func (c *Storage) Start() error {

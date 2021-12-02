@@ -25,6 +25,7 @@ type RPCSettings struct {
 }
 
 type StorageSettings struct {
+	Keys            []*crypto.Key          `json:"keys,omitempty"`
 	SettingsTTLDays int64                  `json:"settings_ttl_days"`
 	RPC             *JSONRPCServerSettings `json:"rpc,omitempty"`
 }
@@ -41,10 +42,10 @@ type AppointmentsSettings struct {
 }
 
 func (a *AppointmentsSettings) Key(name string) *crypto.Key {
-	return key(a.Keys, name)
+	return Key(a.Keys, name)
 }
 
-func key(keys []*crypto.Key, name string) *crypto.Key {
+func Key(keys []*crypto.Key, name string) *crypto.Key {
 	for _, key := range keys {
 		if key.Name == name {
 			return key
@@ -54,7 +55,7 @@ func key(keys []*crypto.Key, name string) *crypto.Key {
 }
 
 func (s *SigningSettings) Key(name string) *crypto.Key {
-	return key(s.Keys, name)
+	return Key(s.Keys, name)
 }
 
 type SigningSettings struct {
@@ -72,7 +73,7 @@ type MeterSettings struct {
 }
 
 type Settings struct {
-	Test         *bool                 `json:"test,omitempty"`
+	Test         bool                  `json:"test,omitempty"`
 	Admin        *AdminSettings        `json:"admin,omitempty"`
 	Definitions  *Definitions          `json:"definitions,omitempty"`
 	Storage      *StorageSettings      `json:"storage,omitempty"`

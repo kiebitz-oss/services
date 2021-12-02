@@ -193,6 +193,7 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 		adminKeys := []*crypto.Key{}
 		apptKeys := []*crypto.Key{}
+		storageKeys := []*crypto.Key{}
 
 		keys := map[string]string{
 			"root":     "ecdsa",
@@ -224,6 +225,10 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 			apptKeys = append(apptKeys, &keyCopy)
 
+			if name == "root" {
+				storageKeys = append(storageKeys, &keyCopy)
+			}
+
 		}
 
 		adminSettings := &services.Settings{
@@ -240,14 +245,26 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			services.Log.Fatal(err)
 		}
 
-		apptSettings := &services.Settings{
-			Appointments: &services.AppointmentsSettings{
-				Keys:   apptKeys,
-				Secret: apptSecret,
+		apptSettings := map[string]interface{}{
+			"appointments": map[string]interface{}{
+				"keys":   apptKeys,
+				"secret": apptSecret,
+			},
+		}
+
+		storageSettings := map[string]interface{}{
+			"storage": map[string]interface{}{
+				"keys": storageKeys,
 			},
 		}
 
 		apptJson, err := json.MarshalIndent(apptSettings, "", "  ")
+
+		if err != nil {
+			services.Log.Fatal(err)
+		}
+
+		storageJson, err := json.MarshalIndent(storageSettings, "", "  ")
 
 		if err != nil {
 			services.Log.Fatal(err)
@@ -274,6 +291,10 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 		}
 
 		if err := ioutil.WriteFile(fmt.Sprintf("%s/003_appt.json", settingsPaths[0]), apptJson, 0644); err != nil {
+			services.Log.Fatal(err)
+		}
+
+		if err := ioutil.WriteFile(fmt.Sprintf("%s/004_storage.json", settingsPaths[0]), storageJson, 0644); err != nil {
 			services.Log.Fatal(err)
 		}
 

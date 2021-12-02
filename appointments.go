@@ -72,6 +72,19 @@ type ProviderQueueData struct {
 	Accessible bool   `json:"accessible"`
 }
 
+// ResetDB
+
+type ResetDBSignedParams struct {
+	JSON      string         `json:"data" coerce:"name:json"`
+	Data      *ResetDBParams `json:"-" coerce:"name:data"`
+	Signature []byte         `json:"signature"`
+	PublicKey []byte         `json:"publicKey"`
+}
+
+type ResetDBParams struct {
+	Timestamp *time.Time `json:"timestamp"`
+}
+
 // AddMediatorPublicKeys
 
 type AddMediatorPublicKeysSignedParams struct {

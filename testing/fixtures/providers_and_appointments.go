@@ -19,12 +19,15 @@ package fixtures
 import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/helpers"
+	"sync"
+	"time"
 )
 
 type ProvidersAndAppointments struct {
 	BaseProvider     Provider
 	BaseAppointments Appointments
 	Providers        int64
+	Concurrency      int64
 }
 
 type ProviderAndAppointments struct {
@@ -34,22 +37,67 @@ type ProviderAndAppointments struct {
 
 func (c ProvidersAndAppointments) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
+	if c.Concurrency == 0 {
+		c.Concurrency = 1
+	}
+
+	var mutex sync.Mutex
+	var workerErr error
+	workChannels := make(chan bool, c.Concurrency)
+
 	providersAndAppointments := make([]*ProviderAndAppointments, c.Providers)
 
+	start := time.Now()
+
 	for i := int64(0); i < c.Providers; i++ {
-		if provider, err := c.BaseProvider.Setup(fixtures); err != nil {
-			return nil, err
-		} else {
-			fixtures["provider"] = provider
-			if appointments, err := c.BaseAppointments.Setup(fixtures); err != nil {
-				return nil, err
-			} else {
-				providersAndAppointments = append(providersAndAppointments, &ProviderAndAppointments{
-					Provider:     provider.(*helpers.Provider),
-					Appointments: appointments.([]*services.SignedAppointment),
-				})
-			}
+		if i%10 == 0 && i > c.Concurrency*2 {
+			elapsed := time.Now().Sub(start).Seconds()
+			et := float64(i) / elapsed
+			services.Log.Debugf("Created %d providers, %.2f providers / second (%.2f appointments / second)", i, et, et*float64(c.BaseAppointments.N))
 		}
+
+		mutex.Lock()
+		if workerErr != nil {
+			services.Log.Error(workerErr)
+			return workerErr, nil
+		}
+		mutex.Unlock()
+
+		workChannels <- true
+
+		go func(x int64) {
+			defer func() {
+				<-workChannels
+			}()
+			if provider, err := c.BaseProvider.Setup(fixtures); err != nil {
+				mutex.Lock()
+				defer mutex.Unlock()
+				workerErr = err
+				return
+			} else {
+				newFixtures := map[string]interface{}{}
+				for k, v := range fixtures {
+					newFixtures[k] = v
+				}
+				newFixtures["provider"] = provider
+				if appointments, err := c.BaseAppointments.Setup(newFixtures); err != nil {
+					mutex.Lock()
+					defer mutex.Unlock()
+					workerErr = err
+					return
+				} else {
+					providersAndAppointments = append(providersAndAppointments, &ProviderAndAppointments{
+						Provider:     provider.(*helpers.Provider),
+						Appointments: appointments.([]*services.SignedAppointment),
+					})
+				}
+			}
+		}(i)
+	}
+
+	// we wait for the remaining work to be done
+	for i := int64(0); i < c.Concurrency; i++ {
+		<-workChannels
 	}
 
 	return providersAndAppointments, nil

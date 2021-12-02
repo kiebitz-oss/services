@@ -188,6 +188,21 @@ func (a *AppointmentsClient) GetKeys() (*Response, error) {
 	return a.requester("getKeys", nil, nil)
 }
 
+func (a *AppointmentsClient) ResetDB() (*Response, error) {
+	signingKey := a.settings.Admin.Signing.Key("root")
+
+	if signingKey == nil {
+		return nil, fmt.Errorf("root key missing")
+	}
+
+	data := map[string]interface{}{
+		"timestamp": time.Now(),
+	}
+
+	return a.requester("resetDB", data, signingKey)
+
+}
+
 func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Response, error) {
 	signingKey := a.settings.Admin.Signing.Key("root")
 
@@ -370,4 +385,19 @@ func MakeStorageClient(settings *services.Settings, client *http.Client) *Storag
 		settings:  settings,
 		requester: MakeAPIClient(settings.Admin.Client.StorageEndpoint, client),
 	}
+}
+
+func (a *StorageClient) ResetDB() (*Response, error) {
+	signingKey := a.settings.Admin.Signing.Key("root")
+
+	if signingKey == nil {
+		return nil, fmt.Errorf("root key missing")
+	}
+
+	data := map[string]interface{}{
+		"timestamp": time.Now(),
+	}
+
+	return a.requester("resetDB", data, signingKey)
+
 }

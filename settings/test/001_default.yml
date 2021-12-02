@@ -17,6 +17,7 @@ database:
 metrics:
   bind_address: "localhost:9091"
 storage:
+  keys: [ ]
   settings_ttl_days: 60
   rpc:
     bind_address: localhost:11111

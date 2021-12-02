@@ -17,36 +17,25 @@
 package servers
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
-// { keys }, keyPair
-// add the mediator key to the list of keys (only for testing)
-func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysSignedParams) *jsonrpc.Response {
-	if response := c.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
+func (s *Storage) resetDB(context *jsonrpc.Context, params *services.ResetDBSignedParams) *jsonrpc.Response {
+	if response := s.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
 		return response
 	}
-	hash := crypto.Hash(params.Data.Signing)
-	keys := c.db.Map("keys", []byte("mediators"))
-	bd, err := json.Marshal(context.Request.Params)
-	if err != nil {
+
+	if !s.test {
+		context.Error(400, "not a test system, will not reset database...", nil)
+	}
+
+	services.Log.Warning("Database reset requested!")
+
+	if err := s.db.Reset(); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
-	if err := keys.Set(hash, bd); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	if result, err := keys.Get(hash); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !bytes.Equal(result, bd) {
-		services.Log.Error("does not match")
-		return context.InternalError()
-	}
+
 	return context.Acknowledge()
 }

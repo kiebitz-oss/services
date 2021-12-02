@@ -33,6 +33,7 @@ type Appointments struct {
 	db            services.Database
 	meter         services.Meter
 	settings      *services.AppointmentsSettings
+	test          bool
 }
 
 func MakeAppointments(settings *services.Settings) (*Appointments, error) {
@@ -41,9 +42,14 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		db:       settings.DatabaseObj,
 		meter:    settings.MeterObj,
 		settings: settings.Appointments,
+		test:     settings.Test,
 	}
 
 	methods := map[string]*jsonrpc.Method{
+		"resetDB": {
+			Form:    &forms.ResetDBForm,
+			Handler: Appointments.resetDB,
+		},
 		"confirmProvider": {
 			Form:    &forms.ConfirmProviderForm,
 			Handler: Appointments.confirmProvider,
@@ -223,7 +229,30 @@ var tws = []services.TimeWindowFunc{
 	services.Month,
 }
 
-// get provider data
+func (c *Appointments) isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time) *jsonrpc.Response {
+	return isRoot(context, data, signature, timestamp, c.settings.Keys)
+}
+
+func isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time, keys []*crypto.Key) *jsonrpc.Response {
+	rootKey := services.Key(keys, "root")
+	if rootKey == nil {
+		services.Log.Error("root key missing")
+		return context.InternalError()
+	}
+	if ok, err := rootKey.Verify(&crypto.SignedData{
+		Data:      data,
+		Signature: signature,
+	}); !ok {
+		return context.Error(403, "invalid signature", nil)
+	} else if err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	}
+	if expired(timestamp) {
+		return context.Error(410, "signature expired", nil)
+	}
+	return nil
+}
 
 func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
 

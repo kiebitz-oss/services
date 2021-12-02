@@ -81,7 +81,8 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 	if resp, err := client.Appointments.PublishAppointments(params, provider); err != nil {
 		return nil, err
 	} else if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("cannot publish appointments")
+		json, _ := resp.JSON()
+		return nil, fmt.Errorf("cannot publish appointments: %v", json)
 	}
 
 	return offers, nil

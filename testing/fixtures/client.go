@@ -23,6 +23,7 @@ import (
 )
 
 type Client struct {
+	ResetDB bool
 }
 
 func (c Client) Setup(fixtures map[string]interface{}) (interface{}, error) {
@@ -33,7 +34,17 @@ func (c Client) Setup(fixtures map[string]interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("settings missing")
 	}
 
-	return helpers.MakeClient(settings), nil
+	client := helpers.MakeClient(settings)
+
+	if c.ResetDB {
+		if _, err := client.Appointments.ResetDB(); err != nil {
+			return nil, err
+		}
+		if _, err := client.Storage.ResetDB(); err != nil {
+			return nil, err
+		}
+	}
+	return client, nil
 }
 
 func (c Client) Teardown(fixture interface{}) error {
