@@ -38,7 +38,7 @@ type Redis struct {
 	pipeline       redis.Pipeliner
 	mutex          sync.Mutex
 	channel        chan bool
-	ctx            context.Context
+	Ctx            context.Context
 }
 
 type RedisLock struct {
@@ -256,7 +256,7 @@ func MakeRedisClient(settings interface{}) (redis.UniversalClient, error) {
 	return client, nil
 }
 
-func MakeRedisShards(settings interface{}) (services.Database, error) {
+func MakeRedisShards(settings interface{}) (*Redis, error) {
 	redisShardSettings := settings.(RedisShardSettings)
 	ctx := context.TODO()
 
@@ -280,14 +280,14 @@ func MakeRedisShards(settings interface{}) (services.Database, error) {
 	database := &Redis{
 		clients: clients,
 		channel: make(chan bool),
-		ctx:     ctx,
+		Ctx:     ctx,
 	}
 
 	return database, nil
 
 }
 
-func MakeRedis(settings interface{}) (services.Database, error) {
+func MakeRedis(settings interface{}) (*Redis, error) {
 	ctx := context.TODO()
 
 	client, err := MakeRedisClient(settings)
@@ -305,10 +305,28 @@ func MakeRedis(settings interface{}) (services.Database, error) {
 	database := &Redis{
 		clients: []redis.UniversalClient{client},
 		channel: make(chan bool),
-		ctx:     ctx,
+		Ctx:     ctx,
 	}
 
 	return database, nil
+}
+
+func MakeRedisAsDatabase(settings interface{}) (services.Database, error) {
+	var db services.Database
+	var err error
+
+	db, err = MakeRedis(settings)
+
+	return db, err
+}
+
+func MakeRedisShardAsDatabase(settings interface{}) (services.Database, error) {
+	var db services.Database
+	var err error
+
+	db, err = MakeRedisShards(settings)
+
+	return db, err
 }
 
 // Makes sure, that Redis implements Database
@@ -316,7 +334,7 @@ var _ services.Database = &Redis{}
 
 func (d *Redis) Reset() error {
 	for _, c := range d.clients {
-		err := c.FlushDB(d.ctx).Err()
+		err := c.FlushDB(d.Ctx).Err()
 		if err != nil {
 			return err
 		}
@@ -326,7 +344,7 @@ func (d *Redis) Reset() error {
 
 func (d *Redis) Lock(lockKey string) (services.Lock, error) {
 	c := d.Client(lockKey)
-	redisLock := MakeRedisLock(d.ctx, lockKey, c)
+	redisLock := MakeRedisLock(d.Ctx, lockKey, c)
 
 	if err := redisLock.Lock(); err != nil {
 		return nil, err
@@ -385,7 +403,7 @@ func (d *Redis) Close() error {
 
 func (d *Redis) Expire(table string, key []byte, ttl time.Duration) error {
 	stringKey := string(d.fullKey(table, key))
-	return d.Client(stringKey).Expire(d.ctx, stringKey, ttl).Err()
+	return d.Client(stringKey).Expire(d.Ctx, stringKey, ttl).Err()
 }
 
 func (d *Redis) Set(table string, key []byte) services.Set {
@@ -429,11 +447,11 @@ type RedisMap struct {
 }
 
 func (r *RedisMap) Del(key []byte) error {
-	return r.db.Client(r.fullKey).HDel(r.db.ctx, r.fullKey, string(key)).Err()
+	return r.db.Client(r.fullKey).HDel(r.db.Ctx, r.fullKey, string(key)).Err()
 }
 
 func (r *RedisMap) GetAll() (map[string][]byte, error) {
-	result, err := r.db.Client(r.fullKey).HGetAll(r.db.ctx, r.fullKey).Result()
+	result, err := r.db.Client(r.fullKey).HGetAll(r.db.Ctx, r.fullKey).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -448,7 +466,7 @@ func (r *RedisMap) GetAll() (map[string][]byte, error) {
 }
 
 func (r *RedisMap) Get(key []byte) ([]byte, error) {
-	result, err := r.db.Client(r.fullKey).HGet(r.db.ctx, r.fullKey, string(key)).Result()
+	result, err := r.db.Client(r.fullKey).HGet(r.db.Ctx, r.fullKey, string(key)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -459,7 +477,7 @@ func (r *RedisMap) Get(key []byte) ([]byte, error) {
 }
 
 func (r *RedisMap) Set(key []byte, value []byte) error {
-	return r.db.Client(r.fullKey).HSet(r.db.ctx, r.fullKey, string(key), string(value)).Err()
+	return r.db.Client(r.fullKey).HSet(r.db.Ctx, r.fullKey, string(key), string(value)).Err()
 }
 
 type RedisSet struct {
@@ -468,19 +486,19 @@ type RedisSet struct {
 }
 
 func (r *RedisSet) Add(data []byte) error {
-	return r.db.Client(r.fullKey).SAdd(r.db.ctx, r.fullKey, string(data)).Err()
+	return r.db.Client(r.fullKey).SAdd(r.db.Ctx, r.fullKey, string(data)).Err()
 }
 
 func (r *RedisSet) Has(data []byte) (bool, error) {
-	return r.db.Client(r.fullKey).SIsMember(r.db.ctx, r.fullKey, string(data)).Result()
+	return r.db.Client(r.fullKey).SIsMember(r.db.Ctx, r.fullKey, string(data)).Result()
 }
 
 func (r *RedisSet) Del(data []byte) error {
-	return r.db.Client(r.fullKey).SRem(r.db.ctx, r.fullKey, string(data)).Err()
+	return r.db.Client(r.fullKey).SRem(r.db.Ctx, r.fullKey, string(data)).Err()
 }
 
 func (r *RedisSet) Members() ([]*services.SetEntry, error) {
-	result, err := r.db.Client(r.fullKey).SMembers(r.db.ctx, r.fullKey).Result()
+	result, err := r.db.Client(r.fullKey).SMembers(r.db.Ctx, r.fullKey).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -501,11 +519,11 @@ type RedisValue struct {
 }
 
 func (r *RedisValue) Set(data []byte, ttl time.Duration) error {
-	return r.db.Client(r.fullKey).Set(r.db.ctx, string(r.fullKey), string(data), ttl).Err()
+	return r.db.Client(r.fullKey).Set(r.db.Ctx, string(r.fullKey), string(data), ttl).Err()
 }
 
 func (r *RedisValue) Get() ([]byte, error) {
-	result, err := r.db.Client(r.fullKey).Get(r.db.ctx, string(r.fullKey)).Result()
+	result, err := r.db.Client(r.fullKey).Get(r.db.Ctx, string(r.fullKey)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -516,7 +534,7 @@ func (r *RedisValue) Get() ([]byte, error) {
 }
 
 func (r *RedisValue) Del() error {
-	return r.db.Client(r.fullKey).Del(r.db.ctx, string(r.fullKey)).Err()
+	return r.db.Client(r.fullKey).Del(r.db.Ctx, string(r.fullKey)).Err()
 }
 
 type RedisSortedSet struct {
@@ -525,7 +543,7 @@ type RedisSortedSet struct {
 }
 
 func (r *RedisSortedSet) Score(data []byte) (int64, error) {
-	n, err := r.db.Client(r.fullKey).ZScore(r.db.ctx, r.fullKey, string(data)).Result()
+	n, err := r.db.Client(r.fullKey).ZScore(r.db.Ctx, r.fullKey, string(data)).Result()
 	if err == redis.Nil {
 		return 0, NotFound
 	} else if err != nil {
@@ -535,16 +553,16 @@ func (r *RedisSortedSet) Score(data []byte) (int64, error) {
 }
 
 func (r *RedisSortedSet) Add(data []byte, score int64) error {
-	return r.db.Client(r.fullKey).ZAdd(r.db.ctx, r.fullKey, &redis.Z{Score: float64(score), Member: string(data)}).Err()
+	return r.db.Client(r.fullKey).ZAdd(r.db.Ctx, r.fullKey, &redis.Z{Score: float64(score), Member: string(data)}).Err()
 }
 
 func (r *RedisSortedSet) Del(data []byte) (bool, error) {
-	n, err := r.db.Client(r.fullKey).ZRem(r.db.ctx, r.fullKey, string(data)).Result()
+	n, err := r.db.Client(r.fullKey).ZRem(r.db.Ctx, r.fullKey, string(data)).Result()
 	return n > 0, err
 }
 
 func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.ctx, r.fullKey, from, to).Result()
+	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.Ctx, r.fullKey, from, to).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -561,7 +579,7 @@ func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, erro
 }
 
 func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client(r.fullKey).ZRangeByScoreWithScores(r.db.ctx, r.fullKey, &redis.ZRangeBy{
+	result, err := r.db.Client(r.fullKey).ZRangeByScoreWithScores(r.db.Ctx, r.fullKey, &redis.ZRangeBy{
 		Min: strconv.FormatInt(from, 10),
 		Max: strconv.FormatInt(to, 10),
 	}).Result()
@@ -581,7 +599,7 @@ func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntr
 }
 
 func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
-	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.ctx, r.fullKey, index, index).Result()
+	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.Ctx, r.fullKey, index, index).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +616,7 @@ func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client(r.fullKey).ZPopMin(r.db.ctx, r.fullKey, n).Result()
+	result, err := r.db.Client(r.fullKey).ZPopMin(r.db.Ctx, r.fullKey, n).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -613,7 +631,7 @@ func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) RemoveRangeByScore(from, to int64) error {
-	_, err := r.db.Client(r.fullKey).ZRemRangeByScore(r.db.ctx, r.fullKey, strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
+	_, err := r.db.Client(r.fullKey).ZRemRangeByScore(r.db.Ctx, r.fullKey, strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
 	if err != nil {
 		return err
 	}

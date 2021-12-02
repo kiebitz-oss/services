@@ -24,13 +24,13 @@ var Databases = services.DatabaseDefinitions{
 	"redis": services.DatabaseDefinition{
 		Name:              "Redis Database",
 		Description:       "For Production Use",
-		Maker:             MakeRedis,
+		Maker:             MakeRedisAsDatabase,
 		SettingsValidator: ValidateRedisSettings,
 	},
 	"redis-shard": services.DatabaseDefinition{
 		Name:              "Redis Sharded Database",
 		Description:       "For Production Use",
-		Maker:             MakeRedisShards,
+		Maker:             MakeRedisShardAsDatabase,
 		SettingsValidator: ValidateRedisShardSettings,
 	},
 	"in-memory": services.DatabaseDefinition{

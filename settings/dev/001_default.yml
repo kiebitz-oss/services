@@ -1,11 +1,18 @@
 name: kiebitz
 meter:
   name: meter
-  type: redis
+  type: redis-shard
   settings:
-    addresses: [ "localhost:6379" ]
-    database: 1
-    password: ""
+    shards:
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
 database:
   name: db
   type: redis-shard

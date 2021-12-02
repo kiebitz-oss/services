@@ -18,13 +18,20 @@ package meters
 
 import (
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/databases"
 )
 
 var Meters = services.MeterDefinitions{
 	"redis": services.MeterDefinition{
-		Name:              "Redis Meter",
+		Name:              "Redis Meter Database",
 		Description:       "For Production Use",
 		Maker:             MakeRedis,
-		SettingsValidator: ValidateRedisSettings,
+		SettingsValidator: databases.ValidateRedisSettings,
+	},
+	"redis-shard": services.MeterDefinition{
+		Name:              "Redis Sharded Meter Database",
+		Description:       "For Production Use",
+		Maker:             MakeRedisShards,
+		SettingsValidator: databases.ValidateRedisShardSettings,
 	},
 }
