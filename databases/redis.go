@@ -25,6 +25,7 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
 	"github.com/prometheus/client_golang/prometheus"
+	"hash/fnv"
 	"strconv"
 	"sync"
 	"time"
@@ -33,12 +34,11 @@ import (
 type Redis struct {
 	metricsPrefix  string
 	redisDurations *prometheus.HistogramVec
-	client         redis.UniversalClient
-	options        redis.UniversalOptions
+	clients        []redis.UniversalClient
 	pipeline       redis.Pipeliner
 	mutex          sync.Mutex
 	channel        chan bool
-	ctx            context.Context
+	Ctx            context.Context
 }
 
 type RedisLock struct {
@@ -79,11 +79,18 @@ func (r *RedisLock) Release() error {
 	return r.dLock.Release(r.ctx)
 }
 
+type RedisShardSettings struct {
+	Shards []RedisSettings `json:"shards"`
+}
+
 type RedisSettings struct {
-	MasterName string   `json:"master_name"`
-	Addresses  []string `json:"addresses`
-	Database   int64    `json:"database"`
-	Password   string   `json:"password"`
+	MasterName        string   `json:"master_name"`
+	Addresses         []string `json:"addresses`
+	SentinelAddresses []string `json:"sentinel_addresses`
+	Database          int64    `json:"database"`
+	Password          string   `json:"password"`
+	SentinelUsername  string   `json:"sentinel_username"`
+	SentinelPassword  string   `json:"sentinel_password"`
 }
 
 type MetricHook struct {
@@ -120,7 +127,14 @@ var RedisForm = forms.Form{
 		{
 			Name: "addresses",
 			Validators: []forms.Validator{
-				forms.IsRequired{},
+				forms.IsOptional{Default: []string{}},
+				forms.IsStringList{},
+			},
+		},
+		{
+			Name: "sentinel_addresses",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: []string{}},
 				forms.IsStringList{},
 			},
 		},
@@ -145,6 +159,35 @@ var RedisForm = forms.Form{
 				forms.IsString{},
 			},
 		},
+		{
+			Name: "sentinel_username",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsString{},
+			},
+		},
+		{
+			Name: "sentinel_password",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsString{},
+			},
+		},
+	},
+}
+var RedisShardForm = forms.Form{
+	ErrorMsg: "invalid data encountered in the Redis config form",
+	Fields: []forms.Field{
+		{
+			Name: "shards",
+			Validators: []forms.Validator{
+				forms.IsList{
+					Validators: []forms.Validator{
+						forms.IsStringMap{Form: &RedisForm},
+					},
+				},
+			},
+		},
 	},
 }
 
@@ -160,47 +203,148 @@ func ValidateRedisSettings(settings map[string]interface{}) (interface{}, error)
 	}
 }
 
-func MakeRedis(settings interface{}) (services.Database, error) {
+func ValidateRedisShardSettings(settings map[string]interface{}) (interface{}, error) {
+	if params, err := RedisShardForm.Validate(settings); err != nil {
+		return nil, err
+	} else {
+		redisSettings := &RedisShardSettings{}
+		if err := RedisForm.Coerce(redisSettings, params); err != nil {
+			return nil, err
+		}
+		return redisSettings, nil
+	}
+}
 
+func MakeRedisClient(settings interface{}) (redis.UniversalClient, error) {
 	redisSettings := settings.(RedisSettings)
+
+	var client redis.UniversalClient
+
+	if len(redisSettings.Addresses) > 0 {
+		options := redis.UniversalOptions{
+			MasterName:   redisSettings.MasterName,
+			Password:     redisSettings.Password,
+			ReadTimeout:  time.Second * 1.0,
+			WriteTimeout: time.Second * 1.0,
+			Addrs:        redisSettings.Addresses,
+			DB:           int(redisSettings.Database),
+		}
+
+		client = redis.NewUniversalClient(&options)
+
+		services.Log.Info("Creating redis connection")
+
+	} else if len(redisSettings.SentinelAddresses) > 0 {
+		options := redis.FailoverOptions{
+			MasterName:       redisSettings.MasterName,
+			Password:         redisSettings.Password,
+			ReadTimeout:      time.Second * 1.0,
+			WriteTimeout:     time.Second * 1.0,
+			DB:               int(redisSettings.Database),
+			SentinelAddrs:    redisSettings.SentinelAddresses,
+			SentinelUsername: redisSettings.SentinelUsername,
+			SentinelPassword: redisSettings.SentinelPassword,
+		}
+
+		client = redis.NewFailoverClient(&options)
+
+		services.Log.Info("Creating sentinel-based redis connection")
+	} else {
+		return nil, errors.New("invalid database configuration, needed addresses or sentinelAddresses")
+	}
+
+	return client, nil
+}
+
+func MakeRedisShards(settings interface{}) (*Redis, error) {
+	redisShardSettings := settings.(RedisShardSettings)
 	ctx := context.TODO()
 
-	options := redis.UniversalOptions{
-		MasterName:   redisSettings.MasterName,
-		Password:     redisSettings.Password,
-		ReadTimeout:  time.Second * 1.0,
-		WriteTimeout: time.Second * 1.0,
-		Addrs:        redisSettings.Addresses,
-		DB:           int(redisSettings.Database),
+	clients := []redis.UniversalClient{}
+	for _, redisSettings := range redisShardSettings.Shards {
+		client, err := MakeRedisClient(redisSettings)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if _, err := client.Ping(ctx).Result(); err != nil {
+			return nil, err
+		}
+
+		clients = append(clients, client)
 	}
 
-	client := redis.NewUniversalClient(&options)
-
-	if _, err := client.Ping(ctx).Result(); err != nil {
-		return nil, err
-	}
+	services.Log.Info("Creating redis-shard database")
 
 	database := &Redis{
-		options: options,
-		client:  client,
+		clients: clients,
 		channel: make(chan bool),
-		ctx:     ctx,
+		Ctx:     ctx,
 	}
 
 	return database, nil
 
 }
 
+func MakeRedis(settings interface{}) (*Redis, error) {
+	ctx := context.TODO()
+
+	client, err := MakeRedisClient(settings)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := client.Ping(ctx).Result(); err != nil {
+		return nil, err
+	}
+
+	services.Log.Info("Creating redis database")
+
+	database := &Redis{
+		clients: []redis.UniversalClient{client},
+		channel: make(chan bool),
+		Ctx:     ctx,
+	}
+
+	return database, nil
+}
+
+func MakeRedisAsDatabase(settings interface{}) (services.Database, error) {
+	var db services.Database
+	var err error
+
+	db, err = MakeRedis(settings)
+
+	return db, err
+}
+
+func MakeRedisShardAsDatabase(settings interface{}) (services.Database, error) {
+	var db services.Database
+	var err error
+
+	db, err = MakeRedisShards(settings)
+
+	return db, err
+}
+
 // Makes sure, that Redis implements Database
 var _ services.Database = &Redis{}
 
 func (d *Redis) Reset() error {
-	return d.client.FlushDB(d.ctx).Err()
+	for _, c := range d.clients {
+		err := c.FlushDB(d.Ctx).Err()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *Redis) Lock(lockKey string) (services.Lock, error) {
-
-	redisLock := MakeRedisLock(d.ctx, lockKey, d.client)
+	c := d.Client(lockKey)
+	redisLock := MakeRedisLock(d.Ctx, lockKey, c)
 
 	if err := redisLock.Lock(); err != nil {
 		return nil, err
@@ -210,8 +354,15 @@ func (d *Redis) Lock(lockKey string) (services.Lock, error) {
 
 }
 
-func (d *Redis) Client() redis.Cmdable {
-	return d.client
+func (d *Redis) getShardForKey(key string) uint32 {
+	f := fnv.New32()
+	f.Write([]byte(key))
+	hashNum := f.Sum32()
+	return hashNum % uint32(len(d.clients))
+}
+
+func (d *Redis) Client(key string) redis.UniversalClient {
+	return d.clients[d.getShardForKey(key)]
 }
 
 func (d *Redis) Open() error {
@@ -229,18 +380,29 @@ func (d *Redis) Open() error {
 	}
 
 	metricHook := MetricHook{redisDurations: d.redisDurations}
-	d.client.AddHook(metricHook)
+
+	for _, client := range d.clients {
+		client.AddHook(metricHook)
+	}
 
 	return nil
 }
 
 func (d *Redis) Close() error {
 	prometheus.Unregister(d.redisDurations)
-	return d.client.Close()
+	for _, client := range d.clients {
+		err := client.Close()
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (d *Redis) Expire(table string, key []byte, ttl time.Duration) error {
-	return d.Client().Expire(d.ctx, string(d.fullKey(table, key)), ttl).Err()
+	stringKey := string(d.fullKey(table, key))
+	return d.Client(stringKey).Expire(d.Ctx, stringKey, ttl).Err()
 }
 
 func (d *Redis) Set(table string, key []byte) services.Set {
@@ -274,21 +436,21 @@ func (d *Redis) Value(table string, key []byte) services.Value {
 	}
 }
 
-func (d *Redis) fullKey(table string, key []byte) []byte {
-	return []byte(fmt.Sprintf("%s::%s", table, string(key)))
+func (d *Redis) fullKey(table string, key []byte) string {
+	return fmt.Sprintf("%s::%s", table, string(key))
 }
 
 type RedisMap struct {
 	db      *Redis
-	fullKey []byte
+	fullKey string
 }
 
 func (r *RedisMap) Del(key []byte) error {
-	return r.db.Client().HDel(r.db.ctx, string(r.fullKey), string(key)).Err()
+	return r.db.Client(r.fullKey).HDel(r.db.Ctx, r.fullKey, string(key)).Err()
 }
 
 func (r *RedisMap) GetAll() (map[string][]byte, error) {
-	result, err := r.db.Client().HGetAll(r.db.ctx, string(r.fullKey)).Result()
+	result, err := r.db.Client(r.fullKey).HGetAll(r.db.Ctx, r.fullKey).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -303,7 +465,7 @@ func (r *RedisMap) GetAll() (map[string][]byte, error) {
 }
 
 func (r *RedisMap) Get(key []byte) ([]byte, error) {
-	result, err := r.db.Client().HGet(r.db.ctx, string(r.fullKey), string(key)).Result()
+	result, err := r.db.Client(r.fullKey).HGet(r.db.Ctx, r.fullKey, string(key)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -314,28 +476,28 @@ func (r *RedisMap) Get(key []byte) ([]byte, error) {
 }
 
 func (r *RedisMap) Set(key []byte, value []byte) error {
-	return r.db.Client().HSet(r.db.ctx, string(r.fullKey), string(key), string(value)).Err()
+	return r.db.Client(r.fullKey).HSet(r.db.Ctx, r.fullKey, string(key), string(value)).Err()
 }
 
 type RedisSet struct {
 	db      *Redis
-	fullKey []byte
+	fullKey string
 }
 
 func (r *RedisSet) Add(data []byte) error {
-	return r.db.Client().SAdd(r.db.ctx, string(r.fullKey), string(data)).Err()
+	return r.db.Client(r.fullKey).SAdd(r.db.Ctx, r.fullKey, string(data)).Err()
 }
 
 func (r *RedisSet) Has(data []byte) (bool, error) {
-	return r.db.Client().SIsMember(r.db.ctx, string(r.fullKey), string(data)).Result()
+	return r.db.Client(r.fullKey).SIsMember(r.db.Ctx, r.fullKey, string(data)).Result()
 }
 
 func (r *RedisSet) Del(data []byte) error {
-	return r.db.Client().SRem(r.db.ctx, string(r.fullKey), string(data)).Err()
+	return r.db.Client(r.fullKey).SRem(r.db.Ctx, r.fullKey, string(data)).Err()
 }
 
 func (r *RedisSet) Members() ([]*services.SetEntry, error) {
-	result, err := r.db.Client().SMembers(r.db.ctx, string(r.fullKey)).Result()
+	result, err := r.db.Client(r.fullKey).SMembers(r.db.Ctx, r.fullKey).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -352,15 +514,15 @@ func (r *RedisSet) Members() ([]*services.SetEntry, error) {
 
 type RedisValue struct {
 	db      *Redis
-	fullKey []byte
+	fullKey string
 }
 
 func (r *RedisValue) Set(data []byte, ttl time.Duration) error {
-	return r.db.Client().Set(r.db.ctx, string(r.fullKey), string(data), ttl).Err()
+	return r.db.Client(r.fullKey).Set(r.db.Ctx, string(r.fullKey), string(data), ttl).Err()
 }
 
 func (r *RedisValue) Get() ([]byte, error) {
-	result, err := r.db.Client().Get(r.db.ctx, string(r.fullKey)).Result()
+	result, err := r.db.Client(r.fullKey).Get(r.db.Ctx, string(r.fullKey)).Result()
 	if err != nil {
 		if err == redis.Nil {
 			return nil, NotFound
@@ -371,16 +533,16 @@ func (r *RedisValue) Get() ([]byte, error) {
 }
 
 func (r *RedisValue) Del() error {
-	return r.db.Client().Del(r.db.ctx, string(r.fullKey)).Err()
+	return r.db.Client(r.fullKey).Del(r.db.Ctx, string(r.fullKey)).Err()
 }
 
 type RedisSortedSet struct {
 	db      *Redis
-	fullKey []byte
+	fullKey string
 }
 
 func (r *RedisSortedSet) Score(data []byte) (int64, error) {
-	n, err := r.db.Client().ZScore(r.db.ctx, string(r.fullKey), string(data)).Result()
+	n, err := r.db.Client(r.fullKey).ZScore(r.db.Ctx, r.fullKey, string(data)).Result()
 	if err == redis.Nil {
 		return 0, NotFound
 	} else if err != nil {
@@ -390,16 +552,16 @@ func (r *RedisSortedSet) Score(data []byte) (int64, error) {
 }
 
 func (r *RedisSortedSet) Add(data []byte, score int64) error {
-	return r.db.Client().ZAdd(r.db.ctx, string(r.fullKey), &redis.Z{Score: float64(score), Member: string(data)}).Err()
+	return r.db.Client(r.fullKey).ZAdd(r.db.Ctx, r.fullKey, &redis.Z{Score: float64(score), Member: string(data)}).Err()
 }
 
 func (r *RedisSortedSet) Del(data []byte) (bool, error) {
-	n, err := r.db.Client().ZRem(r.db.ctx, string(r.fullKey), string(data)).Result()
+	n, err := r.db.Client(r.fullKey).ZRem(r.db.Ctx, r.fullKey, string(data)).Result()
 	return n > 0, err
 }
 
 func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeWithScores(r.db.ctx, string(r.fullKey), from, to).Result()
+	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.Ctx, r.fullKey, from, to).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +578,7 @@ func (r *RedisSortedSet) Range(from, to int64) ([]*services.SortedSetEntry, erro
 }
 
 func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeByScoreWithScores(r.db.ctx, string(r.fullKey), &redis.ZRangeBy{
+	result, err := r.db.Client(r.fullKey).ZRangeByScoreWithScores(r.db.Ctx, r.fullKey, &redis.ZRangeBy{
 		Min: strconv.FormatInt(from, 10),
 		Max: strconv.FormatInt(to, 10),
 	}).Result()
@@ -436,7 +598,7 @@ func (r *RedisSortedSet) RangeByScore(from, to int64) ([]*services.SortedSetEntr
 }
 
 func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZRangeWithScores(r.db.ctx, string(r.fullKey), index, index).Result()
+	result, err := r.db.Client(r.fullKey).ZRangeWithScores(r.db.Ctx, r.fullKey, index, index).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -453,7 +615,7 @@ func (r *RedisSortedSet) At(index int64) (*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
-	result, err := r.db.Client().ZPopMin(r.db.ctx, string(r.fullKey), n).Result()
+	result, err := r.db.Client(r.fullKey).ZPopMin(r.db.Ctx, r.fullKey, n).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -468,7 +630,7 @@ func (r *RedisSortedSet) PopMin(n int64) ([]*services.SortedSetEntry, error) {
 }
 
 func (r *RedisSortedSet) RemoveRangeByScore(from, to int64) error {
-	_, err := r.db.Client().ZRemRangeByScore(r.db.ctx, string(r.fullKey), strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
+	_, err := r.db.Client(r.fullKey).ZRemRangeByScore(r.db.Ctx, r.fullKey, strconv.FormatInt(from, 10), strconv.FormatInt(to, 10)).Result()
 	if err != nil {
 		return err
 	}
