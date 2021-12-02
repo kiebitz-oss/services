@@ -8,11 +8,19 @@ meter:
     password: ""
 database:
   name: db
-  type: redis
+  type: redis-shard
   settings:
-    addresses: [ "localhost:6379" ]
-    database: 0
-    password: ""
+    shards:
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
+      - addresses: [ "localhost:6379" ]
+        password: ""
+        database: 1
+
 metrics:
   bind_address: "localhost:9090"
 storage:

@@ -27,6 +27,12 @@ var Databases = services.DatabaseDefinitions{
 		Maker:             MakeRedis,
 		SettingsValidator: ValidateRedisSettings,
 	},
+	"redis-shard": services.DatabaseDefinition{
+		Name:              "Redis Sharded Database",
+		Description:       "For Production Use",
+		Maker:             MakeRedisShards,
+		SettingsValidator: ValidateRedisShardSettings,
+	},
 	"in-memory": services.DatabaseDefinition{
 		Name:              "In-memory Database (no persistence! just use for testing)",
 		Description:       "An in-memory database for testing only",
