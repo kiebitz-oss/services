@@ -16,7 +16,7 @@ name: db # or meter
 type: redis
 settings:
     addresses: [ "localhost:6379" ] # Set of addresses pointing to the SAME redis server.
-    database: 1 # or 0
+    database: 1 # Redis database ID
     password: "" # Redis password
     master: "mymaster" # Redis master name
 ```
@@ -30,7 +30,7 @@ name: db # or meter
 type: redis
 settings:
     sentinel_addresses: [ "localhost:26379" ] # Set of addresses pointing to the SAME sentinel server.
-    database: 1 # or 0
+    database: 1 # Redis database ID
     password: "" # Redis password
     master: "mymaster" # Redis master name
     sentinel_username: "username" # Sentinel username
@@ -44,15 +44,15 @@ You can also use the application-based Redis sharding by specifing multiple shar
 
 ```yaml
 name: db # or meter
-type: redis
+type: redis-shard
 settings:
     shards:
       - addresses: [ "localhost:6379" ] # Set of addresses pointing to the SAME redis server.
-        database: 1 # or 0
+        database: 1 # Redis database ID
         password: "" # Redis password
         master: "mymaster" # Redis master name 
       - sentinel_addresses: [ "localhost:26379" ] # Set of addresses pointing to the SAME sentinel server.
-        database: 1 # or 0
+        database: 1 # Redis database ID
         password: "" # Redis password
         master: "mymaster" # Redis master name
         sentinel_username: "username" # Sentinel username
