@@ -311,7 +311,7 @@ func MakeRedis(settings interface{}) (*Redis, error) {
 
 	services.Log.Info("Creating redis database")
 
-  clients := make(map[uint32]redis.UniversalClient)
+	clients := make(map[uint32]redis.UniversalClient)
 	clients[shardIndex] = client
 
 	database := &Redis{
