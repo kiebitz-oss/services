@@ -31,14 +31,6 @@ source .dev-setup
 
 For the commands below we'll assume that `KIEBITZ_SETTINGS` points to the `settings/dev` directory.
 
-### Secrets
-
-Kiebitz needs several secrets that is uses e.g. for HMAC. You can generate these via
-
-```bash
-make secrets
-```
-
 ### Cryptographic Keys
 
 Now, we need to generate various cryptographic keys for signing and encryption. To do this, we simply run
