@@ -52,7 +52,7 @@ func convertID(id interface{}) interface{} {
 	return id
 }
 
-func (c *Context) Result(data interface{}) *Response {
+func (c *Context) Result(data interface{}) services.Response {
 
 	return &Response{
 		ID:      convertID(c.Request.ID),
@@ -61,7 +61,7 @@ func (c *Context) Result(data interface{}) *Response {
 	}
 }
 
-func (c *Context) Error(code int, message string, data interface{}) *Response {
+func (c *Context) Error(code int, message string, data interface{}) services.Response {
 	return &Response{
 		Error: &Error{
 			Code:    code,
@@ -73,26 +73,26 @@ func (c *Context) Error(code int, message string, data interface{}) *Response {
 	}
 }
 
-func (c *Context) NotFound() *Response {
+func (c *Context) NotFound() services.Response {
 	return c.Error(404, "not found", nil)
 }
 
-func (c *Context) Acknowledge() *Response {
+func (c *Context) Acknowledge() services.Response {
 	return c.Result("ok")
 }
 
-func (c *Context) Nil() *Response {
+func (c *Context) Nil() services.Response {
 	return c.Result(nil)
 }
 
-func (c *Context) MethodNotFound() *Response {
+func (c *Context) MethodNotFound() services.Response {
 	return c.Error(-32601, "method not found", nil)
 }
 
-func (c *Context) InvalidParams(err error) *Response {
+func (c *Context) InvalidParams(err error) services.Response {
 	return c.Error(-32602, "invalid params", err)
 }
 
-func (c *Context) InternalError() *Response {
+func (c *Context) InternalError() services.Response {
 	return c.Error(-32603, "internal error", nil)
 }

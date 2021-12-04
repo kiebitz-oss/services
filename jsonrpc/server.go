@@ -51,7 +51,7 @@ func (s *JSONRPCServer) JSONRPC(handler Handler) http.Handler {
 		response := handler(context)
 
 		if response == nil {
-			response = context.Nil()
+			response = context.Nil().(*Response)
 		}
 
 		// people will forget this so we add it here in that case

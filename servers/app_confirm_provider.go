@@ -21,11 +21,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // { id, key, providerData, keyData }, keyPair
-func (c *Appointments) confirmProvider(context *jsonrpc.Context, params *services.ConfirmProviderSignedParams) *jsonrpc.Response {
+func (c *Appointments) confirmProvider(context services.Context, params *services.ConfirmProviderSignedParams) services.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp

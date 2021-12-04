@@ -19,12 +19,11 @@ package servers
 import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getVerifiedProviderData(context *jsonrpc.Context, params *services.GetVerifiedProviderDataSignedParams) *jsonrpc.Response {
+func (c *Appointments) getVerifiedProviderData(context services.Context, params *services.GetVerifiedProviderDataSignedParams) services.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp

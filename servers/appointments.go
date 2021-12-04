@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
@@ -45,79 +46,109 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		test:     settings.Test,
 	}
 
-	methods := map[string]*jsonrpc.Method{
-		"resetDB": {
-			Form:    &forms.ResetDBForm,
-			Handler: Appointments.resetDB,
+	api := &api.API{
+		Version: 1,
+		Endpoints: []*api.Endpoint{
+			{
+				Name:    "resetDB",
+				Form:    &forms.ResetDBForm,
+				Type:    api.Retrieve,
+				Handler: Appointments.resetDB,
+			},
+			{
+				Name:    "confirmProvider",
+				Form:    &forms.ConfirmProviderForm,
+				Type:    api.Create,
+				Handler: Appointments.confirmProvider,
+			},
+			{
+				Name:    "addMediatorPublicKeys",
+				Form:    &forms.AddMediatorPublicKeysForm,
+				Type:    api.Create,
+				Handler: Appointments.addMediatorPublicKeys,
+			},
+			{
+				Name:    "addCodes",
+				Form:    &forms.AddCodesForm,
+				Handler: Appointments.addCodes,
+			},
+			{
+				Name:    "uploadDistances",
+				Form:    &forms.UploadDistancesForm,
+				Handler: Appointments.uploadDistances,
+			},
+			{
+				Name:    "getStats",
+				Form:    &forms.GetStatsForm,
+				Handler: Appointments.getStats,
+			},
+			{
+				Name:    "getKeys",
+				Form:    &forms.GetKeysForm,
+				Handler: Appointments.getKeys,
+			},
+			{
+				Name:    "getAppointmentsByZipCode",
+				Form:    &forms.GetAppointmentsByZipCodeForm,
+				Handler: Appointments.getAppointmentsByZipCode,
+			},
+			{
+				Name:    "getAppointment",
+				Form:    &forms.GetAppointmentForm,
+				Handler: Appointments.getAppointment,
+			},
+			{
+				Name:    "getProviderAppointments",
+				Form:    &forms.GetProviderAppointmentsForm,
+				Handler: Appointments.getProviderAppointments,
+			},
+			{
+				Name:    "publishAppointments",
+				Form:    &forms.PublishAppointmentsForm,
+				Handler: Appointments.publishAppointments,
+			},
+			{
+				Name:    "bookAppointment",
+				Form:    &forms.BookAppointmentForm,
+				Handler: Appointments.bookAppointment,
+			},
+			{
+				Name:    "cancelAppointment",
+				Form:    &forms.CancelAppointmentForm,
+				Handler: Appointments.cancelAppointment,
+			},
+			{
+				Name:    "getToken",
+				Form:    &forms.GetTokenForm,
+				Handler: Appointments.getToken,
+			},
+			{
+				Name:    "storeProviderData",
+				Form:    &forms.StoreProviderDataForm,
+				Handler: Appointments.storeProviderData,
+			},
+			{
+				Name:    "checkProviderData",
+				Form:    &forms.CheckProviderDataForm,
+				Handler: Appointments.checkProviderData,
+			},
+			{
+				Name:    "getPendingProviderData",
+				Form:    &forms.GetPendingProviderDataForm,
+				Handler: Appointments.getPendingProviderData,
+			},
+			{
+				Name:    "getVerifiedProviderData",
+				Form:    &forms.GetVerifiedProviderDataForm,
+				Handler: Appointments.getVerifiedProviderData,
+			},
 		},
-		"confirmProvider": {
-			Form:    &forms.ConfirmProviderForm,
-			Handler: Appointments.confirmProvider,
-		},
-		"addMediatorPublicKeys": {
-			Form:    &forms.AddMediatorPublicKeysForm,
-			Handler: Appointments.addMediatorPublicKeys,
-		},
-		"addCodes": {
-			Form:    &forms.AddCodesForm,
-			Handler: Appointments.addCodes,
-		},
-		"uploadDistances": {
-			Form:    &forms.UploadDistancesForm,
-			Handler: Appointments.uploadDistances,
-		},
-		"getStats": {
-			Form:    &forms.GetStatsForm,
-			Handler: Appointments.getStats,
-		},
-		"getKeys": {
-			Form:    &forms.GetKeysForm,
-			Handler: Appointments.getKeys,
-		},
-		"getAppointmentsByZipCode": {
-			Form:    &forms.GetAppointmentsByZipCodeForm,
-			Handler: Appointments.getAppointmentsByZipCode,
-		},
-		"getAppointment": {
-			Form:    &forms.GetAppointmentForm,
-			Handler: Appointments.getAppointment,
-		},
-		"getProviderAppointments": {
-			Form:    &forms.GetProviderAppointmentsForm,
-			Handler: Appointments.getProviderAppointments,
-		},
-		"publishAppointments": {
-			Form:    &forms.PublishAppointmentsForm,
-			Handler: Appointments.publishAppointments,
-		},
-		"bookAppointment": {
-			Form:    &forms.BookAppointmentForm,
-			Handler: Appointments.bookAppointment,
-		},
-		"cancelAppointment": {
-			Form:    &forms.CancelAppointmentForm,
-			Handler: Appointments.cancelAppointment,
-		},
-		"getToken": {
-			Form:    &forms.GetTokenForm,
-			Handler: Appointments.getToken,
-		},
-		"storeProviderData": {
-			Form:    &forms.StoreProviderDataForm,
-			Handler: Appointments.storeProviderData,
-		},
-		"checkProviderData": {
-			Form:    &forms.CheckProviderDataForm,
-			Handler: Appointments.checkProviderData,
-		},
-		"getPendingProviderData": {
-			Form:    &forms.GetPendingProviderDataForm,
-			Handler: Appointments.getPendingProviderData,
-		},
-		"getVerifiedProviderData": {
-			Form:    &forms.GetVerifiedProviderDataForm,
-			Handler: Appointments.getVerifiedProviderData,
-		},
+	}
+
+	methods, err := api.ToJSONRPC()
+
+	if err != nil {
+		return nil, err
 	}
 
 	handler, err := jsonrpc.MethodsHandler(methods)
@@ -229,11 +260,11 @@ var tws = []services.TimeWindowFunc{
 	services.Month,
 }
 
-func (c *Appointments) isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time) *jsonrpc.Response {
+func (c *Appointments) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
 	return isRoot(context, data, signature, timestamp, c.settings.Keys)
 }
 
-func isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time, keys []*crypto.Key) *jsonrpc.Response {
+func isRoot(context services.Context, data, signature []byte, timestamp *time.Time, keys []*crypto.Key) services.Response {
 	rootKey := services.Key(keys, "root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -254,7 +285,7 @@ func isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Ti
 	return nil
 }
 
-func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
+func (c *Appointments) isMediator(context services.Context, data, signature, publicKey []byte) (services.Response, *services.ActorKey) {
 
 	keys, err := c.getActorKeys()
 
@@ -266,7 +297,7 @@ func (c *Appointments) isMediator(context *jsonrpc.Context, data, signature, pub
 	return c.isOnKeyList(context, data, signature, publicKey, keys.Mediators)
 }
 
-func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, publicKey []byte) (*jsonrpc.Response, *services.ActorKey) {
+func (c *Appointments) isProvider(context services.Context, data, signature, publicKey []byte) (services.Response, *services.ActorKey) {
 
 	keys, err := c.getActorKeys()
 
@@ -278,7 +309,7 @@ func (c *Appointments) isProvider(context *jsonrpc.Context, data, signature, pub
 	return c.isOnKeyList(context, data, signature, publicKey, keys.Providers)
 }
 
-func (c *Appointments) isActiveProviderID(context *jsonrpc.Context, publicKey []byte) (*jsonrpc.Response, bool) {
+func (c *Appointments) isActiveProviderID(context services.Context, publicKey []byte) (services.Response, bool) {
 	activeProvider, err := c.db.Map("keys", []byte("providers")).Get([]byte(publicKey))
 
 	if len(activeProvider) == 0 {
@@ -291,7 +322,7 @@ func (c *Appointments) isActiveProviderID(context *jsonrpc.Context, publicKey []
 	return nil, true
 }
 
-func (c *Appointments) isOnKeyList(context *jsonrpc.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (*jsonrpc.Response, *services.ActorKey) {
+func (c *Appointments) isOnKeyList(context services.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (services.Response, *services.ActorKey) {
 
 	actorKey, err := findActorKey(keyList, publicKey)
 

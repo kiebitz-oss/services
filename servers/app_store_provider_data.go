@@ -20,11 +20,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) storeProviderData(context *jsonrpc.Context, params *services.StoreProviderDataSignedParams) *jsonrpc.Response {
+func (c *Appointments) storeProviderData(context services.Context, params *services.StoreProviderDataSignedParams) services.Response {
 
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {

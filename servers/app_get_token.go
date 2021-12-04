@@ -24,7 +24,6 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 func (c *Appointments) priorityToken() (uint64, []byte, error) {
@@ -56,7 +55,7 @@ func (c *Appointments) priorityToken() (uint64, []byte, error) {
 
 //{hash, code, publicKey}
 // get a token for a given queue
-func (c *Appointments) getToken(context *jsonrpc.Context, params *services.GetTokenParams) *jsonrpc.Response {
+func (c *Appointments) getToken(context services.Context, params *services.GetTokenParams) services.Response {
 
 	codes := c.db.Set("codes", []byte("user"))
 	codeScores := c.db.SortedSet("codeScores", []byte("user"))

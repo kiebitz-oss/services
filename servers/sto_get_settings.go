@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 func toInterface(data []byte) (interface{}, error) {
@@ -31,7 +30,7 @@ func toInterface(data []byte) (interface{}, error) {
 	return v, nil
 }
 
-func (c *Storage) getSettings(context *jsonrpc.Context, params *services.GetSettingsParams) *jsonrpc.Response {
+func (c *Storage) getSettings(context services.Context, params *services.GetSettingsParams) services.Response {
 	value := c.db.Value("settings", params.ID)
 	if data, err := value.Get(); err != nil {
 		if err == databases.NotFound {

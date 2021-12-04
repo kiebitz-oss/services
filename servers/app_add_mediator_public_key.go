@@ -21,18 +21,17 @@ import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // { keys }, keyPair
 // add the mediator key to the list of keys (only for testing)
-func (c *Appointments) addMediatorPublicKeys(context *jsonrpc.Context, params *services.AddMediatorPublicKeysSignedParams) *jsonrpc.Response {
+func (c *Appointments) addMediatorPublicKeys(context services.Context, params *services.AddMediatorPublicKeysSignedParams) services.Response {
 	if response := c.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
 		return response
 	}
 	hash := crypto.Hash(params.Data.Signing)
 	keys := c.db.Map("keys", []byte("mediators"))
-	bd, err := json.Marshal(context.Request.Params)
+	bd, err := json.Marshal(params)
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()

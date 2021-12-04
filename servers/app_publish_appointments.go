@@ -23,11 +23,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/jsonrpc"
 	"time"
 )
 
-func (c *Appointments) publishAppointments(context *jsonrpc.Context, params *services.PublishAppointmentsSignedParams) *jsonrpc.Response {
+func (c *Appointments) publishAppointments(context services.Context, params *services.PublishAppointmentsSignedParams) services.Response {
 
 	// make sure this is a valid provider asking for tokens
 	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)

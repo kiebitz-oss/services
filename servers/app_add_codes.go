@@ -19,10 +19,9 @@ package servers
 import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
-func (c *Appointments) addCodes(context *jsonrpc.Context, params *services.AddCodesParams) *jsonrpc.Response {
+func (c *Appointments) addCodes(context services.Context, params *services.AddCodesParams) services.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")

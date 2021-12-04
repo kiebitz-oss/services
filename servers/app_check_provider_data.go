@@ -21,11 +21,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // { id, encryptedData, code }, keyPair
-func (c *Appointments) checkProviderData(context *jsonrpc.Context, params *services.CheckProviderDataSignedParams) *jsonrpc.Response {
+func (c *Appointments) checkProviderData(context services.Context, params *services.CheckProviderDataSignedParams) services.Response {
 
 	// make sure this is a valid provider
 	resp, _ := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)

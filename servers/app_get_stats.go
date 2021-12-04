@@ -18,14 +18,13 @@ package servers
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/jsonrpc"
 	"sort"
 	"strings"
 	"time"
 )
 
 // public endpoint
-func (c *Appointments) getStats(context *jsonrpc.Context, params *services.GetStatsParams) *jsonrpc.Response {
+func (c *Appointments) getStats(context services.Context, params *services.GetStatsParams) services.Response {
 
 	if c.meter == nil {
 		return context.InternalError()

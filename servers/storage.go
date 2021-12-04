@@ -18,6 +18,7 @@ package servers
 
 import (
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
@@ -40,23 +41,37 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		test:     settings.Test,
 	}
 
-	methods := map[string]*jsonrpc.Method{
-		"resetDB": {
-			Form:    &forms.ResetDBForm,
-			Handler: Storage.resetDB,
+	api := &api.API{
+		Version: 1,
+		Endpoints: []*api.Endpoint{
+			{
+				Name:    "storeSettings",
+				Form:    &forms.StoreSettingsForm,
+				Handler: Storage.storeSettings,
+			},
+			{
+				Name:    "getSettings",
+				Form:    &forms.GetSettingsForm,
+				Handler: Storage.getSettings,
+			},
+			{
+				Name:    "deleteSettings",
+				Form:    &forms.DeleteSettingsForm,
+				Handler: Storage.deleteSettings,
+			},
+			{
+				Name:    "resetDB",
+				Form:    &forms.ResetDBForm,
+				Type:    api.Retrieve,
+				Handler: Storage.resetDB,
+			},
 		},
-		"storeSettings": {
-			Form:    &forms.StoreSettingsForm,
-			Handler: Storage.storeSettings,
-		},
-		"getSettings": {
-			Form:    &forms.GetSettingsForm,
-			Handler: Storage.getSettings,
-		},
-		"deleteSettings": {
-			Form:    &forms.DeleteSettingsForm,
-			Handler: Storage.deleteSettings,
-		},
+	}
+
+	methods, err := api.ToJSONRPC()
+
+	if err != nil {
+		return nil, err
 	}
 
 	handler, err := jsonrpc.MethodsHandler(methods)
@@ -73,7 +88,7 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 	}
 }
 
-func (c *Storage) isRoot(context *jsonrpc.Context, data, signature []byte, timestamp *time.Time) *jsonrpc.Response {
+func (c *Storage) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
 	return isRoot(context, data, signature, timestamp, c.settings.Keys)
 }
 

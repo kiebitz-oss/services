@@ -49,13 +49,13 @@ func handlerStruct(handler interface{}) (interface{}, error) {
 
 	returnType := funcType.Out(0)
 
-	if !returnType.AssignableTo(reflect.TypeOf(&Response{})) {
+	if !returnType.Implements(reflect.TypeOf((*services.Response)(nil)).Elem()) {
 		return nil, fmt.Errorf("return value should be a response")
 	}
 
 	contextType := funcType.In(0)
 
-	if !contextType.AssignableTo(reflect.TypeOf(&Context{})) {
+	if !contextType.Implements(reflect.TypeOf((*services.Context)(nil)).Elem()) {
 		return nil, fmt.Errorf("first argument should accept a context")
 	}
 
@@ -77,8 +77,10 @@ func callHandler(context *Context, handler, params interface{}) (*Response, erro
 		return nil, fmt.Errorf("not a function")
 	}
 
+	apiContext := services.Context(context)
+
 	paramsValue := reflect.ValueOf(params)
-	contextValue := reflect.ValueOf(context)
+	contextValue := reflect.ValueOf(apiContext)
 
 	responseValue := value.Call([]reflect.Value{contextValue, paramsValue})
 
@@ -100,27 +102,27 @@ func MethodsHandler(methods map[string]*Method) (Handler, error) {
 
 	return func(context *Context) *Response {
 		if method, ok := methods[context.Request.Method]; !ok {
-			return context.MethodNotFound()
+			return context.MethodNotFound().(*Response)
 		} else {
 			if params, err := method.Form.ValidateWithContext(context.Request.Params, map[string]interface{}{"context": context}); err != nil {
-				return context.InvalidParams(err)
+				return context.InvalidParams(err).(*Response)
 			} else {
 				if paramsStruct, err := handlerStruct(method.Handler); err != nil {
 					// this should never happen...
 					services.Log.Error(err)
-					return context.InternalError()
+					return context.InternalError().(*Response)
 				} else if err := method.Form.Coerce(paramsStruct, params); err != nil {
 					// this shouldn't happen either...
 					services.Log.Error(err)
-					return context.InternalError()
+					return context.InternalError().(*Response)
 				} else {
 					if response, err := callHandler(context, method.Handler, paramsStruct); err != nil {
 						// and neither should this...
 						services.Log.Error(err)
-						return context.InternalError()
+						return context.InternalError().(*Response)
 					} else {
 						if response == nil {
-							return context.Nil()
+							return context.Nil().(*Response)
 						}
 						return response
 					}

@@ -18,10 +18,9 @@ package servers
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
-func (a *Appointments) resetDB(context *jsonrpc.Context, params *services.ResetDBSignedParams) *jsonrpc.Response {
+func (a *Appointments) resetDB(context services.Context, params *services.ResetDBSignedParams) services.Response {
 	if response := a.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
 		return response
 	}

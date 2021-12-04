@@ -22,10 +22,9 @@ import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
-func (c *Appointments) uploadDistances(context *jsonrpc.Context, params *services.UploadDistancesSignedParams) *jsonrpc.Response {
+func (c *Appointments) uploadDistances(context services.Context, params *services.UploadDistancesSignedParams) services.Response {
 	rootKey := c.settings.Key("root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")

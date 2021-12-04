@@ -22,11 +22,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/jsonrpc"
 	"time"
 )
 
-func (c *Appointments) bookAppointment(context *jsonrpc.Context, params *services.BookAppointmentSignedParams) *jsonrpc.Response {
+func (c *Appointments) bookAppointment(context services.Context, params *services.BookAppointmentSignedParams) services.Response {
 
 	// Not sure, if this lock makes any sense.
 	lock, err := c.db.Lock("bookAppointment_" + string(params.Data.ID[:]))

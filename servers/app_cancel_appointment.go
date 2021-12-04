@@ -22,11 +22,10 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/jsonrpc"
 	"time"
 )
 
-func (c *Appointments) cancelAppointment(context *jsonrpc.Context, params *services.CancelAppointmentSignedParams) *jsonrpc.Response {
+func (c *Appointments) cancelAppointment(context services.Context, params *services.CancelAppointmentSignedParams) services.Response {
 	// we verify the signature (without veryfing e.g. the provenance of the key)
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Error(err)

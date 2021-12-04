@@ -22,10 +22,9 @@ import (
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
-func (c *Appointments) getAppointmentsByZipCode(context *jsonrpc.Context, params *services.GetAppointmentsByZipCodeParams) *jsonrpc.Response {
+func (c *Appointments) getAppointmentsByZipCode(context services.Context, params *services.GetAppointmentsByZipCodeParams) services.Response {
 
 	keys, err := c.getActorKeys()
 

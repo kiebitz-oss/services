@@ -18,11 +18,10 @@ package servers
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/jsonrpc"
 )
 
 // return all public keys present in the system
-func (c *Appointments) getKeys(context *jsonrpc.Context, params *services.GetKeysParams) *jsonrpc.Response {
+func (c *Appointments) getKeys(context services.Context, params *services.GetKeysParams) services.Response {
 
 	keys, err := c.getKeysData()
 
