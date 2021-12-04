@@ -1,4 +1,4 @@
-.PHONY: all test clean build install examples secrets setup test-setup test-keys
+.PHONY: all test clean build install examples setup test-setup test-keys
 
 SHELL := /bin/bash
 
