@@ -193,10 +193,18 @@ var StorageForm = forms.Form{
 			},
 		},
 		{
-			Name: "rpc",
+			Name: "jsonrpc",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &JSONRPCServerSettingsForm,
+				},
+			},
+		},
+		{
+			Name: "http",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &HTTPServerSettingsForm,
 				},
 			},
 		},
@@ -369,10 +377,18 @@ var AppointmentsForm = forms.Form{
 			},
 		},
 		{
-			Name: "rpc",
+			Name: "jsonrpc",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &JSONRPCServerSettingsForm,
+				},
+			},
+		},
+		{
+			Name: "http",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &HTTPServerSettingsForm,
 				},
 			},
 		},

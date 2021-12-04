@@ -20,14 +20,16 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/forms"
+	"github.com/kiebitz-oss/services/http"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
 	"time"
 )
 
 type Storage struct {
+	server        *http.HTTPServer
 	settings      *services.StorageSettings
-	server        *jsonrpc.JSONRPCServer
+	jsonRPCServer *jsonrpc.JSONRPCServer
 	metricsServer *metrics.PrometheusMetricsServer
 	db            services.Database
 	test          bool
@@ -80,12 +82,16 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		return nil, err
 	}
 
-	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Storage.RPC, handler, "storage"); err != nil {
+	if server, err := http.MakeHTTPServer(settings.Storage.HTTP, nil, "storage"); err != nil {
+		return nil, err
+	} else if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Storage.JSONRPC, handler, "storage", server); err != nil {
 		return nil, err
 	} else {
-		Storage.server = jsonrpcServer
+		Storage.jsonRPCServer = jsonrpcServer
+		Storage.server = server
 		return Storage, nil
 	}
+
 }
 
 func (c *Storage) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
@@ -93,9 +99,23 @@ func (c *Storage) isRoot(context services.Context, data, signature []byte, times
 }
 
 func (c *Storage) Start() error {
-	return c.server.Start()
+	// we start the JSONRPC server first to avoid passing HTTP requests to it before it is initialized
+	if err := c.jsonRPCServer.Start(); err != nil {
+		return err
+	}
+	if err := c.server.Start(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Storage) Stop() error {
-	return c.server.Stop()
+	// we stop the HTTP server first to avoid the JSONRPC server receiving requests when it is already stopped
+	if err := c.server.Stop(); err != nil {
+		return err
+	}
+	if err := c.jsonRPCServer.Stop(); err != nil {
+		return err
+	}
+	return nil
 }

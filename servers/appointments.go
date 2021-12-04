@@ -23,13 +23,15 @@ import (
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
+	"github.com/kiebitz-oss/services/http"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/metrics"
 	"time"
 )
 
 type Appointments struct {
-	server        *jsonrpc.JSONRPCServer
+	server        *http.HTTPServer
+	jsonRPCServer *jsonrpc.JSONRPCServer
 	metricsServer *metrics.PrometheusMetricsServer
 	db            services.Database
 	meter         services.Meter
@@ -157,20 +159,37 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		return nil, err
 	}
 
-	if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Appointments.RPC, handler, "appointments"); err != nil {
+	if server, err := http.MakeHTTPServer(settings.Appointments.HTTP, nil, "appointments"); err != nil {
+		return nil, err
+	} else if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Appointments.JSONRPC, handler, "appointments", server); err != nil {
 		return nil, err
 	} else {
-		Appointments.server = jsonrpcServer
+		Appointments.jsonRPCServer = jsonrpcServer
+		Appointments.server = server
 		return Appointments, nil
 	}
 }
 
 func (c *Appointments) Start() error {
-	return c.server.Start()
+	// we start the JSONRPC server first to avoid passing HTTP requests to it before it is initialized
+	if err := c.jsonRPCServer.Start(); err != nil {
+		return err
+	}
+	if err := c.server.Start(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Appointments) Stop() error {
-	return c.server.Stop()
+	// we stop the HTTP server first to avoid the JSONRPC server receiving requests when it is already stopped
+	if err := c.server.Stop(); err != nil {
+		return err
+	}
+	if err := c.jsonRPCServer.Stop(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Method Handlers

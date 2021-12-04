@@ -19,16 +19,17 @@ metrics:
 storage:
   keys: [ ]
   settings_ttl_days: 60
-  rpc:
+  http:
     bind_address: localhost:11111
-    cors:
-      allowed_hosts: [ "http://localhost:8080" ]
-      allowed_headers: [ "*" ]
-      allowed_methods: [ "POST" ]
     #tls:
     #  ca_certificate_file: "$DIR/certs/root.crt"
     #  certificate_file: "$DIR/certs/storage-1.crt"
     #  key_file: "$DIR/certs/storage-1.key"
+  jsonrpc:
+    cors:
+      allowed_hosts: [ "http://localhost:8080" ]
+      allowed_headers: [ "*" ]
+      allowed_methods: [ "POST" ]
 admin:
   signing:
     keys: [ ]
@@ -39,8 +40,13 @@ appointments:
   provider_codes_enabled: false
   user_codes_enabled: false
   keys: [ ]
-  rpc:
+  http:
     bind_address: localhost:22222
+    #tls:
+    #  ca_certificate_file: "$DIR/certs/root.crt"
+    #  certificate_file: "$DIR/certs/storage-1.crt"
+    #  key_file: "$DIR/certs/storage-1.key"
+  jsonrpc:
     cors:
       allowed_hosts: [ "http://localhost:8080" ]
       allowed_headers: [ "*" ]

@@ -28,6 +28,13 @@ type TimeWindow struct {
 
 type TimeWindowFunc func(int64) TimeWindow
 
+func (t *TimeWindow) EqualTo(tw *TimeWindow) bool {
+	if t.Type != tw.Type || t.From != tw.From || t.To != tw.To {
+		return false
+	}
+	return true
+}
+
 func Second(value int64) TimeWindow {
 	t := time.Unix(value/1e9, value%1e9).UTC()
 	from := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), 0, t.Location())

@@ -32,6 +32,7 @@ type JSONRPCServer struct {
 	httpDurations *prometheus.HistogramVec
 	settings      *services.JSONRPCServerSettings
 	server        *http.HTTPServer
+	ownServer     bool
 	handler       Handler
 }
 
@@ -79,7 +80,7 @@ func NotFound(c *http.Context) {
 	c.JSON(404, map[string]interface{}{"message": "please send all requests to the '/jsonrpc' endpoint"})
 }
 
-func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string) (*JSONRPCServer, error) {
+func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string, httpServer *http.HTTPServer) (*JSONRPCServer, error) {
 
 	server := &JSONRPCServer{
 		settings:      settings,
@@ -110,17 +111,27 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 		},
 	}
 
-	httpServerSettings := &http.HTTPServerSettings{
-		TLS:         settings.TLS,
-		BindAddress: settings.BindAddress,
+	if httpServer == nil {
+
+		server.ownServer = true
+
+		if settings.HTTP == nil {
+			return nil, fmt.Errorf("HTTP settings missing")
+		}
+
+		var err error
+
+		if httpServer, err = http.MakeHTTPServer(settings.HTTP, routeGroups, fmt.Sprintf("%s_http", metricsPrefix)); err != nil {
+			return nil, err
+		}
+	} else if err := httpServer.AddRouteGroups(routeGroups); err != nil {
+		return nil, err
 	}
 
-	if httpServer, err := http.MakeHTTPServer(httpServerSettings, routeGroups, fmt.Sprintf("%s_http", metricsPrefix)); err != nil {
-		return nil, err
-	} else {
-		server.server = httpServer
-		return server, nil
-	}
+	server.server = httpServer
+
+	return server, nil
+
 }
 
 func (s *JSONRPCServer) Start() error {
@@ -138,10 +149,19 @@ func (s *JSONRPCServer) Start() error {
 		return fmt.Errorf("error registering collector for jsonRPC server (%s): %v", s.metricsPrefix, err)
 	}
 
+	if !s.ownServer {
+		return nil
+	}
+
 	return s.server.Start()
 }
 
 func (s *JSONRPCServer) Stop() error {
 	prometheus.Unregister(s.httpDurations)
+
+	if !s.ownServer {
+		return nil
+	}
+
 	return s.server.Stop()
 }

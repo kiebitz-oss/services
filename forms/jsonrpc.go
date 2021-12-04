@@ -66,21 +66,6 @@ var JSONRPCServerSettingsForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "bind_address",
-			Validators: []forms.Validator{
-				forms.IsString{}, // to do: add URL validation
-			},
-		},
-		{
-			Name: "tls",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsStringMap{
-					Form: &tls.TLSSettingsForm,
-				},
-			},
-		},
 	},
 }
 

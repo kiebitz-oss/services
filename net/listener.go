@@ -24,20 +24,14 @@ import (
 	"time"
 )
 
-type RateLimit struct {
-	TimeWindow *TimeWindow `json:"timeWindow"`
-	Type       string      `json:"type"`
-	Limit      int64       `json:"limit"`
-}
-
 type RateLimitedListener struct {
 	listener   net.Listener
-	rateLimits []*RateLimit
+	rateLimits []*services.RateLimit
 	rates      []map[string]int64
 	mutex      sync.Mutex
 }
 
-func MakeRateLimitedListener(listener net.Listener, rateLimits []*RateLimit) *RateLimitedListener {
+func MakeRateLimitedListener(listener net.Listener, rateLimits []*services.RateLimit) *RateLimitedListener {
 	services.Log.Tracef("Creating rate-limited network listener...")
 	rates := make([]map[string]int64, len(rateLimits))
 	for i, _ := range rateLimits {
@@ -72,7 +66,7 @@ acceptLoop:
 			services.Log.Tracef("Got a connection from '%s'", key)
 			for i, rateLimit := range l.rateLimits {
 				services.Log.Tracef("Checking rate limit of type '%s' with limit %d", rateLimit.Type, rateLimit.Limit)
-				tw := MakeTimeWindow(t, rateLimit.Type)
+				tw := services.MakeTimeWindow(t, rateLimit.Type)
 				if tw.Type == "" {
 					l.mutex.Unlock()
 					return nil, fmt.Errorf("invalid time window type: %s", rateLimit.Type)

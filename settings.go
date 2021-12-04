@@ -27,12 +27,14 @@ type RPCSettings struct {
 type StorageSettings struct {
 	Keys            []*crypto.Key          `json:"keys,omitempty"`
 	SettingsTTLDays int64                  `json:"settings_ttl_days"`
-	RPC             *JSONRPCServerSettings `json:"rpc,omitempty"`
+	HTTP            *HTTPServerSettings    `json:"http,omitempty"`
+	JSONRPC         *JSONRPCServerSettings `json:"jsonrpc,omitempty"`
 }
 
 type AppointmentsSettings struct {
 	DataTTLDays             int64                  `json:"data_ttl_days,omitempty"`
-	RPC                     *JSONRPCServerSettings `json:"rpc,omitempty"`
+	HTTP                    *HTTPServerSettings    `json:"http,omitempty"`
+	JSONRPC                 *JSONRPCServerSettings `json:"jsonrpc,omitempty"`
 	Keys                    []*crypto.Key          `json:"keys,omitempty"`
 	Secret                  []byte                 `json:"secret,omitempty"`
 	ProviderCodesEnabled    bool                   `json:"provider_codes_enabled,omitempty"`
@@ -115,9 +117,20 @@ type CorsSettings struct {
 
 // Settings for the JSON-RPC server
 type JSONRPCServerSettings struct {
-	Cors        *CorsSettings `json:"cors,omitempty"`
-	TLS         *TLSSettings  `json:"tls,omitempty"`
-	BindAddress string        `json:"bind_address"`
+	Cors *CorsSettings       `json:"cors,omitempty"`
+	HTTP *HTTPServerSettings `json:"http,omitempty"`
+}
+
+type HTTPServerSettings struct {
+	TLS           *TLSSettings `json:"tls,omitempty"`
+	BindAddress   string       `json:"bind_address"`
+	TCPRateLimits []*RateLimit `json:"tcp_rate_limits"`
+}
+
+type RateLimit struct {
+	TimeWindow *TimeWindow `json:"timeWindow"`
+	Type       string      `json:"type"`
+	Limit      int64       `json:"limit"`
 }
 
 type MetricSettings struct {

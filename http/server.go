@@ -57,7 +57,7 @@ type Hooks struct {
 }
 
 type HTTPServer struct {
-	settings      *HTTPServerSettings
+	settings      *services.HTTPServerSettings
 	tlsConfig     *cryptoTls.Config
 	listener      net.Listener
 	mutex         sync.Mutex
@@ -92,7 +92,7 @@ func initializeRouteGroup(routeGroup *RouteGroup) error {
 	return nil
 }
 
-func MakeHTTPServer(settings *HTTPServerSettings, routeGroups []*RouteGroup, metricsPrefix string) (*HTTPServer, error) {
+func MakeHTTPServer(settings *services.HTTPServerSettings, routeGroups []*RouteGroup, metricsPrefix string) (*HTTPServer, error) {
 
 	for _, routeGroup := range routeGroups {
 		if err := initializeRouteGroup(routeGroup); err != nil {
@@ -121,6 +121,16 @@ func MakeHTTPServer(settings *HTTPServerSettings, routeGroups []*RouteGroup, met
 	s.server.Handler = s
 
 	return s, nil
+}
+
+func (s *HTTPServer) AddRouteGroups(routeGroups []*RouteGroup) error {
+	for _, routeGroup := range routeGroups {
+		if err := initializeRouteGroup(routeGroup); err != nil {
+			return err
+		}
+	}
+	s.routeGroups = append(s.routeGroups, routeGroups...)
+	return nil
 }
 
 func (h *HTTPServer) SetHooks(hooks *Hooks) {

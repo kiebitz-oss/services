@@ -14,16 +14,29 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package http
+package forms
 
 import (
-	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/net"
+	"github.com/kiebitz-oss/services/tls"
+	"github.com/kiprotect/go-helpers/forms"
 )
 
-// Settings for the JSON-RPC server
-type HTTPServerSettings struct {
-	TLS           *services.TLSSettings `json:"tls"`
-	BindAddress   string                `json:"bind_address"`
-	TCPRateLimits []*net.RateLimit      `json:"tcp_rate_limits"`
+var HTTPServerSettingsForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "bind_address",
+			Validators: []forms.Validator{
+				forms.IsString{}, // to do: add URL validation
+			},
+		},
+		{
+			Name: "tls",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsStringMap{
+					Form: &tls.TLSSettingsForm,
+				},
+			},
+		},
+	},
 }
