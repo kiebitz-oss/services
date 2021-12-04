@@ -135,6 +135,19 @@ kiebitz run storage
 kiebitz run all
 ```
 
+## APIs
+
+The Kiebitz services can be exposed as a JSON-RPC or REST service (or both). For example, if both API types are enabled, the `getAppointmentsByZipCode` endpoint with parameters `zipCode=10707` and `radius=20` can be reached via both of the following queries:
+
+```bash
+# REST endpoint
+curl http://localhost:8888/appointments/zipCode/10707/20
+# JSON-RPC endpoint
+curl -X POST --header "Content-Type: application/json" http://localhost:8888/jsonrpc --data '{"jsonrpc": "2.0", "method": "getAppointmentsByZipCode", "params": {"zipCode": "10707", "radius": "20"}}' 
+```
+
+In general, the REST API is better for caching as it exposes cacheable endpoints via GET requests, while the JSON-RPC API provides a simpler and more natural interface.
+
 ## Testing
 
 Here's how you can send a request to the storage server via `curl` (this assumes you have `jq` installed for parsing of the JSON result):

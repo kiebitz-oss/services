@@ -729,10 +729,11 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: 50},
 				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    5,
-					Max:    80,
+					HasMin:  true,
+					HasMax:  true,
+					Min:     5,
+					Max:     80,
+					Convert: true,
 				},
 			},
 		},

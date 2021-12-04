@@ -69,7 +69,7 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Form:    &forms.GetAppointmentsByZipCodeForm,
 				Handler: appointments.getAppointmentsByZipCode,
 				REST: &api.REST{
-					Path:   "appointments/zipCode/<zipCode>/<distance>",
+					Path:   "appointments/zipCode/<zipCode>/<radius>",
 					Method: api.GET,
 				},
 			},
