@@ -23,25 +23,20 @@ import (
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/http"
-	"github.com/kiebitz-oss/services/jsonrpc"
-	"github.com/kiebitz-oss/services/metrics"
 	"time"
 )
 
 type Appointments struct {
-	server        *http.HTTPServer
-	jsonRPCServer *jsonrpc.JSONRPCServer
-	metricsServer *metrics.PrometheusMetricsServer
-	db            services.Database
-	meter         services.Meter
-	settings      *services.AppointmentsSettings
-	test          bool
+	*Server
+	db       services.Database
+	meter    services.Meter
+	settings *services.AppointmentsSettings
+	test     bool
 }
 
 func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 
-	Appointments := &Appointments{
+	appointments := &Appointments{
 		db:       settings.DatabaseObj,
 		meter:    settings.MeterObj,
 		settings: settings.Appointments,
@@ -52,144 +47,177 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		Version: 1,
 		Endpoints: []*api.Endpoint{
 			{
-				Name:    "resetDB",
-				Form:    &forms.ResetDBForm,
-				Type:    api.Retrieve,
-				Handler: Appointments.resetDB,
-			},
-			{
-				Name:    "confirmProvider",
-				Form:    &forms.ConfirmProviderForm,
-				Type:    api.Create,
-				Handler: Appointments.confirmProvider,
-			},
-			{
-				Name:    "addMediatorPublicKeys",
-				Form:    &forms.AddMediatorPublicKeysForm,
-				Type:    api.Create,
-				Handler: Appointments.addMediatorPublicKeys,
-			},
-			{
-				Name:    "addCodes",
-				Form:    &forms.AddCodesForm,
-				Handler: Appointments.addCodes,
-			},
-			{
-				Name:    "uploadDistances",
-				Form:    &forms.UploadDistancesForm,
-				Handler: Appointments.uploadDistances,
-			},
-			{
-				Name:    "getStats",
+				Name:    "getStats", // unauthenticated
 				Form:    &forms.GetStatsForm,
-				Handler: Appointments.getStats,
+				Handler: appointments.getStats,
+				REST: &api.REST{
+					Path:   "stats",
+					Method: api.GET,
+				},
 			},
 			{
-				Name:    "getKeys",
+				Name:    "getKeys", // unauthenticated
 				Form:    &forms.GetKeysForm,
-				Handler: Appointments.getKeys,
+				Handler: appointments.getKeys,
+				REST: &api.REST{
+					Path:   "keys",
+					Method: api.GET,
+				},
 			},
 			{
-				Name:    "getAppointmentsByZipCode",
+				Name:    "getAppointmentsByZipCode", // unauthenticated
 				Form:    &forms.GetAppointmentsByZipCodeForm,
-				Handler: Appointments.getAppointmentsByZipCode,
+				Handler: appointments.getAppointmentsByZipCode,
+				REST: &api.REST{
+					Path:   "appointments/zipCode/<zipCode>/<distance>",
+					Method: api.GET,
+				},
 			},
 			{
-				Name:    "getAppointment",
+				Name:    "getAppointment", // unauthenticated
 				Form:    &forms.GetAppointmentForm,
-				Handler: Appointments.getAppointment,
+				Handler: appointments.getAppointment,
+				REST: &api.REST{
+					Path:   "provider/<providerID>/appointments/<id>",
+					Method: api.GET,
+				},
 			},
 			{
-				Name:    "getProviderAppointments",
-				Form:    &forms.GetProviderAppointmentsForm,
-				Handler: Appointments.getProviderAppointments,
-			},
-			{
-				Name:    "publishAppointments",
-				Form:    &forms.PublishAppointmentsForm,
-				Handler: Appointments.publishAppointments,
-			},
-			{
-				Name:    "bookAppointment",
-				Form:    &forms.BookAppointmentForm,
-				Handler: Appointments.bookAppointment,
-			},
-			{
-				Name:    "cancelAppointment",
-				Form:    &forms.CancelAppointmentForm,
-				Handler: Appointments.cancelAppointment,
-			},
-			{
-				Name:    "getToken",
+				Name:    "getToken", // unauthenticated
 				Form:    &forms.GetTokenForm,
-				Handler: Appointments.getToken,
+				Handler: appointments.getToken,
+				REST: &api.REST{
+					Path:   "token",
+					Method: api.POST,
+				},
 			},
 			{
-				Name:    "storeProviderData",
-				Form:    &forms.StoreProviderDataForm,
-				Handler: Appointments.storeProviderData,
+				Name:    "addMediatorPublicKeys", // authenticted (root)
+				Form:    &forms.AddMediatorPublicKeysForm,
+				Handler: appointments.addMediatorPublicKeys,
+				REST: &api.REST{
+					Path:   "mediators",
+					Method: api.POST,
+				},
 			},
 			{
-				Name:    "checkProviderData",
-				Form:    &forms.CheckProviderDataForm,
-				Handler: Appointments.checkProviderData,
+				Name:    "addCodes", // authenticated (root)
+				Form:    &forms.AddCodesForm,
+				Handler: appointments.addCodes,
+				REST: &api.REST{
+					Path:   "codes",
+					Method: api.POST,
+				},
 			},
 			{
-				Name:    "getPendingProviderData",
+				Name:    "uploadDistances", // authenticated (root)
+				Form:    &forms.UploadDistancesForm,
+				Handler: appointments.uploadDistances,
+				REST: &api.REST{
+					Path:   "distances",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "resetDB", // authenticated (root)
+				Form:    &forms.ResetDBForm,
+				Handler: appointments.resetDB,
+				REST: &api.REST{
+					Path:   "db/reset",
+					Method: api.DELETE,
+				},
+			},
+			{
+				Name:    "confirmProvider", // authenticated (mediator)
+				Form:    &forms.ConfirmProviderForm,
+				Handler: appointments.confirmProvider,
+				REST: &api.REST{
+					Path:   "providers",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "getPendingProviderData", // authenticated (mediator)
 				Form:    &forms.GetPendingProviderDataForm,
-				Handler: Appointments.getPendingProviderData,
+				Handler: appointments.getPendingProviderData,
+				REST: &api.REST{
+					Path:   "providers/pending",
+					Method: api.POST,
+				},
 			},
 			{
-				Name:    "getVerifiedProviderData",
+				Name:    "getVerifiedProviderData", // authenticated (mediator)
 				Form:    &forms.GetVerifiedProviderDataForm,
-				Handler: Appointments.getVerifiedProviderData,
+				Handler: appointments.getVerifiedProviderData,
+				REST: &api.REST{
+					Path:   "providers/verified",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "getProviderAppointments", // authenticated (provider)
+				Form:    &forms.GetProviderAppointmentsForm,
+				Handler: appointments.getProviderAppointments,
+				REST: &api.REST{
+					Path:   "appointments",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "publishAppointments", // authenticated (provider)
+				Form:    &forms.PublishAppointmentsForm,
+				Handler: appointments.publishAppointments,
+				REST: &api.REST{
+					Path:   "appointments/publish",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "storeProviderData", // authenticated (provider)
+				Form:    &forms.StoreProviderDataForm,
+				Handler: appointments.storeProviderData,
+				REST: &api.REST{
+					Path:   "providers/data",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "checkProviderData", // authenticated (provider)
+				Form:    &forms.CheckProviderDataForm,
+				Handler: appointments.checkProviderData,
+				REST: &api.REST{
+					Path:   "providers/data",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "bookAppointment", // authenticated (user)
+				Form:    &forms.BookAppointmentForm,
+				Handler: appointments.bookAppointment,
+				REST: &api.REST{
+					Path:   "appointments/book",
+					Method: api.POST,
+				},
+			},
+			{
+				Name:    "cancelAppointment", // authenticated (user)
+				Form:    &forms.CancelAppointmentForm,
+				Handler: appointments.cancelAppointment,
+				REST: &api.REST{
+					Path:   "appointments/cancel",
+					Method: api.DELETE,
+				},
 			},
 		},
 	}
 
-	methods, err := api.ToJSONRPC()
+	var err error
 
-	if err != nil {
+	if appointments.Server, err = MakeServer("appointments", settings.Appointments.HTTP, settings.Appointments.JSONRPC, settings.Appointments.REST, api); err != nil {
 		return nil, err
 	}
 
-	handler, err := jsonrpc.MethodsHandler(methods)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if server, err := http.MakeHTTPServer(settings.Appointments.HTTP, nil, "appointments"); err != nil {
-		return nil, err
-	} else if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Appointments.JSONRPC, handler, "appointments", server); err != nil {
-		return nil, err
-	} else {
-		Appointments.jsonRPCServer = jsonrpcServer
-		Appointments.server = server
-		return Appointments, nil
-	}
-}
-
-func (c *Appointments) Start() error {
-	// we start the JSONRPC server first to avoid passing HTTP requests to it before it is initialized
-	if err := c.jsonRPCServer.Start(); err != nil {
-		return err
-	}
-	if err := c.server.Start(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Appointments) Stop() error {
-	// we stop the HTTP server first to avoid the JSONRPC server receiving requests when it is already stopped
-	if err := c.server.Stop(); err != nil {
-		return err
-	}
-	if err := c.jsonRPCServer.Stop(); err != nil {
-		return err
-	}
-	return nil
+	return appointments, nil
 }
 
 // Method Handlers

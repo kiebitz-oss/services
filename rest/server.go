@@ -14,12 +14,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package jsonrpc
+package rest
 
 import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/http"
+	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
@@ -27,26 +28,23 @@ import (
 
 type Handler func(*Context) *Response
 
-type JSONRPCServer struct {
+type RESTServer struct {
 	metricsPrefix string
 	httpDurations *prometheus.HistogramVec
-	settings      *services.JSONRPCServerSettings
+	settings      *services.RESTServerSettings
 	server        *http.HTTPServer
 	ownServer     bool
 	handler       Handler
 }
 
-func (s *JSONRPCServer) JSONRPC(handler Handler) http.Handler {
+func (s *RESTServer) REST(handler Handler) http.Handler {
 
 	return func(c *http.Context) {
 
 		startTime := time.Now()
 
-		// the request data has been validated by the 'ExtractJSONRequest' handler
-		request := c.Get("request").(*Request)
-
 		context := &Context{
-			Request: request,
+			HTTP: c,
 		}
 
 		response := handler(context)
@@ -55,30 +53,17 @@ func (s *JSONRPCServer) JSONRPC(handler Handler) http.Handler {
 			response = context.Nil().(*Response)
 		}
 
-		// people will forget this so we add it here in that case
-		if response.JSONRPC == "" {
-			response.JSONRPC = "2.0"
-		}
-
-		code := 200
-
-		// if there was an error we return a 400 status instead of 200
-		if response.Error != nil {
-			code = 400
-		}
-
-		c.JSON(code, response)
+		c.JSON(response.StatusCode, response.Data)
 
 		elapsedTime := time.Since(startTime)
-		codeString := strconv.Itoa(code)
-
-		s.httpDurations.WithLabelValues(request.Method, codeString).Observe(elapsedTime.Seconds())
+		codeString := strconv.Itoa(response.StatusCode)
+		s.httpDurations.WithLabelValues(c.Request.URL.Path, codeString).Observe(elapsedTime.Seconds())
 	}
 }
 
-func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler, metricsPrefix string, httpServer *http.HTTPServer) (*JSONRPCServer, error) {
+func MakeRESTServer(settings *services.RESTServerSettings, handler Handler, metricsPrefix string, httpServer *http.HTTPServer) (*RESTServer, error) {
 
-	server := &JSONRPCServer{
+	server := &RESTServer{
 		settings:      settings,
 		metricsPrefix: metricsPrefix,
 	}
@@ -87,14 +72,13 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 		{
 			// these handlers will be executed for all routes in the group
 			Handlers: []http.Handler{
-				Cors(settings.Cors, false),
+				jsonrpc.Cors(settings.Cors, false),
 			},
 			Routes: []*http.Route{
 				{
-					Pattern: "^/jsonrpc$",
+					Pattern: "^.*$",
 					Handlers: []http.Handler{
-						ExtractJSONRequest,
-						server.JSONRPC(handler),
+						server.REST(handler),
 					},
 				},
 			},
@@ -124,19 +108,19 @@ func MakeJSONRPCServer(settings *services.JSONRPCServerSettings, handler Handler
 
 }
 
-func (s *JSONRPCServer) Start() error {
+func (s *RESTServer) Start() error {
 
 	s.httpDurations = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:    fmt.Sprintf("%s_%s", s.metricsPrefix, "rpc_durations_seconds"),
-			Help:    "RPC latency distributions",
+			Name:    fmt.Sprintf("%s_%s", s.metricsPrefix, "rest_durations_seconds"),
+			Help:    "REST latency distributions",
 			Buckets: []float64{0, 0.1, 0.2, 0.5, 1, 2, 5, 10},
 		},
 		[]string{"method", "code"},
 	)
 
 	if err := prometheus.Register(s.httpDurations); err != nil {
-		return fmt.Errorf("error registering collector for jsonRPC server (%s): %v", s.metricsPrefix, err)
+		return fmt.Errorf("error registering collector for RESET server (%s): %v", s.metricsPrefix, err)
 	}
 
 	if !s.ownServer {
@@ -146,7 +130,7 @@ func (s *JSONRPCServer) Start() error {
 	return s.server.Start()
 }
 
-func (s *JSONRPCServer) Stop() error {
+func (s *RESTServer) Stop() error {
 	prometheus.Unregister(s.httpDurations)
 
 	if !s.ownServer {

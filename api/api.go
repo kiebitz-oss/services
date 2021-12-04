@@ -4,14 +4,14 @@ import (
 	"github.com/kiprotect/go-helpers/forms"
 )
 
-type EndpointType string
+type Method string
 
 const (
-	Retrieve = EndpointType("retrieve")
-	Create   = EndpointType("create")
-	Replace  = EndpointType("replace")
-	Delete   = EndpointType("delete")
-	Modify   = EndpointType("modify")
+	POST   = Method("POST")
+	GET    = Method("GET")
+	PUT    = Method("PUT")
+	DELETE = Method("DELETE")
+	PATCH  = Method("PATCH")
 )
 
 type API struct {
@@ -19,9 +19,14 @@ type API struct {
 	Endpoints []*Endpoint
 }
 
+type REST struct {
+	Path   string `json:"path"`
+	Method Method `json:"method"`
+}
+
 type Endpoint struct {
-	Name    string       `json:"name"`
-	Type    EndpointType `json:"type"`
-	Handler interface{}  `json:"-"`
-	Form    *forms.Form  `json:"form"`
+	Name    string      `json:"name"`
+	Handler interface{} `json:"-"`
+	REST    *REST       `json:"rest,omitempty"`
+	Form    *forms.Form `json:"form"`
 }

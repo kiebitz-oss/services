@@ -29,11 +29,13 @@ type StorageSettings struct {
 	SettingsTTLDays int64                  `json:"settings_ttl_days"`
 	HTTP            *HTTPServerSettings    `json:"http,omitempty"`
 	JSONRPC         *JSONRPCServerSettings `json:"jsonrpc,omitempty"`
+	REST            *RESTServerSettings    `json:"rest,omitempty"`
 }
 
 type AppointmentsSettings struct {
 	DataTTLDays             int64                  `json:"data_ttl_days,omitempty"`
 	HTTP                    *HTTPServerSettings    `json:"http,omitempty"`
+	REST                    *RESTServerSettings    `json:"rest,omitempty"`
 	JSONRPC                 *JSONRPCServerSettings `json:"jsonrpc,omitempty"`
 	Keys                    []*crypto.Key          `json:"keys,omitempty"`
 	Secret                  []byte                 `json:"secret,omitempty"`
@@ -117,6 +119,12 @@ type CorsSettings struct {
 
 // Settings for the JSON-RPC server
 type JSONRPCServerSettings struct {
+	Cors *CorsSettings       `json:"cors,omitempty"`
+	HTTP *HTTPServerSettings `json:"http,omitempty"`
+}
+
+// Settings for the JSON-RPC server
+type RESTServerSettings struct {
 	Cors *CorsSettings       `json:"cors,omitempty"`
 	HTTP *HTTPServerSettings `json:"http,omitempty"`
 }

@@ -20,24 +20,19 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/forms"
-	"github.com/kiebitz-oss/services/http"
-	"github.com/kiebitz-oss/services/jsonrpc"
-	"github.com/kiebitz-oss/services/metrics"
 	"time"
 )
 
 type Storage struct {
-	server        *http.HTTPServer
-	settings      *services.StorageSettings
-	jsonRPCServer *jsonrpc.JSONRPCServer
-	metricsServer *metrics.PrometheusMetricsServer
-	db            services.Database
-	test          bool
+	*Server
+	settings *services.StorageSettings
+	db       services.Database
+	test     bool
 }
 
 func MakeStorage(settings *services.Settings) (*Storage, error) {
 
-	Storage := &Storage{
+	storage := &Storage{
 		db:       settings.DatabaseObj,
 		settings: settings.Storage,
 		test:     settings.Test,
@@ -49,73 +44,36 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 			{
 				Name:    "storeSettings",
 				Form:    &forms.StoreSettingsForm,
-				Handler: Storage.storeSettings,
+				Handler: storage.storeSettings,
 			},
 			{
 				Name:    "getSettings",
 				Form:    &forms.GetSettingsForm,
-				Handler: Storage.getSettings,
+				Handler: storage.getSettings,
 			},
 			{
 				Name:    "deleteSettings",
 				Form:    &forms.DeleteSettingsForm,
-				Handler: Storage.deleteSettings,
+				Handler: storage.deleteSettings,
 			},
 			{
 				Name:    "resetDB",
 				Form:    &forms.ResetDBForm,
-				Type:    api.Retrieve,
-				Handler: Storage.resetDB,
+				Handler: storage.resetDB,
 			},
 		},
 	}
 
-	methods, err := api.ToJSONRPC()
+	var err error
 
-	if err != nil {
+	if storage.Server, err = MakeServer("storage", settings.Storage.HTTP, settings.Storage.JSONRPC, settings.Storage.REST, api); err != nil {
 		return nil, err
 	}
 
-	handler, err := jsonrpc.MethodsHandler(methods)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if server, err := http.MakeHTTPServer(settings.Storage.HTTP, nil, "storage"); err != nil {
-		return nil, err
-	} else if jsonrpcServer, err := jsonrpc.MakeJSONRPCServer(settings.Storage.JSONRPC, handler, "storage", server); err != nil {
-		return nil, err
-	} else {
-		Storage.jsonRPCServer = jsonrpcServer
-		Storage.server = server
-		return Storage, nil
-	}
+	return storage, nil
 
 }
 
 func (c *Storage) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
 	return isRoot(context, data, signature, timestamp, c.settings.Keys)
-}
-
-func (c *Storage) Start() error {
-	// we start the JSONRPC server first to avoid passing HTTP requests to it before it is initialized
-	if err := c.jsonRPCServer.Start(); err != nil {
-		return err
-	}
-	if err := c.server.Start(); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Storage) Stop() error {
-	// we stop the HTTP server first to avoid the JSONRPC server receiving requests when it is already stopped
-	if err := c.server.Stop(); err != nil {
-		return err
-	}
-	if err := c.jsonRPCServer.Stop(); err != nil {
-		return err
-	}
-	return nil
 }
