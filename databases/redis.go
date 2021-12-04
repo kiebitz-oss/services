@@ -34,7 +34,7 @@ import (
 type Redis struct {
 	metricsPrefix  string
 	redisDurations *prometheus.HistogramVec
-	clients        []redis.UniversalClient
+	clients        map[uint32]redis.UniversalClient
 	pipeline       redis.Pipeliner
 	mutex          sync.Mutex
 	channel        chan bool
@@ -91,6 +91,7 @@ type RedisSettings struct {
 	Password          string   `json:"password"`
 	SentinelUsername  string   `json:"sentinel_username"`
 	SentinelPassword  string   `json:"sentinel_password"`
+	ShardIndex        int64    `json:"shard_index"`
 }
 
 type MetricHook struct {
@@ -173,6 +174,13 @@ var RedisForm = forms.Form{
 				forms.IsString{},
 			},
 		},
+		{
+			Name: "shard_index",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: 0},
+				forms.IsInteger{},
+			},
+		},
 	},
 }
 var RedisShardForm = forms.Form{
@@ -215,7 +223,7 @@ func ValidateRedisShardSettings(settings map[string]interface{}) (interface{}, e
 	}
 }
 
-func MakeRedisClient(settings interface{}) (redis.UniversalClient, error) {
+func MakeRedisClient(settings interface{}) (redis.UniversalClient, uint32, error) {
 	redisSettings := settings.(RedisSettings)
 
 	var client redis.UniversalClient
@@ -250,19 +258,20 @@ func MakeRedisClient(settings interface{}) (redis.UniversalClient, error) {
 
 		services.Log.Info("Creating sentinel-based redis connection")
 	} else {
-		return nil, errors.New("invalid database configuration, needed addresses or sentinelAddresses")
+		return nil, 0, errors.New("invalid database configuration, needed addresses or sentinelAddresses")
 	}
 
-	return client, nil
+	return client, uint32(redisSettings.ShardIndex), nil
 }
 
 func MakeRedisShards(settings interface{}) (*Redis, error) {
 	redisShardSettings := settings.(RedisShardSettings)
 	ctx := context.TODO()
 
-	clients := []redis.UniversalClient{}
+	clients := map[uint32]redis.UniversalClient{}
+
 	for _, redisSettings := range redisShardSettings.Shards {
-		client, err := MakeRedisClient(redisSettings)
+		client, shardIndex, err := MakeRedisClient(redisSettings)
 
 		if err != nil {
 			return nil, err
@@ -272,7 +281,7 @@ func MakeRedisShards(settings interface{}) (*Redis, error) {
 			return nil, err
 		}
 
-		clients = append(clients, client)
+		clients[shardIndex] = client
 	}
 
 	services.Log.Info("Creating redis-shard database")
@@ -290,7 +299,7 @@ func MakeRedisShards(settings interface{}) (*Redis, error) {
 func MakeRedis(settings interface{}) (*Redis, error) {
 	ctx := context.TODO()
 
-	client, err := MakeRedisClient(settings)
+	client, shardIndex, err := MakeRedisClient(settings)
 
 	if err != nil {
 		return nil, err
@@ -302,8 +311,11 @@ func MakeRedis(settings interface{}) (*Redis, error) {
 
 	services.Log.Info("Creating redis database")
 
+	clients := make(map[uint32]redis.UniversalClient)
+	clients[shardIndex] = client
+
 	database := &Redis{
-		clients: []redis.UniversalClient{client},
+		clients: clients,
 		channel: make(chan bool),
 		Ctx:     ctx,
 	}
@@ -362,7 +374,8 @@ func (d *Redis) getShardForKey(key string) uint32 {
 }
 
 func (d *Redis) Client(key string) redis.UniversalClient {
-	return d.clients[d.getShardForKey(key)]
+	shard_index := d.getShardForKey(key)
+	return d.clients[shard_index]
 }
 
 func (d *Redis) Open() error {
