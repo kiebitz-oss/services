@@ -73,6 +73,10 @@ func (c *Context) Error(code int, message string, data interface{}) services.Res
 	}
 }
 
+func (c *Context) Params() map[string]interface{} {
+	return c.Request.Params
+}
+
 func (c *Context) NotFound() services.Response {
 	return c.Error(404, "not found", nil)
 }

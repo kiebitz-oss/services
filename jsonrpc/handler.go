@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiprotect/go-helpers/forms"
-	"reflect"
 )
 
 type Method struct {
@@ -28,71 +27,11 @@ type Method struct {
 	Handler interface{}
 }
 
-type Coercer func(interface{}) error
-
-// returns a new struct that we can coerce the valid form parameters into
-func handlerStruct(handler interface{}) (interface{}, error) {
-	value := reflect.ValueOf(handler)
-	if value.Kind() != reflect.Func {
-		return nil, fmt.Errorf("not a function")
-	}
-
-	funcType := value.Type()
-
-	if funcType.NumIn() != 2 {
-		return nil, fmt.Errorf("expected a function with 2 arguments")
-	}
-
-	if funcType.NumOut() != 1 {
-		return nil, fmt.Errorf("expected a function with 1 return value")
-	}
-
-	returnType := funcType.Out(0)
-
-	if !returnType.Implements(reflect.TypeOf((*services.Response)(nil)).Elem()) {
-		return nil, fmt.Errorf("return value should be a response")
-	}
-
-	contextType := funcType.In(0)
-
-	if !contextType.Implements(reflect.TypeOf((*services.Context)(nil)).Elem()) {
-		return nil, fmt.Errorf("first argument should accept a context")
-	}
-
-	structType := funcType.In(1)
-
-	if structType.Kind() != reflect.Ptr || structType.Elem().Kind() != reflect.Struct {
-		return nil, fmt.Errorf("second argument should be a struct pointer")
-	}
-
-	// we create a new struct and return it
-	return reflect.New(structType.Elem()).Interface(), nil
-}
-
-// calls the handler with the validated and coerced form parameters
-func callHandler(context *Context, handler, params interface{}) (*Response, error) {
-	value := reflect.ValueOf(handler)
-
-	if value.Kind() != reflect.Func {
-		return nil, fmt.Errorf("not a function")
-	}
-
-	apiContext := services.Context(context)
-
-	paramsValue := reflect.ValueOf(params)
-	contextValue := reflect.ValueOf(apiContext)
-
-	responseValue := value.Call([]reflect.Value{contextValue, paramsValue})
-
-	return responseValue[0].Interface().(*Response), nil
-
-}
-
 func MethodsHandler(methods map[string]*Method) (Handler, error) {
 
 	// we check that all provided methods have the correct type
 	for key, method := range methods {
-		if _, err := handlerStruct(method.Handler); err != nil {
+		if _, err := services.APIHandlerStruct(method.Handler); err != nil {
 			return nil, err
 		}
 		if method.Form == nil {
@@ -104,30 +43,7 @@ func MethodsHandler(methods map[string]*Method) (Handler, error) {
 		if method, ok := methods[context.Request.Method]; !ok {
 			return context.MethodNotFound().(*Response)
 		} else {
-			if params, err := method.Form.ValidateWithContext(context.Request.Params, map[string]interface{}{"context": context}); err != nil {
-				return context.InvalidParams(err).(*Response)
-			} else {
-				if paramsStruct, err := handlerStruct(method.Handler); err != nil {
-					// this should never happen...
-					services.Log.Error(err)
-					return context.InternalError().(*Response)
-				} else if err := method.Form.Coerce(paramsStruct, params); err != nil {
-					// this shouldn't happen either...
-					services.Log.Error(err)
-					return context.InternalError().(*Response)
-				} else {
-					if response, err := callHandler(context, method.Handler, paramsStruct); err != nil {
-						// and neither should this...
-						services.Log.Error(err)
-						return context.InternalError().(*Response)
-					} else {
-						if response == nil {
-							return context.Nil().(*Response)
-						}
-						return response
-					}
-				}
-			}
+			return services.HandleAPICall(method.Handler, method.Form, context).(*Response)
 		}
 	}, nil
 }
