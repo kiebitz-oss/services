@@ -41,6 +41,11 @@ func ExtractJSONRequest(c *http.Context) {
 	}
 	serverErrorResponse := Response{JSONRPC: "2.0,", Error: &Error{Code: -32603, Message: "internal server error"}}
 
+	if c.Request.Method != "POST" {
+		c.JSON(405, Response{JSONRPC: "2.0", Error: &Error{Code: -1, Message: "method not allowed"}})
+		return
+	}
+
 	if !jsonContentTypeRegexp.MatchString(c.Request.Header.Get("content-type")) {
 		c.JSON(400, invalidJSONResponse)
 		return
