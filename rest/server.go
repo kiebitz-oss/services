@@ -120,7 +120,7 @@ func (s *RESTServer) Start() error {
 	)
 
 	if err := prometheus.Register(s.httpDurations); err != nil {
-		return fmt.Errorf("error registering collector for RESET server (%s): %v", s.metricsPrefix, err)
+		return fmt.Errorf("error registering collector for REST server (%s): %v", s.metricsPrefix, err)
 	}
 
 	if !s.ownServer {
