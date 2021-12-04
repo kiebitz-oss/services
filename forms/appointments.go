@@ -794,6 +794,22 @@ var GetProviderAppointmentsDataForm = forms.Form{
 				forms.IsTime{Format: "rfc3339"},
 			},
 		},
+		{
+			Name: "fromDate",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: "0000-00-00"},
+				forms.MatchesRegex{Regex: regexp.MustCompile(`^(|\d\d\d\d-\d\d-\d\d)$`)},
+				forms.IsString{},
+			},
+		},
+		{
+			Name: "toDate",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: "9999-99-99"},
+				forms.MatchesRegex{Regex: regexp.MustCompile(`^(|\d\d\d\d-\d\d-\d\d)$`)},
+				forms.IsString{},
+			},
+		},
 	},
 }
 
