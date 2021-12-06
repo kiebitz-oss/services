@@ -294,6 +294,64 @@ var ProviderQueueDataForm = forms.Form{
 	},
 }
 
+var RevokeProviderForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsString{},
+				JSON{
+					Key: "json",
+				},
+				forms.IsStringMap{
+					Form: &RevokeProviderDataForm,
+				},
+			},
+		},
+		{
+			Name: "signature",
+			Validators: []forms.Validator{
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+		{
+			Name: "publicKey",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+	},
+}
+
+var RevokeProviderDataForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "providerID",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "timestamp",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+	},
+}
+
+
 var ResetDBForm = forms.Form{
 	Fields: []forms.Field{
 		{

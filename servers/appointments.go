@@ -137,6 +137,15 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
+				Name:    "revokeProvider", // authenticated (mediator)
+				Form:    &forms.RevokeProviderForm,
+				Handler: appointments.revokeProvider,
+				REST: &api.REST{
+					Path:   "providers/revoke",
+					Method: api.POST,
+				},
+			},
+			{
 				Name:    "getPendingProviderData", // authenticated (mediator)
 				Form:    &forms.GetPendingProviderDataForm,
 				Handler: appointments.getPendingProviderData,

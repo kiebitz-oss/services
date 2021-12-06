@@ -39,13 +39,6 @@ type ConfirmProviderParams struct {
 	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
 }
 
-type SignedKeyData struct {
-	JSON      string   `json:"data" coerce:"name:json"`
-	Data      *KeyData `json:"-" coerce:"name:data"`
-	Signature []byte   `json:"signature"`
-	PublicKey []byte   `json:"publicKey"`
-}
-
 func (k *KeyData) Sign(key *crypto.Key) (*SignedKeyData, error) {
 	if data, err := json.Marshal(k); err != nil {
 		return nil, err
@@ -70,6 +63,26 @@ type KeyData struct {
 type ProviderQueueData struct {
 	ZipCode    string `json:"zipCode"`
 	Accessible bool   `json:"accessible"`
+}
+
+// RevokeProvider
+
+type RevokeProviderSignedParams struct {
+	JSON      string                `json:"data" coerce:"name:json"`
+	Data      *RevokeProviderParams `json:"-" coerce:"name:data"`
+	Signature []byte                `json:"signature"`
+	PublicKey []byte                `json:"publicKey"`
+}
+
+type RevokeProviderParams struct {
+	ProviderID []byte `json:"providerID"`
+}
+
+type SignedKeyData struct {
+	JSON      string   `json:"data" coerce:"name:json"`
+	Data      *KeyData `json:"-" coerce:"name:data"`
+	Signature []byte   `json:"signature"`
+	PublicKey []byte   `json:"publicKey"`
 }
 
 // ResetDB
