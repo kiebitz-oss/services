@@ -25,30 +25,34 @@ import (
 	servicesForms "github.com/kiebitz-oss/services/forms"
 	"github.com/kiprotect/go-helpers/forms"
 	"github.com/kiprotect/go-helpers/settings"
+	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 var EnvSettingsName = "KIEBITZ_SETTINGS"
 
-func SettingsPaths() []string {
+func SettingsPaths() ([]string, fs.FS, error) {
 	envValue := os.Getenv(EnvSettingsName)
-	if envValue == "" {
-		return []string{}
-	}
 	values := strings.Split(envValue, ":")
 	sanitizedValues := make([]string, 0, len(values))
 	for _, value := range values {
 		if value == "" {
 			continue
 		}
+		var err error
+		if value, err = filepath.Abs(value); err != nil {
+			return nil, nil, err
+		}
+		value = value[1:]
 		sanitizedValues = append(sanitizedValues, value)
 	}
-	return sanitizedValues
+	return sanitizedValues, os.DirFS("/"), nil
 }
 
-func Settings(settingsPaths []string, definitions *services.Definitions) (*services.Settings, error) {
-	if rawSettings, err := settings.MakeSettings(settingsPaths); err != nil {
+func Settings(settingsPaths []string, fs fs.FS, definitions *services.Definitions) (*services.Settings, error) {
+	if rawSettings, err := settings.MakeSettings(settingsPaths, fs); err != nil {
 		return nil, err
 	} else if params, err := servicesForms.SettingsForm.ValidateWithContext(rawSettings.Values, map[string]interface{}{"definitions": definitions}); err != nil {
 		return nil, err

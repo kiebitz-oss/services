@@ -33,9 +33,13 @@ func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 	}
 	services.Log.SetLevel(c.LogLevel)
 
-	paths := helpers.SettingsPaths()
+	paths, fs, err := helpers.SettingsPaths()
 
-	if settings, err := helpers.Settings(paths, &c.Definitions); err != nil {
+	if err != nil {
+		return nil, err
+	}
+
+	if settings, err := helpers.Settings(paths, fs, &c.Definitions); err != nil {
 		return nil, err
 	} else if db, err := helpers.InitializeDatabase(settings); err != nil {
 		return nil, err

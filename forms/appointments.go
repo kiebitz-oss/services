@@ -1458,7 +1458,8 @@ var StoreProviderDataDataForm = forms.Form{
 var GetPendingProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
-			Name: "data",
+			Name:        "data",
+			Description: "parameters for fetching pending provider data",
 			Validators: []forms.Validator{
 				forms.IsString{},
 				JSON{
@@ -1583,14 +1584,14 @@ var GetStatsForm = forms.Form{
 			Name: "name",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: ""},
-				forms.MatchesRegex{Regex: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
+				forms.MatchesRegex{Regexp: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
 			},
 		},
 		{
 			Name: "metric",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: ""},
-				forms.MatchesRegex{Regex: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
+				forms.MatchesRegex{Regexp: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
 			},
 		},
 		{

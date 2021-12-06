@@ -280,7 +280,12 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			services.Log.Fatal(err)
 		}
 
-		settingsPaths := helpers.SettingsPaths()
+		// to do: handle non-real FS?
+		settingsPaths, _, err := helpers.SettingsPaths()
+
+		if err != nil {
+			services.Log.Fatal(err)
+		}
 
 		if len(settingsPaths) == 0 {
 			services.Log.Fatal("no settings paths defined!")

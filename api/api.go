@@ -31,8 +31,9 @@ const (
 )
 
 type API struct {
-	Version   int
-	Endpoints []*Endpoint
+	Version     int         `json:"version"`
+	Description string      `json:"description"`
+	Endpoints   []*Endpoint `json:"endpoints"`
 }
 
 type REST struct {
@@ -40,9 +41,14 @@ type REST struct {
 	Method Method `json:"method"`
 }
 
+type ReturnType struct {
+}
+
 type Endpoint struct {
-	Name    string      `json:"name"`
-	Handler interface{} `json:"-"`
-	REST    *REST       `json:"rest,omitempty"`
-	Form    *forms.Form `json:"form"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	Handler     interface{} `json:"-"`
+	REST        *REST       `json:"rest,omitempty"`
+	Form        *forms.Form `json:"form"`
+	ReturnType  *ReturnType `json:"returnType"`
 }

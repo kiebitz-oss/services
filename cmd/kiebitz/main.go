@@ -24,8 +24,11 @@ import (
 )
 
 func Settings(definitions *services.Definitions) (*services.Settings, error) {
-	settingsPaths := helpers.SettingsPaths()
-	return helpers.Settings(settingsPaths, definitions)
+	if settingsPaths, fs, err := helpers.SettingsPaths(); err != nil {
+		return nil, err
+	} else {
+		return helpers.Settings(settingsPaths, fs, definitions)
+	}
 }
 
 func main() {

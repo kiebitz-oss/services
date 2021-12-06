@@ -17,9 +17,22 @@
 package api
 
 import (
+	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/jsonrpc"
 	"github.com/kiebitz-oss/services/rest"
+	"github.com/kiprotect/go-helpers/forms"
 )
+
+var APIDocForm = &forms.Form{}
+
+type APIDocParams struct {
+}
+
+func makeJSONRPCDoc(methods map[string]*jsonrpc.Method, api *API) interface{} {
+	return func(context services.Context, params *APIDocParams) services.Response {
+		return context.Result(api)
+	}
+}
 
 func (c *API) ToJSONRPC() (jsonrpc.Handler, error) {
 	methods := map[string]*jsonrpc.Method{}
@@ -28,6 +41,10 @@ func (c *API) ToJSONRPC() (jsonrpc.Handler, error) {
 			Form:    endpoint.Form,
 			Handler: endpoint.Handler,
 		}
+	}
+	methods["_doc"] = &jsonrpc.Method{
+		Form:    APIDocForm,
+		Handler: makeJSONRPCDoc(methods, c),
 	}
 	return jsonrpc.MethodsHandler(methods)
 }

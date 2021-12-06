@@ -18,7 +18,6 @@ package helpers
 
 import (
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/helpers"
 	"github.com/urfave/cli"
 	"os"
 )
@@ -37,11 +36,6 @@ func decorate(commands []cli.Command, decorator decorator) []cli.Command {
 		newCommands[i] = command
 	}
 	return newCommands
-}
-
-func Settings(definitions *services.Definitions) (*services.Settings, error) {
-	settingsPaths := helpers.SettingsPaths()
-	return helpers.Settings(settingsPaths, definitions)
 }
 
 func CLI(settings *services.Settings) {
