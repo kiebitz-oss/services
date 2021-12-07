@@ -53,7 +53,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 	for i, providerKey := range keys.Providers {
 
 		// max 10 providers
-		if i > 10 {
+		if len(providerAppointmentsList) > 10 {
 			break
 		}
 
