@@ -21,7 +21,7 @@ dep:
 install:
 	CGO_ENABLED=0 go install $(GOFLAGS) ./...
 
-test-setup: dep test-keys
+test-setup: dep install test-keys
 
 test-keys:
 	KIEBITZ_SETTINGS=$(KIEBITZ_TEST_SETTINGS) kiebitz admin keys setup
