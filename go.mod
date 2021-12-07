@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/bsm/redislock v0.7.1
 	github.com/go-redis/redis/v8 v8.11.4
-	github.com/kiprotect/go-helpers v0.0.0-20211206172950-5ae593696a59
+	github.com/kiprotect/go-helpers v0.0.0-20211207221745-c19fc4844596
 	github.com/prometheus/client_golang v1.11.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/urfave/cli v1.22.5
