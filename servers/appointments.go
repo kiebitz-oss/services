@@ -101,6 +101,15 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
+				Name:    "revokeMediator", // authenticated (mediator)
+				Form:    &forms.RevokeMediatorForm,
+				Handler: appointments.revokeMediator,
+				REST: &api.REST{
+					Path:   "mediators/revoke",
+					Method: api.POST,
+				},
+			},
+			{
 				Name:    "addCodes", // authenticated (root)
 				Form:    &forms.AddCodesForm,
 				Handler: appointments.addCodes,

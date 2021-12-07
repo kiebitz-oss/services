@@ -39,6 +39,13 @@ type ConfirmProviderParams struct {
 	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
 }
 
+type SignedKeyData struct {
+	JSON      string   `json:"data" coerce:"name:json"`
+	Data      *KeyData `json:"-" coerce:"name:data"`
+	Signature []byte   `json:"signature"`
+	PublicKey []byte   `json:"publicKey"`
+}
+
 func (k *KeyData) Sign(key *crypto.Key) (*SignedKeyData, error) {
 	if data, err := json.Marshal(k); err != nil {
 		return nil, err
@@ -78,13 +85,6 @@ type RevokeProviderParams struct {
 	ProviderID []byte `json:"providerID"`
 }
 
-type SignedKeyData struct {
-	JSON      string   `json:"data" coerce:"name:json"`
-	Data      *KeyData `json:"-" coerce:"name:data"`
-	Signature []byte   `json:"signature"`
-	PublicKey []byte   `json:"publicKey"`
-}
-
 // ResetDB
 
 type ResetDBSignedParams struct {
@@ -111,6 +111,19 @@ type AddMediatorPublicKeysParams struct {
 	Timestamp  *time.Time `json:"timestamp"`
 	Encryption []byte     `json:"encryption"`
 	Signing    []byte     `json:"signing"`
+}
+
+// RevokeMediator
+
+type RevokeMediatorSignedParams struct {
+	JSON      string                `json:"data" coerce:"name:json"`
+	Data      *RevokeMediatorParams `json:"-" coerce:"name:data"`
+	Signature []byte                `json:"signature"`
+	PublicKey []byte                `json:"publicKey"`
+}
+
+type RevokeMediatorParams struct {
+	MediatorID []byte `json:"mediatorID"`
 }
 
 // AddCodes

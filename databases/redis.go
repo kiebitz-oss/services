@@ -488,10 +488,6 @@ func (r *RedisMap) Get(key []byte) ([]byte, error) {
 	return []byte(result), nil
 }
 
-func (r *RedisMap) Remove() error {
-	return r.db.Client(r.fullKey).Del(r.db.Ctx, string(r.fullKey)).Err()
-}
-
 func (r *RedisMap) Set(key []byte, value []byte) error {
 	return r.db.Client(r.fullKey).HSet(r.db.Ctx, r.fullKey, string(key), string(value)).Err()
 }

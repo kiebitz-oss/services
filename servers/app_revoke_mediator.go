@@ -21,17 +21,17 @@ import (
 	"github.com/kiebitz-oss/services/databases"
 )
 
-func (c *Appointments) revokeProvider(context services.Context, params *services.RevokeProviderSignedParams) services.Response {
+func (c *Appointments) revokeMediator(context services.Context, params *services.RevokeMediatorSignedParams) services.Response {
 
 	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
 		return resp
 	}
 
-	providerID := params.Data.ProviderID
+	mediatorID := params.Data.MediatorID
 
-	providerKeys := c.db.Map("keys", []byte("providers"))
+	mediatorKeys := c.db.Map("keys", []byte("mediators"))
 
-	if err := providerKeys.Del([]byte(providerID)); err != nil && err != databases.NotFound {
+	if err := mediatorKeys.Del([]byte(mediatorID)); err != nil && err != databases.NotFound {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

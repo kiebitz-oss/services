@@ -351,7 +351,6 @@ var RevokeProviderDataForm = forms.Form{
 	},
 }
 
-
 var ResetDBForm = forms.Form{
 	Fields: []forms.Field{
 		{
@@ -464,6 +463,63 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 			Validators: []forms.Validator{
 				forms.IsBytes{
 					Encoding: "base64",
+				},
+			},
+		},
+	},
+}
+
+var RevokeMediatorForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsString{},
+				JSON{
+					Key: "json",
+				},
+				forms.IsStringMap{
+					Form: &RevokeMediatorDataForm,
+				},
+			},
+		},
+		{
+			Name: "signature",
+			Validators: []forms.Validator{
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+		{
+			Name: "publicKey",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+	},
+}
+
+var RevokeMediatorDataForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "mediatorID",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
+		{
+			Name: "timestamp",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
 				},
 			},
 		},

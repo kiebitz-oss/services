@@ -95,7 +95,6 @@ type Map interface {
 	Get(key []byte) ([]byte, error)
 	Del(key []byte) error
 	Set(key []byte, value []byte) error
-	Remove() error
 	Object
 }
 
