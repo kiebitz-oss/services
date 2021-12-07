@@ -1,4 +1,4 @@
- meter:
+meter:
   settings:
     addresses: [ "redis:6379" ]
 database:
