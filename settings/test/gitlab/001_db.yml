@@ -1,0 +1,6 @@
+ meter:
+  settings:
+    addresses: [ "redis:6379" ]
+database:
+  settings:
+    addresses: [ "redis:6379" ]
