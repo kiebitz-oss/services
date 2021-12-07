@@ -34,6 +34,18 @@ import (
 var EnvSettingsName = "KIEBITZ_SETTINGS"
 
 func SettingsPaths() ([]string, fs.FS, error) {
+	if paths, err := RealSettingsPaths(); err != nil {
+		return nil, nil, err
+	} else {
+		modifiedPaths := make([]string, len(paths))
+		for i, path := range paths {
+			modifiedPaths[i] = path[1:]
+		}
+		return modifiedPaths, os.DirFS("/"), nil
+	}
+}
+
+func RealSettingsPaths() ([]string, error) {
 	envValue := os.Getenv(EnvSettingsName)
 	values := strings.Split(envValue, ":")
 	sanitizedValues := make([]string, 0, len(values))
@@ -43,12 +55,11 @@ func SettingsPaths() ([]string, fs.FS, error) {
 		}
 		var err error
 		if value, err = filepath.Abs(value); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
-		value = value[1:]
 		sanitizedValues = append(sanitizedValues, value)
 	}
-	return sanitizedValues, os.DirFS("/"), nil
+	return sanitizedValues, nil
 }
 
 func Settings(settingsPaths []string, fs fs.FS, definitions *services.Definitions) (*services.Settings, error) {

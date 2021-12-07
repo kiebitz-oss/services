@@ -280,8 +280,7 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			services.Log.Fatal(err)
 		}
 
-		// to do: handle non-real FS?
-		settingsPaths, _, err := helpers.SettingsPaths()
+		settingsPaths, err := helpers.RealSettingsPaths()
 
 		if err != nil {
 			services.Log.Fatal(err)

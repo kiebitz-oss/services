@@ -35,6 +35,8 @@ func (c Settings) Setup(fixtures map[string]interface{}) (interface{}, error) {
 
 	paths, fs, err := helpers.SettingsPaths()
 
+	services.Log.Info(paths)
+
 	if err != nil {
 		return nil, err
 	}
