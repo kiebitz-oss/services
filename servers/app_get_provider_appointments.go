@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
+	"time"
 )
 
 func (c *Appointments) getProviderAppointments(context services.Context, params *services.GetProviderAppointmentsSignedParams) services.Response {
@@ -56,11 +57,24 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 
 	signedAppointments := make([]*services.SignedAppointment, 0)
 
-	for _, date := range allDates {
-		if string(date) < params.Data.FromDate || string(date) > params.Data.ToDate {
+	for _, dateStr := range allDates {
+
+		date, err := time.Parse("2006-01-02", string(dateStr))
+
+		if err != nil {
+			services.Log.Error(err)
 			continue
 		}
-		dateKey := append(hash, date...)
+
+		if params.Data.FromDate != nil && date.Before(*params.Data.FromDate) {
+			continue
+		}
+
+		if params.Data.ToDate != nil && date.After(*params.Data.ToDate) {
+			continue
+		}
+
+		dateKey := append(hash, dateStr...)
 		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 		allAppointments, err := appointmentsByDate.GetAll()
 		if err != nil {
