@@ -20,7 +20,7 @@ settings:
   addresses: [ "localhost:6379" ] # Set of addresses pointing to the SAME redis server.
   database: 1 # Redis database ID
   password: "" # Redis password
-  master: "mymaster" # Redis master name
+  master_name: "mymaster" # Redis master name
 ```
 
 ### Redis + Sentinel
@@ -34,7 +34,7 @@ settings:
   sentinel_addresses: [ "localhost:26379" ] # Set of addresses pointing to the SAME sentinel server.
   database: 1 # Redis database ID
   password: "" # Redis password
-  master: "mymaster" # Redis master name
+  master_name: "mymaster" # Redis master name
   sentinel_username: "username" # Sentinel username
   sentinel_password: "password" # Sentinel password
 ```
@@ -53,12 +53,12 @@ settings:
     - addresses: [ "localhost:6379" ] # Set of addresses pointing to the SAME redis server.
       database: 1 # Redis database ID
       password: "" # Redis password
-      master: "mymaster" # Redis master name 
+      master_name: "mymaster" # Redis master name 
       shard_index: 0  # Ascending shard index, beginning at 0
     - sentinel_addresses: [ "localhost:26379" ] # Set of addresses pointing to the SAME sentinel server.
       database: 1 # Redis database ID
       password: "" # Redis password
-      master: "mymaster" # Redis master name
+      master_name: "mymaster" # Redis master name
       sentinel_username: "username" # Sentinel username
       sentinel_password: "password" # Sentinel password
       shard_index: 1 # Ascending shard index, beginning at 0
