@@ -57,6 +57,9 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 	signedAppointments := make([]*services.SignedAppointment, 0)
 
 	for _, date := range allDates {
+		if string(date) < params.Data.FromDate || string(date) > params.Data.ToDate {
+			continue
+		}
 		dateKey := append(hash, date...)
 		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
 		allAppointments, err := appointmentsByDate.GetAll()

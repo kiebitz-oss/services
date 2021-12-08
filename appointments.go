@@ -292,6 +292,8 @@ type GetProviderAppointmentsSignedParams struct {
 
 type GetProviderAppointmentsParams struct {
 	Timestamp *time.Time `json:"timestamp"`
+	FromDate  string     `json:"fromDate,omitempty"`
+	ToDate    string     `json:"toDate,omitempty"`
 }
 
 // PublishAppointments
