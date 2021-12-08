@@ -26,21 +26,18 @@ import (
 // { id, key, providerData, keyData }, keyPair
 func (c *Appointments) confirmProvider(context services.Context, params *services.ConfirmProviderSignedParams) services.Response {
 
-	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
+	resp, _ := c.isMediator(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	})
+
+	if resp != nil {
 		return resp
 	}
 
 	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
-
-	/*
-		lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
-		if err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
-
-		defer lock.Release()
-	*/
 
 	keys := c.db.Map("keys", []byte("providers"))
 

@@ -26,9 +26,16 @@ import (
 // { keys }, keyPair
 // add the mediator key to the list of keys (only for testing)
 func (c *Appointments) addMediatorPublicKeys(context services.Context, params *services.AddMediatorPublicKeysSignedParams) services.Response {
-	if response := c.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
-		return response
+
+	if resp := c.isRoot(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	}); resp != nil {
+		return resp
 	}
+
 	hash := crypto.Hash(params.Data.Signing)
 	keys := c.db.Map("keys", []byte("mediators"))
 	bd, err := json.Marshal(params)

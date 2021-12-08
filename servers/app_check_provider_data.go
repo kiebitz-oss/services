@@ -26,15 +26,15 @@ import (
 // { id, encryptedData, code }, keyPair
 func (c *Appointments) checkProviderData(context services.Context, params *services.CheckProviderDataSignedParams) services.Response {
 
-	// make sure this is a valid provider
-	resp, _ := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
+	resp, _ := c.isProvider(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	})
 
 	if resp != nil {
 		return resp
-	}
-
-	if expired(params.Data.Timestamp) {
-		return context.Error(410, "signature expired", nil)
 	}
 
 	hash := crypto.Hash(params.PublicKey)

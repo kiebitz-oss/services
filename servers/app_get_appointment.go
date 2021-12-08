@@ -19,31 +19,19 @@ package servers
 import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
 )
 
 func (c *Appointments) getAppointment(context services.Context, params *services.GetAppointmentSignedParams) services.Response {
-	// we verify the signature (without veryfing e.g. the provenance of the key)
-	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
-	}
 
-	signedData := &crypto.SignedStringData{
-		Data:      params.Data.SignedTokenData.JSON,
-		Signature: params.Data.SignedTokenData.Signature,
-	}
-
-	tokenKey := c.settings.Key("token")
-
-	if ok, err := tokenKey.VerifyString(signedData); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
+	if resp := c.isUser(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		ExtraData: params.Data.SignedTokenData,
+		Timestamp: params.Data.Timestamp,
+	}); resp != nil {
+		return resp
 	}
 
 	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)

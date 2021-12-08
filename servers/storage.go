@@ -20,7 +20,6 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/forms"
-	"time"
 )
 
 type Storage struct {
@@ -72,8 +71,4 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 
 	return storage, nil
 
-}
-
-func (c *Storage) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
-	return isRoot(context, data, signature, timestamp, c.settings.Keys)
 }

@@ -21,8 +21,14 @@ import (
 )
 
 func (s *Storage) resetDB(context services.Context, params *services.ResetDBSignedParams) services.Response {
-	if response := s.isRoot(context, []byte(params.JSON), params.Signature, params.Data.Timestamp); response != nil {
-		return response
+
+	if resp := s.isRoot(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	}); resp != nil {
+		return resp
 	}
 
 	if !s.test {

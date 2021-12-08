@@ -25,6 +25,19 @@ import (
 	"time"
 )
 
+func (c *Appointments) isActiveProviderID(context services.Context, publicKey []byte) (services.Response, bool) {
+	activeProvider, err := c.db.Map("keys", []byte("providers")).Get([]byte(publicKey))
+
+	if len(activeProvider) == 0 {
+		return context.Error(404, "provider not found", nil), false
+	} else if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), false
+	}
+
+	return nil, true
+}
+
 func (c *Appointments) bookAppointment(context services.Context, params *services.BookAppointmentSignedParams) services.Response {
 
 	// Not sure, if this lock makes any sense.

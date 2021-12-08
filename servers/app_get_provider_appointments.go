@@ -25,15 +25,15 @@ import (
 
 func (c *Appointments) getProviderAppointments(context services.Context, params *services.GetProviderAppointmentsSignedParams) services.Response {
 
-	// make sure this is a valid provider asking for tokens
-	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
+	resp, providerKey := c.isProvider(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	})
 
 	if resp != nil {
 		return resp
-	}
-
-	if expired(params.Data.Timestamp) {
-		return context.Error(410, "signature expired", nil)
 	}
 
 	pkd, err := providerKey.ProviderKeyData()
@@ -66,11 +66,11 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 			continue
 		}
 
-		if params.Data.FromDate != nil && date.Before(*params.Data.FromDate) {
+		if params.Data.From != nil && date.Before(*params.Data.From) {
 			continue
 		}
 
-		if params.Data.ToDate != nil && date.After(*params.Data.ToDate) {
+		if params.Data.To != nil && date.After(*params.Data.To) {
 			continue
 		}
 

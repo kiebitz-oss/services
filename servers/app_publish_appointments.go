@@ -28,8 +28,12 @@ import (
 
 func (c *Appointments) publishAppointments(context services.Context, params *services.PublishAppointmentsSignedParams) services.Response {
 
-	// make sure this is a valid provider asking for tokens
-	resp, providerKey := c.isProvider(context, []byte(params.JSON), params.Signature, params.PublicKey)
+	resp, providerKey := c.isProvider(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	})
 
 	if resp != nil {
 		return resp

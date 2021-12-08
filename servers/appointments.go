@@ -26,6 +26,15 @@ import (
 	"time"
 )
 
+var tws = []services.TimeWindowFunc{
+	services.Minute,
+	services.QuarterHour,
+	services.Hour,
+	services.Day,
+	services.Week,
+	services.Month,
+}
+
 type Appointments struct {
 	*Server
 	db       services.Database
@@ -229,16 +238,8 @@ func expired(timestamp *time.Time) bool {
 
 // public endpoints
 
-func findActorKey(keys []*services.ActorKey, publicKey []byte) (*services.ActorKey, error) {
-	for _, key := range keys {
-		if akd, err := key.KeyData(); err != nil {
-			services.Log.Error(err)
-			continue
-		} else if bytes.Equal(akd.Signing, publicKey) {
-			return key, nil
-		}
-	}
-	return nil, nil
+func (c *Appointments) Key(key string) *crypto.Key {
+	return c.settings.Key(key)
 }
 
 func (c *Appointments) getListKeys(key string) ([]*services.ActorKey, error) {
@@ -296,77 +297,55 @@ func (c *Appointments) getActorKeys() (*services.KeyLists, error) {
 	}, nil
 }
 
-// provider-only endpoints
+// authentication
 
-var tws = []services.TimeWindowFunc{
-	services.Minute,
-	services.QuarterHour,
-	services.Hour,
-	services.Day,
-	services.Week,
-	services.Month,
-}
+func (c *Appointments) isUser(context services.Context, params *services.SignedParams) services.Response {
 
-func (c *Appointments) isRoot(context services.Context, data, signature []byte, timestamp *time.Time) services.Response {
-	return isRoot(context, data, signature, timestamp, c.settings.Keys)
-}
+	signedData := &crypto.SignedStringData{
+		Data:      params.JSON,
+		Signature: params.Signature,
+	}
 
-func isRoot(context services.Context, data, signature []byte, timestamp *time.Time, keys []*crypto.Key) services.Response {
-	rootKey := services.Key(keys, "root")
-	if rootKey == nil {
-		services.Log.Error("root key missing")
+	tokenKey := c.settings.Key("token")
+
+	if tokenKey == nil {
+		services.Log.Error("token key missing")
 		return context.InternalError()
 	}
-	if ok, err := rootKey.Verify(&crypto.SignedData{
-		Data:      data,
-		Signature: signature,
-	}); !ok {
-		return context.Error(403, "invalid signature", nil)
-	} else if err != nil {
+
+	// first we verify the signed token against the token key
+	if ok, err := tokenKey.VerifyString(signedData); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
+	} else if !ok {
+		return context.Error(400, "invalid token", nil)
 	}
-	if expired(timestamp) {
+
+	signedTokenData := params.ExtraData.(*services.SignedTokenData)
+
+	// then we ensure the public key matches the key from the signed token data
+	if !bytes.Equal(signedTokenData.Data.PublicKey, params.PublicKey) {
+		return context.Error(400, "invalid key", nil)
+	}
+
+	// then we verify the data was signed with the same key
+	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
+		services.Log.Error(err)
+		return context.InternalError()
+	} else if !ok {
+		return context.Error(400, "invalid signature", nil)
+	}
+
+	if expired(params.Timestamp) {
 		return context.Error(410, "signature expired", nil)
 	}
+
 	return nil
+
 }
 
-func (c *Appointments) isMediator(context services.Context, data, signature, publicKey []byte) (services.Response, *services.ActorKey) {
-
-	keys, err := c.getActorKeys()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError(), nil
-	}
-
-	return c.isOnKeyList(context, data, signature, publicKey, keys.Mediators)
-}
-
-func (c *Appointments) isProvider(context services.Context, data, signature, publicKey []byte) (services.Response, *services.ActorKey) {
-
-	keys, err := c.getActorKeys()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError(), nil
-	}
-
-	return c.isOnKeyList(context, data, signature, publicKey, keys.Providers)
-}
-
-func (c *Appointments) isActiveProviderID(context services.Context, publicKey []byte) (services.Response, bool) {
-	activeProvider, err := c.db.Map("keys", []byte("providers")).Get([]byte(publicKey))
-
-	if len(activeProvider) == 0 {
-		return context.Error(404, "provider not found", nil), false
-	} else if err != nil {
-		services.Log.Error(err)
-		return context.InternalError(), false
-	}
-
-	return nil, true
+func (c *Appointments) isRoot(context services.Context, params *services.SignedParams) services.Response {
+	return isRoot(context, []byte(params.JSON), params.Signature, params.Timestamp, c.settings.Keys)
 }
 
 func (c *Appointments) isOnKeyList(context services.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (services.Response, *services.ActorKey) {
@@ -391,4 +370,40 @@ func (c *Appointments) isOnKeyList(context services.Context, data, signature, pu
 
 	return nil, actorKey
 
+}
+
+func (c *Appointments) isMediator(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
+
+	keys, err := c.getActorKeys()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), nil
+	}
+
+	if resp, key := c.isOnKeyList(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Mediators); resp != nil {
+		return resp, nil
+	} else if expired(params.Timestamp) {
+		return context.Error(410, "signature expired", nil), nil
+	} else {
+		return nil, key
+	}
+}
+
+func (c *Appointments) isProvider(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
+
+	keys, err := c.getActorKeys()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), nil
+	}
+
+	if resp, key := c.isOnKeyList(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Providers); resp != nil {
+		return resp, nil
+	} else if expired(params.Timestamp) {
+		return context.Error(410, "signature expired", nil), nil
+	} else {
+		return nil, key
+	}
 }

@@ -25,7 +25,14 @@ import (
 // { limit }, keyPair
 func (c *Appointments) getPendingProviderData(context services.Context, params *services.GetPendingProviderDataSignedParams) services.Response {
 
-	if resp, _ := c.isMediator(context, []byte(params.JSON), params.Signature, params.PublicKey); resp != nil {
+	resp, _ := c.isMediator(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		Timestamp: params.Data.Timestamp,
+	})
+
+	if resp != nil {
 		return resp
 	}
 

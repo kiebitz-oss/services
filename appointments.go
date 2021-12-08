@@ -22,6 +22,16 @@ import (
 	"time"
 )
 
+// Generic signed params for checking
+
+type SignedParams struct {
+	JSON      string
+	Signature []byte
+	PublicKey []byte
+	Timestamp *time.Time
+	ExtraData interface{}
+}
+
 // ConfirmProvider
 
 type ConfirmProviderSignedParams struct {
@@ -34,6 +44,7 @@ type ConfirmProviderSignedParams struct {
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
 type ConfirmProviderParams struct {
+	Timestamp             *time.Time                `json:"timestamp"`
 	PublicProviderData    *SignedProviderData       `json:"publicProviderData"`
 	EncryptedProviderData *crypto.ECDHEncryptedData `json:"encryptedProviderData"`
 	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
@@ -292,8 +303,8 @@ type GetProviderAppointmentsSignedParams struct {
 
 type GetProviderAppointmentsParams struct {
 	Timestamp *time.Time `json:"timestamp"`
-	FromDate  *time.Time `json:"fromDate,omitempty"`
-	ToDate    *time.Time `json:"toDate,omitempty"`
+	From      *time.Time `json:"from,omitempty"`
+	To        *time.Time `json:"to,omitempty"`
 }
 
 // PublishAppointments
@@ -405,6 +416,7 @@ type GetAppointmentSignedParams struct {
 }
 
 type GetAppointmentParams struct {
+	Timestamp       *time.Time       `json:"timestamp"`
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`
@@ -462,7 +474,8 @@ type GetPendingProviderDataSignedParams struct {
 }
 
 type GetPendingProviderDataParams struct {
-	N int64 `json:"n"`
+	Timestamp *time.Time `json:"timestamp"`
+	Limit     int64      `json:"limit"`
 }
 
 // GetVerifiedProviderData
@@ -475,7 +488,8 @@ type GetVerifiedProviderDataSignedParams struct {
 }
 
 type GetVerifiedProviderDataParams struct {
-	N int64 `json:"n"`
+	Timestamp *time.Time `json:"timestamp"`
+	Limit     int64      `json:"limit"`
 }
 
 // GetStats

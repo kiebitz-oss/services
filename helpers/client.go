@@ -261,7 +261,10 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 		return nil, err
 	}
 
+	t := time.Now()
+
 	params := &services.ConfirmProviderParams{
+		Timestamp:             &t,
 		PublicProviderData:    signedProviderData,
 		EncryptedProviderData: encryptedProviderData,
 		SignedKeyData:         signedKeyData,

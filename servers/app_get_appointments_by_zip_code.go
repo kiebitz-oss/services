@@ -24,8 +24,24 @@ import (
 	"github.com/kiebitz-oss/services/forms"
 )
 
+func toProviderData(data []byte) (*services.SignedProviderData, error) {
+	providerData := &services.SignedProviderData{}
+	var providerDataMap map[string]interface{}
+	if err := json.Unmarshal(data, &providerDataMap); err != nil {
+		return nil, err
+	}
+	if params, err := forms.SignedProviderDataForm.Validate(providerDataMap); err != nil {
+		return nil, err
+	} else if err := forms.SignedProviderDataForm.Coerce(providerData, params); err != nil {
+		return nil, err
+	}
+	return providerData, nil
+
+}
+
 func (c *Appointments) getAppointmentsByZipCode(context services.Context, params *services.GetAppointmentsByZipCodeParams) services.Response {
 
+	// get all provider keys
 	keys, err := c.getActorKeys()
 
 	if err != nil {
@@ -33,7 +49,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		return context.InternalError()
 	}
 
+	// get all neighboring zip codes for the given zip code
 	neighbors := c.db.SortedSet("distances::neighbors::zipCode", []byte(params.ZipCode))
+	// public provider data structure
 	publicProviderData := c.db.Map("providerData", []byte("public"))
 
 	allNeighbors, err := neighbors.Range(0, -1)
@@ -58,12 +76,14 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		}
 
 		pkd, err := providerKey.ProviderKeyData()
+
 		if err != nil {
 			services.Log.Error(err)
 			continue
 		}
 
 		if pkd.QueueData.ZipCode != params.ZipCode {
+			// check the distance of the zip codes don't match
 			if distance, ok := distances[pkd.QueueData.ZipCode]; !ok {
 				continue
 			} else if distance > params.Radius {
@@ -74,6 +94,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		// the provider "ID" is the hash of the signing key
 		hash := crypto.Hash(pkd.Signing)
 
+		// fetch the full public data of the provider
 		pd, err := publicProviderData.Get(hash)
 
 		if err != nil {
@@ -84,18 +105,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 			continue
 		}
 
-		providerData := &services.SignedProviderData{}
-		var providerDataMap map[string]interface{}
+		providerData, err := toProviderData(pd)
 
-		if err := json.Unmarshal(pd, &providerDataMap); err != nil {
-			services.Log.Error(err)
-			continue
-		}
-
-		if params, err := forms.SignedProviderDataForm.Validate(providerDataMap); err != nil {
-			services.Log.Error(err)
-			continue
-		} else if err := forms.SignedProviderDataForm.Coerce(providerData, params); err != nil {
+		if err != nil {
 			services.Log.Error(err)
 			continue
 		}
@@ -143,6 +155,14 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 				for i, booking := range signedAppointment.Bookings {
 					slots[i] = &services.Slot{ID: booking.ID}
 				}
+
+				// if all slots are booked we do not return the appointment
+				// to do: enable once the frontend is migrated to the new checking process
+				/*
+					if len(slots) == len(signedAppointment.Data.SlotData) {
+						continue
+					}
+				*/
 
 				// we remove the bookings as the user is not allowed to see them
 				signedAppointment.Bookings = nil
