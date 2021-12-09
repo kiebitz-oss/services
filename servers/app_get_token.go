@@ -19,37 +19,42 @@ package servers
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"encoding/binary"
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
 )
 
-func (c *Appointments) priorityToken() (uint64, []byte, error) {
-	data := c.db.Value("priorityToken", []byte("primary"))
-	if token, err := data.Get(); err != nil && err != databases.NotFound {
+type PriorityToken struct {
+	N int64 `json:"n"`
+}
+
+func (p *PriorityToken) Marshal() ([]byte, error) {
+	if data, err := json.Marshal(p); err != nil {
+		return nil, err
+	} else {
+		return data, nil
+	}
+}
+
+func (c *Appointments) priorityToken() (int64, []byte, error) {
+	tokenValue := c.db.Integer("priorityToken", []byte("primary"))
+	if n, err := tokenValue.IncrBy(1); err != nil && err != databases.NotFound {
 		return 0, nil, err
 	} else {
-		var intToken uint64
-		if err == nil {
-			intToken = binary.LittleEndian.Uint64(token)
-		}
-		intToken = intToken + 1
-		bs := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bs, intToken)
 
-		if err := data.Set(bs, 0); err != nil {
+		priorityToken := &PriorityToken{
+			N: n,
+		}
+
+		if tokenData, err := priorityToken.Marshal(); err != nil {
 			return 0, nil, err
+		} else {
+			h := hmac.New(sha256.New, c.settings.Secret)
+			h.Write(tokenData)
+			token := h.Sum(nil)
+			return n, token[:], nil
 		}
-
-		h := hmac.New(sha256.New, c.settings.Secret)
-		h.Write(bs)
-
-		token := h.Sum(nil)
-
-		return intToken, token[:], nil
-
 	}
 }
 

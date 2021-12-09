@@ -38,6 +38,7 @@ type DatabaseOps interface {
 	List(table string, key []byte) List
 	Map(table string, key []byte) Map
 	Value(table string, key []byte) Value
+	Integer(table string, key []byte) Integer
 }
 
 type Lock interface {
@@ -96,6 +97,14 @@ type Map interface {
 	Del(key []byte) error
 	Set(key []byte, value []byte) error
 	Object
+}
+
+type Integer interface {
+	Object
+	Set(value int64, ttl time.Duration) error
+	IncrBy(int64) (int64, error)
+	Get() (int64, error)
+	Del() error
 }
 
 type Value interface {

@@ -449,6 +449,13 @@ func (d *Redis) Value(table string, key []byte) services.Value {
 	}
 }
 
+func (d *Redis) Integer(table string, key []byte) services.Integer {
+	return &RedisInteger{
+		db:      d,
+		fullKey: d.fullKey(table, key),
+	}
+}
+
 func (d *Redis) fullKey(table string, key []byte) string {
 	return fmt.Sprintf("%s::%s", table, string(key))
 }
@@ -523,6 +530,45 @@ func (r *RedisSet) Members() ([]*services.SetEntry, error) {
 		})
 	}
 	return entries, nil
+}
+
+type RedisInteger struct {
+	db      *Redis
+	fullKey string
+}
+
+func (r *RedisInteger) Set(value int64, ttl time.Duration) error {
+	return r.db.Client(r.fullKey).Set(r.db.Ctx, string(r.fullKey), strconv.FormatInt(value, 10), ttl).Err()
+}
+
+func (r *RedisInteger) IncrBy(value int64) (int64, error) {
+	if result, err := r.db.Client(r.fullKey).IncrBy(r.db.Ctx, string(r.fullKey), value).Result(); err != nil {
+		if err == redis.Nil {
+			return 0, NotFound
+		}
+		return 0, err
+	} else {
+		return result, nil
+	}
+}
+
+func (r *RedisInteger) Get() (int64, error) {
+	result, err := r.db.Client(r.fullKey).Get(r.db.Ctx, string(r.fullKey)).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return 0, NotFound
+		}
+		return 0, err
+	}
+	if i, err := strconv.ParseInt(string(result), 10, 64); err != nil {
+		return 0, err
+	} else {
+		return i, nil
+	}
+}
+
+func (r *RedisInteger) Del() error {
+	return r.db.Client(r.fullKey).Del(r.db.Ctx, string(r.fullKey)).Err()
 }
 
 type RedisValue struct {
