@@ -42,6 +42,7 @@ type REST struct {
 }
 
 type ReturnType struct {
+	Validators []forms.Validator `json:"validators"`
 }
 
 type Endpoint struct {

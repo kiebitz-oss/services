@@ -17,13 +17,12 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 )
 
 // mediator-only endpoint
 // { limit }, keyPair
-func (c *Appointments) getVerifiedProviderData(context services.Context, params *services.GetVerifiedProviderDataSignedParams) services.Response {
+func (c *Appointments) getVerifiedProviderData(context services.Context, params *services.GetPendingProviderDataSignedParams) services.Response {
 
 	resp, _ := c.isMediator(context, &services.SignedParams{
 		JSON:      params.JSON,
@@ -36,25 +35,20 @@ func (c *Appointments) getVerifiedProviderData(context services.Context, params 
 		return resp
 	}
 
-	providerData := c.db.Map("providerData", []byte("verified"))
+	verifiedProviderData := c.backend.VerifiedProviderData()
 
-	pd, err := providerData.GetAll()
+	providerDataMap, err := verifiedProviderData.GetAll()
 
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	pdEntries := []map[string]interface{}{}
+	pdEntries := []*services.RawProviderData{}
 
-	for _, v := range pd {
-		var m map[string]interface{}
-		if err := json.Unmarshal(v, &m); err != nil {
-			services.Log.Error(err)
-			continue
-		} else {
-			pdEntries = append(pdEntries, m)
-		}
+	for id, pd := range providerDataMap {
+		pd.ID = []byte(id)
+		pdEntries = append(pdEntries, pd)
 	}
 
 	return context.Result(pdEntries)

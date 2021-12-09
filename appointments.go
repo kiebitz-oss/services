@@ -486,6 +486,11 @@ type StoreProviderDataParams struct {
 	Code          []byte                    `json:"code"`
 }
 
+type RawProviderData struct {
+	ID            []byte                    `json:"id,omitempty"`
+	EncryptedData *crypto.ECDHEncryptedData `json:"encryptedData"`
+}
+
 // GetPendingProviderData
 
 type GetPendingProviderDataSignedParams struct {

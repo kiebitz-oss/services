@@ -26,6 +26,18 @@ func (a *AppointmentsBackend) EncryptedProviderData() *EncryptedProviderData {
 	}
 }
 
+func (a *AppointmentsBackend) UnverifiedProviderData() *RawProviderData {
+	return &RawProviderData{
+		dbs: a.db.Map("providerData", []byte("unverified")),
+	}
+}
+
+func (a *AppointmentsBackend) VerifiedProviderData() *RawProviderData {
+	return &RawProviderData{
+		dbs: a.db.Map("providerData", []byte("verified")),
+	}
+}
+
 func (a *AppointmentsBackend) AppointmentsByDate(providerID []byte, date string) *AppointmentsByDate {
 	dateKey := append(providerID, []byte(date)...)
 	return &AppointmentsByDate{
@@ -74,6 +86,62 @@ func (c *EncryptedProviderData) Get(providerID []byte) (*services.EncryptedProvi
 		} else {
 			return encryptedData, nil
 		}
+	}
+}
+
+type RawProviderData struct {
+	dbs services.Map
+}
+
+func (c *RawProviderData) Set(providerID []byte, rawData *services.RawProviderData) error {
+	if data, err := json.Marshal(rawData); err != nil {
+		return err
+	} else {
+		return c.dbs.Set(providerID, data)
+	}
+}
+
+func (c *RawProviderData) Del(providerID []byte) error {
+	return c.dbs.Del(providerID)
+}
+
+func (c *RawProviderData) Get(providerID []byte) (*services.RawProviderData, error) {
+	if data, err := c.dbs.Get(providerID); err != nil {
+		return nil, err
+	} else {
+		var mapData map[string]interface{}
+		rawData := &services.RawProviderData{}
+		if err := json.Unmarshal(data, &mapData); err != nil {
+			return nil, err
+		} else if params, err := forms.RawProviderDataForm.Validate(mapData); err != nil {
+			return nil, err
+		} else if err := forms.RawProviderDataForm.Coerce(rawData, params); err != nil {
+			return nil, err
+		} else {
+			return rawData, nil
+		}
+	}
+}
+
+func (c *RawProviderData) GetAll() (map[string]*services.RawProviderData, error) {
+	if dataMap, err := c.dbs.GetAll(); err != nil {
+		return nil, err
+	} else {
+		providerDataMap := map[string]*services.RawProviderData{}
+		for id, data := range dataMap {
+			var mapData map[string]interface{}
+			rawData := &services.RawProviderData{}
+			if err := json.Unmarshal(data, &mapData); err != nil {
+				return nil, err
+			} else if params, err := forms.RawProviderDataForm.Validate(mapData); err != nil {
+				return nil, err
+			} else if err := forms.RawProviderDataForm.Coerce(rawData, params); err != nil {
+				return nil, err
+			} else {
+				providerDataMap[id] = rawData
+			}
+		}
+		return providerDataMap, nil
 	}
 }
 
@@ -134,6 +202,14 @@ func (p *PublicProviderData) Get(hash []byte) (*services.SignedProviderData, err
 		return nil, err
 	} else {
 		return signedProviderData, nil
+	}
+}
+
+func (p *PublicProviderData) Set(hash []byte, signedProviderData *services.SignedProviderData) error {
+	if data, err := json.Marshal(signedProviderData); err != nil {
+		return err
+	} else {
+		return p.dbs.Set(hash, data)
 	}
 }
 

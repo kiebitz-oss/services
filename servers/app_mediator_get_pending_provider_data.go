@@ -17,7 +17,6 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 )
 
@@ -36,26 +35,20 @@ func (c *Appointments) getPendingProviderData(context services.Context, params *
 		return resp
 	}
 
-	providerData := c.db.Map("providerData", []byte("unverified"))
+	unverifiedProviderData := c.backend.UnverifiedProviderData()
 
-	pd, err := providerData.GetAll()
+	providerDataMap, err := unverifiedProviderData.GetAll()
 
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
 
-	pdEntries := []map[string]interface{}{}
+	pdEntries := []*services.RawProviderData{}
 
-	for k, v := range pd {
-		var m map[string]interface{}
-		if err := json.Unmarshal(v, &m); err != nil {
-			services.Log.Error(err)
-			continue
-		} else {
-			m["id"] = []byte(k)
-			pdEntries = append(pdEntries, m)
-		}
+	for id, pd := range providerDataMap {
+		pd.ID = []byte(id)
+		pdEntries = append(pdEntries, pd)
 	}
 
 	return context.Result(pdEntries)

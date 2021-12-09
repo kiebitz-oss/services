@@ -26,12 +26,16 @@ import (
 func (c *Appointments) storeProviderData(context services.Context, params *services.StoreProviderDataSignedParams) services.Response {
 
 	// we verify the signature (without veryfing e.g. the provenance of the key)
+	// this is important as we use the public key as an identifier for the provider
+	// data so we need to make sure the caller is actually in possession of the key
 	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	} else if !ok {
 		return context.Error(400, "invalid signature", nil)
 	}
+
+	// to do: add one-time use check
 
 	hash := crypto.Hash(params.PublicKey)
 
@@ -43,8 +47,9 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 
 	defer lock.Release()
 
-	verifiedProviderData := c.db.Map("providerData", []byte("verified"))
-	providerData := c.db.Map("providerData", []byte("unverified"))
+	verifiedProviderData := c.backend.VerifiedProviderData()
+	providerData := c.backend.UnverifiedProviderData()
+
 	codes := c.db.Set("codes", []byte("provider"))
 	codeScores := c.db.SortedSet("codeScores", []byte("provider"))
 
@@ -71,7 +76,9 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 		}
 	}
 
-	if err := providerData.Set(hash, []byte(params.JSON)); err != nil {
+	if err := providerData.Set(hash, &services.RawProviderData{
+		EncryptedData: params.Data.EncryptedData,
+	}); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

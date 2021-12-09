@@ -105,6 +105,19 @@ var ConfirmProviderForm = forms.Form{
 	},
 }
 
+var RawProviderDataForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "encryptedData",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &ECDHEncryptedDataForm,
+				},
+			},
+		},
+	},
+}
+
 var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
