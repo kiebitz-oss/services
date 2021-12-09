@@ -17,9 +17,7 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/forms"
 )
 
 func (c *Appointments) getAppointment(context services.Context, params *services.GetAppointmentSignedParams) services.Response {
@@ -34,32 +32,19 @@ func (c *Appointments) getAppointment(context services.Context, params *services
 		return resp
 	}
 
-	appointmentDatesByID := c.db.Map("appointmentDatesByID", params.Data.ProviderID)
+	appointmentDatesByID := c.backend.AppointmentDatesByID(params.Data.ProviderID)
 
 	if date, err := appointmentDatesByID.Get(params.Data.ID); err != nil {
 		services.Log.Errorf("Cannot get appointment by ID: %v", err)
 		return context.InternalError()
 	} else {
 
-		dateKey := append(params.Data.ProviderID, date...)
-		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+		appointmentsByDate := c.backend.AppointmentsByDate(params.Data.ProviderID, date)
 
-		if appointment, err := appointmentsByDate.Get(params.Data.ID); err != nil {
+		if signedAppointment, err := appointmentsByDate.Get(params.Data.ID); err != nil {
 			services.Log.Errorf("Cannot get appointment by date: %v", err)
 			return context.InternalError()
 		} else {
-			signedAppointment := &services.SignedAppointment{}
-			var mapData map[string]interface{}
-			if err := json.Unmarshal(appointment, &mapData); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			} else if params, err := forms.SignedAppointmentForm.Validate(mapData); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			} else if err := forms.SignedAppointmentForm.Coerce(signedAppointment, params); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			}
 
 			slots := make([]*services.Slot, len(signedAppointment.Bookings))
 
