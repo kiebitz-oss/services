@@ -25,35 +25,30 @@ import (
 	"github.com/kiebitz-oss/services/databases"
 )
 
-type PriorityToken struct {
-	N int64 `json:"n"`
-}
-
-func (p *PriorityToken) Marshal() ([]byte, error) {
-	if data, err := json.Marshal(p); err != nil {
-		return nil, err
-	} else {
-		return data, nil
-	}
-}
-
-func (c *Appointments) priorityToken() (int64, []byte, error) {
+// Generates an HMAC based priority token and associated data structure.
+// As the token already gets signed with the token key it's currently a bit
+// pointless to use HMAC-based signature as the token. On the other hand this
+// makes the tokens deterministic, which can be useful to synchronize them in
+// a decentralized setup where different backends generate tokens and sign them
+// with indidivual private keys but still want to keep the priority tokens
+// deterministic. Hence, we leave this mechanism as is.
+func (c *Appointments) priorityToken() (*services.PriorityToken, string, []byte, error) {
 	tokenValue := c.db.Integer("priorityToken", []byte("primary"))
 	if n, err := tokenValue.IncrBy(1); err != nil && err != databases.NotFound {
-		return 0, nil, err
+		return nil, "", nil, err
 	} else {
 
-		priorityToken := &PriorityToken{
+		priorityToken := &services.PriorityToken{
 			N: n,
 		}
 
 		if tokenData, err := priorityToken.Marshal(); err != nil {
-			return 0, nil, err
+			return nil, "", nil, err
 		} else {
 			h := hmac.New(sha256.New, c.settings.Secret)
 			h.Write(tokenData)
 			token := h.Sum(nil)
-			return n, token[:], nil
+			return priorityToken, string(tokenData), token[:], nil
 		}
 	}
 }
@@ -86,13 +81,15 @@ func (c *Appointments) getToken(context services.Context, params *services.GetTo
 		}
 	}
 
-	if _, token, err := c.priorityToken(); err != nil {
+	if data, jsonData, token, err := c.priorityToken(); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	} else {
 		tokenData := &services.TokenData{
 			Hash:      params.Hash,
 			Token:     token,
+			Data:      data,
+			JSON:      jsonData,
 			PublicKey: params.PublicKey,
 		}
 

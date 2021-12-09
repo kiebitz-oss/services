@@ -243,10 +243,24 @@ func (k *TokenData) Sign(key *crypto.Key) (*SignedTokenData, error) {
 	}
 }
 
+type PriorityToken struct {
+	N int64 `json:"n"`
+}
+
+func (p *PriorityToken) Marshal() ([]byte, error) {
+	if data, err := json.Marshal(p); err != nil {
+		return nil, err
+	} else {
+		return data, nil
+	}
+}
+
 type TokenData struct {
-	PublicKey []byte `json:"publicKey"`
-	Token     []byte `json:"token"`
-	Hash      []byte `json:"hash"`
+	JSON      string         `json:"data" coerce:"name:json"`
+	Data      *PriorityToken `json:"-" coerce:"name:data"`
+	PublicKey []byte         `json:"publicKey"`
+	Token     []byte         `json:"token"`
+	Hash      []byte         `json:"hash"`
 }
 
 // GetAppointmentsByZipCode
