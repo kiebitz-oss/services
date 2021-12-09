@@ -72,3 +72,7 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 	return storage, nil
 
 }
+
+func (c *Storage) isRoot(context services.Context, params *services.SignedParams) services.Response {
+	return isRoot(context, []byte(params.JSON), params.Signature, params.Timestamp, c.settings.Keys)
+}

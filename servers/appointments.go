@@ -23,9 +23,9 @@ import (
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/forms"
-	"time"
 )
 
+// time windows for statistics generation
 var tws = []services.TimeWindowFunc{
 	services.Minute,
 	services.QuarterHour,
@@ -231,13 +231,6 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 
 // Method Handlers
 
-// signed requests are valid only 1 minute
-func expired(timestamp *time.Time) bool {
-	return time.Now().Add(-time.Minute).After(*timestamp)
-}
-
-// public endpoints
-
 func (c *Appointments) Key(key string) *crypto.Key {
 	return c.settings.Key(key)
 }
@@ -297,7 +290,7 @@ func (c *Appointments) getActorKeys() (*services.KeyLists, error) {
 	}, nil
 }
 
-// authentication
+// authentication helpers
 
 func (c *Appointments) isUser(context services.Context, params *services.SignedParams) services.Response {
 
@@ -348,7 +341,43 @@ func (c *Appointments) isRoot(context services.Context, params *services.SignedP
 	return isRoot(context, []byte(params.JSON), params.Signature, params.Timestamp, c.settings.Keys)
 }
 
-func (c *Appointments) isOnKeyList(context services.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (services.Response, *services.ActorKey) {
+func (c *Appointments) isMediator(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
+
+	keys, err := c.getActorKeys()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), nil
+	}
+
+	if resp, key := c.isValidActorSignature(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Mediators); resp != nil {
+		return resp, nil
+	} else if expired(params.Timestamp) {
+		return context.Error(410, "signature expired", nil), nil
+	} else {
+		return nil, key
+	}
+}
+
+func (c *Appointments) isProvider(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
+
+	keys, err := c.getActorKeys()
+
+	if err != nil {
+		services.Log.Error(err)
+		return context.InternalError(), nil
+	}
+
+	if resp, key := c.isValidActorSignature(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Providers); resp != nil {
+		return resp, nil
+	} else if expired(params.Timestamp) {
+		return context.Error(410, "signature expired", nil), nil
+	} else {
+		return nil, key
+	}
+}
+
+func (c *Appointments) isValidActorSignature(context services.Context, data, signature, publicKey []byte, keyList []*services.ActorKey) (services.Response, *services.ActorKey) {
 
 	actorKey, err := findActorKey(keyList, publicKey)
 
@@ -370,40 +399,4 @@ func (c *Appointments) isOnKeyList(context services.Context, data, signature, pu
 
 	return nil, actorKey
 
-}
-
-func (c *Appointments) isMediator(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
-
-	keys, err := c.getActorKeys()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError(), nil
-	}
-
-	if resp, key := c.isOnKeyList(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Mediators); resp != nil {
-		return resp, nil
-	} else if expired(params.Timestamp) {
-		return context.Error(410, "signature expired", nil), nil
-	} else {
-		return nil, key
-	}
-}
-
-func (c *Appointments) isProvider(context services.Context, params *services.SignedParams) (services.Response, *services.ActorKey) {
-
-	keys, err := c.getActorKeys()
-
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError(), nil
-	}
-
-	if resp, key := c.isOnKeyList(context, []byte(params.JSON), params.Signature, params.PublicKey, keys.Providers); resp != nil {
-		return resp, nil
-	} else if expired(params.Timestamp) {
-		return context.Error(410, "signature expired", nil), nil
-	} else {
-		return nil, key
-	}
 }
