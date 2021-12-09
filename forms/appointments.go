@@ -913,7 +913,7 @@ var PublishAppointmentsDataForm = forms.Form{
 				forms.IsList{
 					Validators: []forms.Validator{
 						forms.IsStringMap{
-							Form: &AppointmentForm,
+							Form: &SignedAppointmentForm,
 						},
 					},
 				},
@@ -969,7 +969,7 @@ var BookingForm = forms.Form{
 	},
 }
 
-var AppointmentForm = forms.Form{
+var SignedAppointmentForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "updatedAt",

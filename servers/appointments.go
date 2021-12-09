@@ -38,6 +38,7 @@ var tws = []services.TimeWindowFunc{
 type Appointments struct {
 	*Server
 	db       services.Database
+	backend  *AppointmentsBackend
 	meter    services.Meter
 	settings *services.AppointmentsSettings
 	test     bool
@@ -47,6 +48,7 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 
 	appointments := &Appointments{
 		db:       settings.DatabaseObj,
+		backend:  &AppointmentsBackend{db: settings.DatabaseObj},
 		meter:    settings.MeterObj,
 		settings: settings.Appointments,
 		test:     settings.Test,

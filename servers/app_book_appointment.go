@@ -112,10 +112,10 @@ func (c *Appointments) bookAppointment(context services.Context, params *service
 			if err := json.Unmarshal(appointment, &mapData); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
-			} else if params, err := forms.AppointmentForm.Validate(mapData); err != nil {
+			} else if params, err := forms.SignedAppointmentForm.Validate(mapData); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
-			} else if err := forms.AppointmentForm.Coerce(signedAppointment, params); err != nil {
+			} else if err := forms.SignedAppointmentForm.Coerce(signedAppointment, params); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
 			}

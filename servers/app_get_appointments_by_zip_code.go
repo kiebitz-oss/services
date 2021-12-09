@@ -17,27 +17,10 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
-	"github.com/kiebitz-oss/services/forms"
 )
-
-func toProviderData(data []byte) (*services.SignedProviderData, error) {
-	providerData := &services.SignedProviderData{}
-	var providerDataMap map[string]interface{}
-	if err := json.Unmarshal(data, &providerDataMap); err != nil {
-		return nil, err
-	}
-	if params, err := forms.SignedProviderDataForm.Validate(providerDataMap); err != nil {
-		return nil, err
-	} else if err := forms.SignedProviderDataForm.Coerce(providerData, params); err != nil {
-		return nil, err
-	}
-	return providerData, nil
-
-}
 
 func (c *Appointments) getAppointmentsByZipCode(context services.Context, params *services.GetAppointmentsByZipCodeParams) services.Response {
 
@@ -52,7 +35,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 	// get all neighboring zip codes for the given zip code
 	neighbors := c.db.SortedSet("distances::neighbors::zipCode", []byte(params.ZipCode))
 	// public provider data structure
-	publicProviderData := c.db.Map("providerData", []byte("public"))
+	publicProviderData := c.backend.PublicProviderData()
 
 	allNeighbors, err := neighbors.Range(0, -1)
 	if err != nil {
@@ -95,20 +78,13 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		hash := crypto.Hash(pkd.Signing)
 
 		// fetch the full public data of the provider
-		pd, err := publicProviderData.Get(hash)
+		providerData, err := publicProviderData.Get(hash)
 
 		if err != nil {
 			if err != databases.NotFound {
 				services.Log.Error(err)
 			}
 			services.Log.Warning("provider data not found")
-			continue
-		}
-
-		providerData, err := toProviderData(pd)
-
-		if err != nil {
-			services.Log.Error(err)
 			continue
 		}
 
@@ -135,20 +111,15 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 				visitedDates[string(date)] = true
 			}
 
-			dateKey := append(hash, date...)
-			appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(date))
 			allAppointments, err := appointmentsByDate.GetAll()
+
 			if err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
 			}
 
-			for _, appointment := range allAppointments {
-				var signedAppointment *services.SignedAppointment
-				if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
-					services.Log.Error(err)
-					continue
-				}
+			for _, signedAppointment := range allAppointments {
 
 				slots := make([]*services.Slot, len(signedAppointment.Bookings))
 

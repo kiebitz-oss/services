@@ -99,9 +99,9 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 			} else if err := json.Unmarshal(data, &mapData); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
-			} else if params, err := forms.AppointmentForm.Validate(mapData); err != nil {
+			} else if params, err := forms.SignedAppointmentForm.Validate(mapData); err != nil {
 				services.Log.Error(err)
-			} else if err := forms.AppointmentForm.Coerce(existingAppointment, params); err != nil {
+			} else if err := forms.SignedAppointmentForm.Coerce(existingAppointment, params); err != nil {
 				services.Log.Error(err)
 			} else {
 				bookings := make([]*services.Booking, 0)
