@@ -20,20 +20,22 @@ import (
 	"bytes"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
+	"github.com/kiebitz-oss/services/databases"
 	"time"
 )
 
-func (c *Appointments) isActiveProviderID(context services.Context, publicKey []byte) (services.Response, bool) {
-	activeProvider, err := c.db.Map("keys", []byte("providers")).Get([]byte(publicKey))
+func (c *Appointments) isActiveProvider(context services.Context, id []byte) services.Response {
 
-	if len(activeProvider) == 0 {
-		return context.Error(404, "provider not found", nil), false
-	} else if err != nil {
+	if _, err := c.backend.Keys("providers").Get(id); err != nil {
+		if err == databases.NotFound {
+			return context.Error(404, "provider not found", nil)
+		}
+	} else {
 		services.Log.Error(err)
-		return context.InternalError(), false
+		return context.InternalError()
 	}
 
-	return nil, true
+	return nil
 }
 
 func (c *Appointments) bookAppointment(context services.Context, params *services.BookAppointmentSignedParams) services.Response {
@@ -85,10 +87,8 @@ func (c *Appointments) bookAppointment(context services.Context, params *service
 	}
 
 	// test if provider of the appointment is still active
-	if res, isActive := c.isActiveProviderID(context, params.Data.ProviderID); res != nil {
+	if res := c.isActiveProvider(context, params.Data.ProviderID); res != nil {
 		return res
-	} else if !isActive {
-		return context.Error(404, "invalid provider id", nil)
 	}
 
 	appointmentDatesByID := c.backend.AppointmentDatesByID(params.Data.ProviderID)

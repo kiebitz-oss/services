@@ -14,6 +14,19 @@ type AppointmentsBackend struct {
 	db services.Database
 }
 
+func (a *AppointmentsBackend) Keys(actor string) *Keys {
+	return &Keys{
+		keys: a.db.Map("keys", []byte(actor)),
+	}
+}
+
+func (a *AppointmentsBackend) Codes(actor string) *Codes {
+	return &Codes{
+		codes:  a.db.Set("codes", []byte(actor)),
+		scores: a.db.SortedSet("codeScores", []byte(actor)),
+	}
+}
+
 func (a *AppointmentsBackend) PublicProviderData() *PublicProviderData {
 	return &PublicProviderData{
 		dbs: a.db.Map("providerData", []byte("public")),
@@ -57,6 +70,79 @@ func (a *AppointmentsBackend) UsedTokens() *UsedTokens {
 	return &UsedTokens{
 		dbs: a.db.Set("bookings", []byte("tokens")),
 	}
+}
+
+type Keys struct {
+	keys services.Map
+}
+
+func (k *Keys) Set(id []byte, key *services.ActorKey) error {
+	if data, err := json.Marshal(key); err != nil {
+		return err
+	} else {
+		return k.keys.Set(id, data)
+	}
+}
+
+func (k *Keys) Get(id []byte) (*services.ActorKey, error) {
+	if mk, err := k.keys.Get(id); err != nil {
+		return nil, err
+	} else {
+		var key *services.ActorKey
+		if err := json.Unmarshal(mk, &key); err != nil {
+			return nil, err
+		} else {
+			return key, nil
+		}
+	}
+}
+
+func (k *Keys) GetAll() ([]*services.ActorKey, error) {
+
+	mk, err := k.keys.GetAll()
+
+	if err != nil {
+		return nil, err
+	}
+
+	actorKeys := []*services.ActorKey{}
+
+	for _, v := range mk {
+		var m *services.ActorKey
+		if err := json.Unmarshal(v, &m); err != nil {
+			return nil, err
+		} else {
+			actorKeys = append(actorKeys, m)
+		}
+	}
+
+	return actorKeys, nil
+
+}
+
+type Codes struct {
+	codes  services.Set
+	scores services.SortedSet
+}
+
+func (c *Codes) Has(code []byte) (bool, error) {
+	return c.codes.Has(code)
+}
+
+func (c *Codes) Add(code []byte) error {
+	return c.codes.Add(code)
+}
+
+func (c *Codes) Del(code []byte) error {
+	return c.codes.Del(code)
+}
+
+func (c *Codes) Score(code []byte) (int64, error) {
+	return c.scores.Score(code)
+}
+
+func (c *Codes) AddToScore(code []byte, score int64) error {
+	return c.scores.Add(code, score)
 }
 
 type EncryptedProviderData struct {

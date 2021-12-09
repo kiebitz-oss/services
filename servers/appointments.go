@@ -18,7 +18,6 @@ package servers
 
 import (
 	"bytes"
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/api"
 	"github.com/kiebitz-oss/services/crypto"
@@ -237,30 +236,6 @@ func (c *Appointments) Key(key string) *crypto.Key {
 	return c.settings.Key(key)
 }
 
-func (c *Appointments) getListKeys(key string) ([]*services.ActorKey, error) {
-	mk, err := c.db.Map("keys", []byte(key)).GetAll()
-
-	if err != nil {
-		services.Log.Error(err)
-		return nil, err
-	}
-
-	actorKeys := []*services.ActorKey{}
-
-	for _, v := range mk {
-		var m *services.ActorKey
-		if err := json.Unmarshal(v, &m); err != nil {
-			services.Log.Error(err)
-			continue
-		} else {
-			actorKeys = append(actorKeys, m)
-		}
-	}
-
-	return actorKeys, nil
-
-}
-
 func (c *Appointments) getKeysData() (*services.Keys, error) {
 
 	providerDataKey := c.settings.Key("provider")
@@ -274,13 +249,14 @@ func (c *Appointments) getKeysData() (*services.Keys, error) {
 }
 
 func (c *Appointments) getActorKeys() (*services.KeyLists, error) {
-	mediatorKeys, err := c.getListKeys("mediators")
+
+	mediatorKeys, err := c.backend.Keys("mediators").GetAll()
 
 	if err != nil {
 		return nil, err
 	}
 
-	providerKeys, err := c.getListKeys("providers")
+	providerKeys, err := c.backend.Keys("providers").GetAll()
 
 	if err != nil {
 		return nil, err

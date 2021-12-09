@@ -149,7 +149,7 @@ var ConfirmProviderDataForm = forms.Form{
 			Name: "signedKeyData",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
-					Form: &SignedDataForm,
+					Form: SignedKeyDataForm(&ProviderKeyDataForm),
 				},
 			},
 		},
@@ -223,45 +223,47 @@ var SignedProviderDataForm = forms.Form{
 	},
 }
 
-var SignedDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
+var SignedKeyDataForm = func(form *forms.Form) *forms.Form {
+	return &forms.Form{
+		Fields: []forms.Field{
+			{
+				Name: "data",
+				Validators: []forms.Validator{
+					forms.IsString{},
+					JSON{
+						Key: "json",
+					},
+					forms.IsStringMap{
+						Form: form,
+					},
 				},
-				forms.IsStringMap{
-					Form: &KeyDataForm,
+			},
+			{
+				Name: "signature",
+				Validators: []forms.Validator{
+					forms.IsBytes{
+						Encoding:  "base64",
+						MaxLength: 1000,
+						MinLength: 30,
+					},
+				},
+			},
+			{
+				Name: "publicKey",
+				Validators: []forms.Validator{
+					forms.IsOptional{},
+					forms.IsBytes{
+						Encoding:  "base64",
+						MaxLength: 1000,
+						MinLength: 30,
+					},
 				},
 			},
 		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-	},
+	}
 }
 
-var KeyDataForm = forms.Form{
+var ProviderKeyDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
 			Name: "signing",
@@ -407,6 +409,14 @@ var AddMediatorPublicKeysForm = forms.Form{
 var AddMediatorPublicKeysDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
+			Name: "signedKeyData",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: SignedKeyDataForm(&MediatorKeyDataForm),
+				},
+			},
+		},
+		{
 			Name: "timestamp",
 			Validators: []forms.Validator{
 				forms.IsTime{
@@ -414,19 +424,28 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "encryption",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding: "base64",
-				},
-			},
-		},
+	},
+}
+
+var MediatorKeyDataForm = forms.Form{
+	Fields: []forms.Field{
 		{
 			Name: "signing",
 			Validators: []forms.Validator{
 				forms.IsBytes{
-					Encoding: "base64",
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 30,
+				},
+			},
+		},
+		{
+			Name: "encryption",
+			Validators: []forms.Validator{
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 30,
 				},
 			},
 		},

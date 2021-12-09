@@ -39,7 +39,7 @@ func (c *Appointments) addCodes(context services.Context, params *services.AddCo
 	if expired(params.Data.Timestamp) {
 		return context.Error(410, "signature expired", nil)
 	}
-	codes := c.db.Set("codes", []byte(params.Data.Actor))
+	codes := c.backend.Codes(params.Data.Actor)
 	for _, code := range params.Data.Codes {
 		if err := codes.Add(code); err != nil {
 			services.Log.Error(err)

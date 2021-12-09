@@ -53,9 +53,7 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 
 	verifiedProviderData := c.backend.VerifiedProviderData()
 	providerData := c.backend.UnverifiedProviderData()
-
-	codes := c.db.Set("codes", []byte("provider"))
-	codeScores := c.db.SortedSet("codeScores", []byte("provider"))
+	codes := c.backend.Codes("provider")
 
 	existingData := false
 	if result, err := verifiedProviderData.Get(hash); err != nil {
@@ -89,7 +87,7 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 
 	// we delete the provider code
 	if c.settings.ProviderCodesEnabled {
-		score, err := codeScores.Score(params.Data.Code)
+		score, err := codes.Score(params.Data.Code)
 		if err != nil && err != databases.NotFound {
 			services.Log.Error(err)
 			return context.InternalError()
@@ -102,7 +100,7 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 				services.Log.Error(err)
 				return context.InternalError()
 			}
-		} else if err := codeScores.Add(params.Data.Code, score); err != nil {
+		} else if err := codes.AddToScore(params.Data.Code, score); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}

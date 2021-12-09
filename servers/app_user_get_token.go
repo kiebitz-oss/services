@@ -57,8 +57,7 @@ func (c *Appointments) priorityToken() (*services.PriorityToken, string, []byte,
 // get a token for a given queue
 func (c *Appointments) getToken(context services.Context, params *services.GetTokenParams) services.Response {
 
-	codes := c.db.Set("codes", []byte("user"))
-	codeScores := c.db.SortedSet("codeScores", []byte("user"))
+	codes := c.backend.Codes("user")
 
 	tokenKey := c.settings.Key("token")
 	if tokenKey == nil {
@@ -108,7 +107,7 @@ func (c *Appointments) getToken(context services.Context, params *services.GetTo
 
 	// if this is a new token we delete the user code
 	if c.settings.UserCodesEnabled {
-		score, err := codeScores.Score(params.Code)
+		score, err := codes.Score(params.Code)
 		if err != nil && err != databases.NotFound {
 			services.Log.Error(err)
 			return context.InternalError()
@@ -121,7 +120,7 @@ func (c *Appointments) getToken(context services.Context, params *services.GetTo
 				services.Log.Error(err)
 				return context.InternalError()
 			}
-		} else if err := codeScores.Add(params.Code, score); err != nil {
+		} else if err := codes.AddToScore(params.Code, score); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}

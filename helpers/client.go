@@ -213,19 +213,29 @@ func (a *AppointmentsClient) ResetDB() (*Response, error) {
 }
 
 func (a *AppointmentsClient) AddMediatorPublicKeys(mediator *crypto.Actor) (*Response, error) {
-	signingKey := a.settings.Admin.Signing.Key("root")
+	rootKey := a.settings.Admin.Signing.Key("root")
 
-	if signingKey == nil {
+	if rootKey == nil {
 		return nil, fmt.Errorf("root key missing")
 	}
 
-	data := map[string]interface{}{
-		"signing":    mediator.SigningKey.PublicKey,
-		"encryption": mediator.EncryptionKey.PublicKey,
-		"timestamp":  time.Now(),
+	keyData := &services.MediatorKeyData{
+		Signing:    mediator.SigningKey.PublicKey,
+		Encryption: mediator.EncryptionKey.PublicKey,
 	}
 
-	return a.requester("addMediatorPublicKeys", data, signingKey)
+	signedKeyData, err := keyData.Sign(rootKey)
+
+	if err != nil {
+		return nil, err
+	}
+
+	params := &services.AddMediatorPublicKeysParams{
+		Timestamp:     time.Now(),
+		SignedKeyData: signedKeyData,
+	}
+
+	return a.requester("addMediatorPublicKeys", params, rootKey)
 
 }
 
@@ -238,7 +248,7 @@ type Provider struct {
 
 func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypto.Actor) (*Response, error) {
 
-	keyData := &services.KeyData{
+	keyData := &services.ProviderKeyData{
 		Signing:    provider.Actor.SigningKey.PublicKey,
 		Encryption: provider.Actor.EncryptionKey.PublicKey,
 		QueueData:  provider.QueueData,

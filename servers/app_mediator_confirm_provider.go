@@ -17,7 +17,6 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
@@ -39,7 +38,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 
 	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
 
-	keys := c.db.Map("keys", []byte("providers"))
+	keys := c.backend.Keys("providers")
 
 	providerKey := &services.ActorKey{
 		Data:      params.Data.SignedKeyData.JSON,
@@ -47,13 +46,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 		PublicKey: params.Data.SignedKeyData.PublicKey,
 	}
 
-	bd, err := json.Marshal(providerKey)
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	if err := keys.Set(hash, bd); err != nil {
+	if err := keys.Set(hash, providerKey); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

@@ -17,8 +17,6 @@
 package servers
 
 import (
-	"bytes"
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 )
@@ -36,23 +34,20 @@ func (c *Appointments) addMediatorPublicKeys(context services.Context, params *s
 		return resp
 	}
 
-	hash := crypto.Hash(params.Data.Signing)
-	keys := c.db.Map("keys", []byte("mediators"))
-	bd, err := json.Marshal(params)
-	if err != nil {
+	mediatorKey := &services.ActorKey{
+		Data:      params.Data.SignedKeyData.JSON,
+		Signature: params.Data.SignedKeyData.Signature,
+		PublicKey: params.Data.SignedKeyData.PublicKey,
+	}
+
+	hash := crypto.Hash(params.Data.SignedKeyData.Data.Signing)
+
+	keys := c.backend.Keys("mediators")
+
+	if err := keys.Set(hash, mediatorKey); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}
-	if err := keys.Set(hash, bd); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-	if result, err := keys.Get(hash); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !bytes.Equal(result, bd) {
-		services.Log.Error("does not match")
-		return context.InternalError()
-	}
+
 	return context.Acknowledge()
 }

@@ -41,8 +41,10 @@ func (c Mediator) Setup(fixtures map[string]interface{}) (interface{}, error) {
 	}
 
 	// we add the mediator public keys to the backend
-	if _, err := client.Appointments.AddMediatorPublicKeys(mediator); err != nil {
+	if resp, err := client.Appointments.AddMediatorPublicKeys(mediator); err != nil {
 		return nil, err
+	} else if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("cannot add mediator keys")
 	}
 
 	return mediator, nil

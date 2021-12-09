@@ -47,7 +47,7 @@ type ConfirmProviderParams struct {
 	Timestamp             time.Time              `json:"timestamp"`
 	PublicProviderData    *SignedProviderData    `json:"publicProviderData"`
 	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
-	SignedKeyData         *SignedKeyData         `json:"signedKeyData"`
+	SignedKeyData         *SignedProviderKeyData `json:"signedKeyData"`
 }
 
 type EncryptedProviderData struct {
@@ -57,20 +57,20 @@ type EncryptedProviderData struct {
 	PublicKey []byte                    `json:"publicKey"`
 }
 
-type SignedKeyData struct {
-	JSON      string   `json:"data" coerce:"name:json"`
-	Data      *KeyData `json:"-" coerce:"name:data"`
-	Signature []byte   `json:"signature"`
-	PublicKey []byte   `json:"publicKey"`
+type SignedProviderKeyData struct {
+	JSON      string           `json:"data" coerce:"name:json"`
+	Data      *ProviderKeyData `json:"-" coerce:"name:data"`
+	Signature []byte           `json:"signature"`
+	PublicKey []byte           `json:"publicKey"`
 }
 
-func (k *KeyData) Sign(key *crypto.Key) (*SignedKeyData, error) {
+func (k *ProviderKeyData) Sign(key *crypto.Key) (*SignedProviderKeyData, error) {
 	if data, err := json.Marshal(k); err != nil {
 		return nil, err
 	} else if signedData, err := key.Sign(data); err != nil {
 		return nil, err
 	} else {
-		return &SignedKeyData{
+		return &SignedProviderKeyData{
 			JSON:      string(data),
 			Signature: signedData.Signature,
 			PublicKey: signedData.PublicKey,
@@ -79,7 +79,7 @@ func (k *KeyData) Sign(key *crypto.Key) (*SignedKeyData, error) {
 	}
 }
 
-type KeyData struct {
+type ProviderKeyData struct {
 	Signing    []byte             `json:"signing"`
 	Encryption []byte             `json:"encryption"`
 	QueueData  *ProviderQueueData `json:"queueData"`
@@ -113,9 +113,35 @@ type AddMediatorPublicKeysSignedParams struct {
 }
 
 type AddMediatorPublicKeysParams struct {
-	Timestamp  time.Time `json:"timestamp"`
-	Encryption []byte    `json:"encryption"`
-	Signing    []byte    `json:"signing"`
+	Timestamp     time.Time              `json:"timestamp"`
+	SignedKeyData *SignedMediatorKeyData `json:"signedKeyData"`
+}
+
+type SignedMediatorKeyData struct {
+	JSON      string           `json:"data" coerce:"name:json"`
+	Data      *MediatorKeyData `json:"-" coerce:"name:data"`
+	Signature []byte           `json:"signature"`
+	PublicKey []byte           `json:"publicKey"`
+}
+
+func (k *MediatorKeyData) Sign(key *crypto.Key) (*SignedMediatorKeyData, error) {
+	if data, err := json.Marshal(k); err != nil {
+		return nil, err
+	} else if signedData, err := key.Sign(data); err != nil {
+		return nil, err
+	} else {
+		return &SignedMediatorKeyData{
+			JSON:      string(data),
+			Signature: signedData.Signature,
+			PublicKey: signedData.PublicKey,
+			Data:      k,
+		}, nil
+	}
+}
+
+type MediatorKeyData struct {
+	Signing    []byte `json:"signing"`
+	Encryption []byte `json:"encryption"`
 }
 
 // AddCodes
@@ -201,16 +227,8 @@ func (a *ActorKey) ProviderKeyData() (*ProviderKeyData, error) {
 }
 
 type ActorKeyData struct {
-	Encryption []byte    `json:"encryption"`
-	Signing    []byte    `json:"signing"`
-	Timestamp  time.Time `json:"timestamp"`
-}
-
-type ProviderKeyData struct {
-	Encryption []byte             `json:"encryption"`
-	Signing    []byte             `json:"signing"`
-	QueueData  *ProviderQueueData `json:"queueData"`
-	Timestamp  time.Time          `json:"timestamp,omitempty"`
+	Encryption []byte `json:"encryption"`
+	Signing    []byte `json:"signing"`
 }
 
 // GetToken
