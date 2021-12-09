@@ -52,14 +52,6 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 	hash := crypto.Hash(pkd.Signing)
 	hexUID := hex.EncodeToString(hash)
 
-	lock, err := c.db.Lock("bookAppointment_" + string(hash[:]))
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer lock.Release()
-
 	// appointments are stored in a provider-specific key
 	appointmentDatesByID := c.backend.AppointmentDatesByID(hash)
 	usedTokens := c.backend.UsedTokens()

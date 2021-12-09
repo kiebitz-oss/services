@@ -43,14 +43,6 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 
 	hash := crypto.Hash(params.PublicKey)
 
-	lock, err := c.db.Lock("storeProviderData_" + string(hash[:]))
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer lock.Release()
-
 	verifiedProviderData := c.backend.VerifiedProviderData()
 	providerData := c.backend.UnverifiedProviderData()
 	codes := c.backend.Codes("provider")

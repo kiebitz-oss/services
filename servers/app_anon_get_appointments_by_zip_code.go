@@ -33,7 +33,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 	}
 
 	// get all neighboring zip codes for the given zip code
-	neighbors := c.db.SortedSet("distances::neighbors::zipCode", []byte(params.ZipCode))
+	neighbors := c.backend.Neighbors("zipCode", params.ZipCode)
 	// public provider data structure
 	publicProviderData := c.backend.PublicProviderData()
 

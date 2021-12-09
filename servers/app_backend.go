@@ -2,6 +2,7 @@ package servers
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/forms"
 	"time"
@@ -12,6 +13,18 @@ import (
 // and deserialized when stored or fetched from the database.
 type AppointmentsBackend struct {
 	db services.Database
+}
+
+func (a *AppointmentsBackend) Neighbors(neighborType, zipCode string) *Neighbors {
+	return &Neighbors{
+		neighbors: a.db.SortedSet(fmt.Sprintf("distances::neighbors::%s", neighborType), []byte(zipCode)),
+	}
+}
+
+func (a *AppointmentsBackend) PriorityToken(name string) *PriorityToken {
+	return &PriorityToken{
+		token: a.db.Integer("priorityToken", []byte(name)),
+	}
 }
 
 func (a *AppointmentsBackend) Keys(actor string) *Keys {
@@ -70,6 +83,26 @@ func (a *AppointmentsBackend) UsedTokens() *UsedTokens {
 	return &UsedTokens{
 		dbs: a.db.Set("bookings", []byte("tokens")),
 	}
+}
+
+type PriorityToken struct {
+	token services.Integer
+}
+
+func (p *PriorityToken) IncrBy(value int64) (int64, error) {
+	return p.token.IncrBy(value)
+}
+
+type Neighbors struct {
+	neighbors services.SortedSet
+}
+
+func (n *Neighbors) Add(to string, distance int64) error {
+	return n.neighbors.Add([]byte(to), distance)
+}
+
+func (n *Neighbors) Range(from, to int64) ([]*services.SortedSetEntry, error) {
+	return n.neighbors.Range(from, to)
 }
 
 type Keys struct {

@@ -17,9 +17,6 @@
 package servers
 
 import (
-	"bytes"
-	"encoding/binary"
-	"fmt"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 )
@@ -42,22 +39,11 @@ func (c *Appointments) uploadDistances(context services.Context, params *service
 	if expired(params.Data.Timestamp) {
 		return context.Error(410, "signature expired", nil)
 	}
-	dst := c.db.Map("distances", []byte(params.Data.Type))
 	for _, distance := range params.Data.Distances {
-		neighborsFrom := c.db.SortedSet(fmt.Sprintf("distances::neighbors::%s", params.Data.Type), []byte(distance.From))
-		neighborsTo := c.db.SortedSet(fmt.Sprintf("distances::neighbors::%s", params.Data.Type), []byte(distance.To))
-		neighborsFrom.Add([]byte(distance.To), int64(distance.Distance))
-		neighborsTo.Add([]byte(distance.From), int64(distance.Distance))
-		key := fmt.Sprintf("%s:%s", distance.From, distance.To)
-		buf := new(bytes.Buffer)
-		if err := binary.Write(buf, binary.LittleEndian, distance.Distance); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
-		if err := dst.Set([]byte(key), buf.Bytes()); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
+		neighborsFrom := c.backend.Neighbors(params.Data.Type, distance.From)
+		neighborsTo := c.backend.Neighbors(params.Data.Type, distance.To)
+		neighborsFrom.Add(distance.To, int64(distance.Distance))
+		neighborsTo.Add(distance.From, int64(distance.Distance))
 	}
 
 	return context.Acknowledge()

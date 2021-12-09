@@ -33,8 +33,8 @@ import (
 // with indidivual private keys but still want to keep the priority tokens
 // deterministic. Hence, we leave this mechanism as is.
 func (c *Appointments) priorityToken() (*services.PriorityToken, string, []byte, error) {
-	tokenValue := c.db.Integer("priorityToken", []byte("primary"))
-	if n, err := tokenValue.IncrBy(1); err != nil && err != databases.NotFound {
+	token := c.backend.PriorityToken("primary")
+	if n, err := token.IncrBy(1); err != nil && err != databases.NotFound {
 		return nil, "", nil, err
 	} else {
 
