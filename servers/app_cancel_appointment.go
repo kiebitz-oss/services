@@ -104,7 +104,7 @@ func (c *Appointments) cancelAppointment(context services.Context, params *servi
 
 			signedAppointment.Bookings = newBookings
 
-			usedTokens := c.db.Set("bookings", []byte("tokens"))
+			usedTokens := c.backend.UsedTokens()
 
 			// we mark the token as unused
 			if err := usedTokens.Del(token); err != nil {

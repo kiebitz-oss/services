@@ -51,7 +51,7 @@ func (c *Appointments) bookAppointment(context services.Context, params *service
 
 	var result interface{}
 
-	usedTokens := c.db.Set("bookings", []byte("tokens"))
+	usedTokens := c.backend.UsedTokens()
 
 	notAuthorized := context.Error(401, "not authorized", nil)
 

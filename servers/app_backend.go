@@ -34,6 +34,28 @@ func (a *AppointmentsBackend) AppointmentDatesByID(providerID []byte) *Appointme
 	}
 }
 
+func (a *AppointmentsBackend) UsedTokens() *UsedTokens {
+	return &UsedTokens{
+		dbs: a.db.Set("bookings", []byte("tokens")),
+	}
+}
+
+type UsedTokens struct {
+	dbs services.Set
+}
+
+func (t *UsedTokens) Del(token []byte) error {
+	return t.dbs.Del(token)
+}
+
+func (t *UsedTokens) Has(token []byte) (bool, error) {
+	return t.dbs.Has(token)
+}
+
+func (t *UsedTokens) Add(token []byte) error {
+	return t.dbs.Add(token)
+}
+
 type AppointmentDatesByID struct {
 	providerID []byte
 	dbs        services.Map

@@ -62,13 +62,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 
 	// appointments are stored in a provider-specific key
 	appointmentDatesByID := c.backend.AppointmentDatesByID(hash)
-	// appointments expire automatically after 120 days
-	if err := c.db.Expire("appointments", hash, time.Hour*24*120); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	usedTokens := c.db.Set("bookings", []byte("tokens"))
+	usedTokens := c.backend.UsedTokens()
 
 	// to do: fix statistics generation
 	var bookedSlots, openSlots int64
