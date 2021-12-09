@@ -757,14 +757,12 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 		{
 			Name: "from",
 			Validators: []forms.Validator{
-				forms.IsOptional{},
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
 		{
 			Name: "to",
 			Validators: []forms.Validator{
-				forms.IsOptional{},
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
@@ -777,19 +775,13 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 		},
 	},
 	Validator: func(values map[string]interface{}, errorAdder forms.ErrorAdder) error {
-		from, fromOk := values["from"].(time.Time)
-		to, toOk := values["to"].(time.Time)
-		if fromOk && !toOk || toOk && !fromOk {
-			return fmt.Errorf("'from' or 'to' given without the other")
-		}
-		if !fromOk && !toOk {
-			return nil
-		}
+		from := values["from"].(time.Time)
+		to := values["to"].(time.Time)
 		if from.After(to) {
 			return fmt.Errorf("'from' value is after 'to' value")
 		}
-		if to.Sub(from) > time.Hour*24*14 {
-			return fmt.Errorf("date span exceeds 14 days")
+		if to.Sub(from) > time.Hour*24 {
+			return fmt.Errorf("date span exceeds 1 day")
 		}
 		return nil
 	},

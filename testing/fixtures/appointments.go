@@ -71,9 +71,8 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		ct = ct.Add(time.Duration(c.Duration) * time.Minute)
 	}
 
-	t := time.Now()
 	params := &services.PublishAppointmentsParams{
-		Timestamp: &t,
+		Timestamp: time.Now(),
 		Offers:    offers,
 	}
 

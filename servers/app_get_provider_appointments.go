@@ -66,11 +66,7 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 			continue
 		}
 
-		if params.Data.From != nil && date.Before(*params.Data.From) {
-			continue
-		}
-
-		if params.Data.To != nil && date.After(*params.Data.To) {
+		if date.Before(params.Data.From) || date.After(params.Data.To) {
 			continue
 		}
 

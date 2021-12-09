@@ -35,7 +35,7 @@ func findActorKey(keys []*services.ActorKey, publicKey []byte) (*services.ActorK
 	return nil, nil
 }
 
-func isRoot(context services.Context, data, signature []byte, timestamp *time.Time, keys []*crypto.Key) services.Response {
+func isRoot(context services.Context, data, signature []byte, timestamp time.Time, keys []*crypto.Key) services.Response {
 	rootKey := services.Key(keys, "root")
 	if rootKey == nil {
 		services.Log.Error("root key missing")
@@ -56,6 +56,6 @@ func isRoot(context services.Context, data, signature []byte, timestamp *time.Ti
 	return nil
 }
 
-func expired(timestamp *time.Time) bool {
-	return time.Now().Add(-time.Minute).After(*timestamp)
+func expired(timestamp time.Time) bool {
+	return time.Now().Add(-time.Minute).After(timestamp)
 }

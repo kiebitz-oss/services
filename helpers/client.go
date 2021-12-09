@@ -261,10 +261,8 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 		return nil, err
 	}
 
-	t := time.Now()
-
 	params := &services.ConfirmProviderParams{
-		Timestamp:             &t,
+		Timestamp:             time.Now(),
 		PublicProviderData:    signedProviderData,
 		EncryptedProviderData: encryptedProviderData,
 		SignedKeyData:         signedKeyData,
@@ -359,10 +357,8 @@ func (a *AppointmentsClient) StoreProviderData(provider *Provider) (*Response, e
 
 func (a *AppointmentsClient) CheckProviderData(provider *Provider) (*Response, error) {
 
-	t := time.Now()
-
 	params := &services.CheckProviderDataParams{
-		Timestamp: &t,
+		Timestamp: time.Now(),
 	}
 
 	return a.requester("checkProviderData", params, provider.Actor.SigningKey)

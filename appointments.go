@@ -28,7 +28,7 @@ type SignedParams struct {
 	JSON      string
 	Signature []byte
 	PublicKey []byte
-	Timestamp *time.Time
+	Timestamp time.Time
 	ExtraData interface{}
 }
 
@@ -44,7 +44,7 @@ type ConfirmProviderSignedParams struct {
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
 type ConfirmProviderParams struct {
-	Timestamp             *time.Time                `json:"timestamp"`
+	Timestamp             time.Time                 `json:"timestamp"`
 	PublicProviderData    *SignedProviderData       `json:"publicProviderData"`
 	EncryptedProviderData *crypto.ECDHEncryptedData `json:"encryptedProviderData"`
 	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
@@ -93,7 +93,7 @@ type ResetDBSignedParams struct {
 }
 
 type ResetDBParams struct {
-	Timestamp *time.Time `json:"timestamp"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // AddMediatorPublicKeys
@@ -106,9 +106,9 @@ type AddMediatorPublicKeysSignedParams struct {
 }
 
 type AddMediatorPublicKeysParams struct {
-	Timestamp  *time.Time `json:"timestamp"`
-	Encryption []byte     `json:"encryption"`
-	Signing    []byte     `json:"signing"`
+	Timestamp  time.Time `json:"timestamp"`
+	Encryption []byte    `json:"encryption"`
+	Signing    []byte    `json:"signing"`
 }
 
 // AddCodes
@@ -121,9 +121,9 @@ type AddCodesParams struct {
 }
 
 type CodesData struct {
-	Actor     string     `json:"actor"`
-	Timestamp *time.Time `json:"timestamp"`
-	Codes     [][]byte   `json:"codes"`
+	Actor     string    `json:"actor"`
+	Timestamp time.Time `json:"timestamp"`
+	Codes     [][]byte  `json:"codes"`
 }
 
 // UploadDistances
@@ -136,7 +136,7 @@ type UploadDistancesSignedParams struct {
 }
 
 type UploadDistancesParams struct {
-	Timestamp *time.Time `json:"timestamp"`
+	Timestamp time.Time  `json:"timestamp"`
 	Type      string     `json:"type"`
 	Distances []Distance `json:"distances"`
 }
@@ -194,16 +194,16 @@ func (a *ActorKey) ProviderKeyData() (*ProviderKeyData, error) {
 }
 
 type ActorKeyData struct {
-	Encryption []byte     `json:"encryption"`
-	Signing    []byte     `json:"signing"`
-	Timestamp  *time.Time `json:"timestamp"`
+	Encryption []byte    `json:"encryption"`
+	Signing    []byte    `json:"signing"`
+	Timestamp  time.Time `json:"timestamp"`
 }
 
 type ProviderKeyData struct {
 	Encryption []byte             `json:"encryption"`
 	Signing    []byte             `json:"signing"`
 	QueueData  *ProviderQueueData `json:"queueData"`
-	Timestamp  *time.Time         `json:"timestamp,omitempty"`
+	Timestamp  time.Time          `json:"timestamp,omitempty"`
 }
 
 // GetToken
@@ -302,9 +302,9 @@ type GetProviderAppointmentsSignedParams struct {
 }
 
 type GetProviderAppointmentsParams struct {
-	Timestamp *time.Time `json:"timestamp"`
-	From      *time.Time `json:"from,omitempty"`
-	To        *time.Time `json:"to,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
+	From      time.Time `json:"from"`
+	To        time.Time `json:"to"`
 }
 
 // PublishAppointments
@@ -317,7 +317,7 @@ type PublishAppointmentsSignedParams struct {
 }
 
 type PublishAppointmentsParams struct {
-	Timestamp *time.Time           `json:"timestamp"`
+	Timestamp time.Time            `json:"timestamp"`
 	Offers    []*SignedAppointment `json:"offers"`
 }
 
@@ -396,7 +396,7 @@ type BookAppointmentParams struct {
 	ID              []byte                    `json:"id"`
 	EncryptedData   *crypto.ECDHEncryptedData `json:"encryptedData"`
 	SignedTokenData *SignedTokenData          `json:"signedTokenData"`
-	Timestamp       *time.Time                `json:"timestamp"`
+	Timestamp       time.Time                 `json:"timestamp"`
 }
 
 type Booking struct {
@@ -416,7 +416,7 @@ type GetAppointmentSignedParams struct {
 }
 
 type GetAppointmentParams struct {
-	Timestamp       *time.Time       `json:"timestamp"`
+	Timestamp       time.Time        `json:"timestamp"`
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`
@@ -447,7 +447,7 @@ type CheckProviderDataSignedParams struct {
 }
 
 type CheckProviderDataParams struct {
-	Timestamp *time.Time `json:"timestamp"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // StoreProviderData
@@ -474,8 +474,8 @@ type GetPendingProviderDataSignedParams struct {
 }
 
 type GetPendingProviderDataParams struct {
-	Timestamp *time.Time `json:"timestamp"`
-	Limit     int64      `json:"limit"`
+	Timestamp time.Time `json:"timestamp"`
+	Limit     int64     `json:"limit"`
 }
 
 // GetVerifiedProviderData
@@ -488,8 +488,8 @@ type GetVerifiedProviderDataSignedParams struct {
 }
 
 type GetVerifiedProviderDataParams struct {
-	Timestamp *time.Time `json:"timestamp"`
-	Limit     int64      `json:"limit"`
+	Timestamp time.Time `json:"timestamp"`
+	Limit     int64     `json:"limit"`
 }
 
 // GetStats
@@ -500,9 +500,9 @@ type GetStatsParams struct {
 	Filter map[string]interface{} `json:"filter"`
 	Metric string                 `json:"metric"`
 	Name   string                 `json:"name"`
-	From   *time.Time             `json:"from"`
-	To     *time.Time             `json:"to"`
-	N      *int64                 `json:"n"`
+	From   *time.Time             `json:"from"` // optional
+	To     *time.Time             `json:"to"`   // optional
+	N      *int64                 `json:"n"`    // optional
 }
 
 type StatsValue struct {
