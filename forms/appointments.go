@@ -1556,6 +1556,14 @@ var EncryptedProviderDataForm = forms.Form{
 var StoreProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
+			Name: "timestamp",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+		{
 			Name: "code",
 			Validators: []forms.Validator{
 				forms.IsOptional{},

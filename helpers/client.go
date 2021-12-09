@@ -368,6 +368,7 @@ func (a *AppointmentsClient) StoreProviderData(provider *Provider) (*Response, e
 
 	encryptedProviderData, err := provider.DataKey.Encrypt(data, dataKey)
 	storeProviderDataParams := &services.StoreProviderDataParams{
+		Timestamp:     time.Now(),
 		EncryptedData: encryptedProviderData,
 		Code:          nil,
 	}

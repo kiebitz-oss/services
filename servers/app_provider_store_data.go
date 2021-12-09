@@ -35,6 +35,10 @@ func (c *Appointments) storeProviderData(context services.Context, params *servi
 		return context.Error(400, "invalid signature", nil)
 	}
 
+	if expired(params.Data.Timestamp) {
+		return context.Error(410, "signature expired", nil)
+	}
+
 	// to do: add one-time use check
 
 	hash := crypto.Hash(params.PublicKey)

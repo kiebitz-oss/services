@@ -482,6 +482,7 @@ type StoreProviderDataSignedParams struct {
 }
 
 type StoreProviderDataParams struct {
+	Timestamp     time.Time                 `json:"timestamp"`
 	EncryptedData *crypto.ECDHEncryptedData `json:"encryptedData"`
 	Code          []byte                    `json:"code"`
 }
