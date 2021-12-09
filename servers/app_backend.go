@@ -11,6 +11,33 @@ type AppointmentsBackend struct {
 	db services.Database
 }
 
+func (a *AppointmentsBackend) PublicProviderData() *PublicProviderData {
+	return &PublicProviderData{
+		dbs: a.db.Map("providerData", []byte("public")),
+	}
+}
+
+func (a *AppointmentsBackend) AppointmentsByDate(providerID []byte, date string) *AppointmentsByDate {
+	dateKey := append(providerID, []byte(date)...)
+	return &AppointmentsByDate{
+		dbs: a.db.Map("appointmentsByDate", dateKey),
+	}
+}
+
+func (a *AppointmentsBackend) AppointmentDatesByID(providerID []byte) *AppointmentDatesByID {
+	return &AppointmentDatesByID{
+		dbs: a.db.Map("appointmentDatesByID", providerID),
+	}
+}
+
+type AppointmentDatesByID struct {
+	dbs services.Map
+}
+
+func (a *AppointmentDatesByID) GetAll() (map[string][]byte, error) {
+	return a.dbs.GetAll()
+}
+
 type PublicProviderData struct {
 	dbs services.Map
 }
@@ -29,6 +56,18 @@ type AppointmentsByDate struct {
 	dbs services.Map
 }
 
+func (a *AppointmentsByDate) Get(id []byte) (*services.SignedAppointment, error) {
+	if appointmentData, err := a.dbs.Get(id); err != nil {
+		return nil, err
+	} else {
+		if signedAppointment, err := SignedAppointment(appointmentData); err != nil {
+			return nil, err
+		} else {
+			return signedAppointment, nil
+		}
+	}
+}
+
 func (a *AppointmentsByDate) GetAll() (map[string]*services.SignedAppointment, error) {
 
 	signedAppointments := make(map[string]*services.SignedAppointment)
@@ -45,18 +84,5 @@ func (a *AppointmentsByDate) GetAll() (map[string]*services.SignedAppointment, e
 		}
 
 		return signedAppointments, nil
-	}
-}
-
-func (a *AppointmentsBackend) PublicProviderData() *PublicProviderData {
-	return &PublicProviderData{
-		dbs: a.db.Map("providerData", []byte("public")),
-	}
-}
-
-func (a *AppointmentsBackend) AppointmentsByDate(providerID []byte, date string) *AppointmentsByDate {
-	dateKey := append(providerID, []byte(date)...)
-	return &AppointmentsByDate{
-		dbs: a.db.Map("appointmentsByDate", dateKey),
 	}
 }

@@ -17,7 +17,6 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"time"
@@ -47,9 +46,8 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 	hash := crypto.Hash(pkd.Signing)
 
 	// appointments are stored in a provider-specific key
-	appointmentDatesByID := c.db.Map("appointmentDatesByID", hash)
+	appointmentDatesByID := c.backend.AppointmentDatesByID(hash)
 	allDates, err := appointmentDatesByID.GetAll()
-
 	if err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
@@ -70,21 +68,22 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 			continue
 		}
 
-		dateKey := append(hash, dateStr...)
-		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
+		appointmentsByDate := c.backend.AppointmentsByDate(hash, string(dateStr))
+
 		allAppointments, err := appointmentsByDate.GetAll()
+
 		if err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
 
 		for _, appointment := range allAppointments {
-			var signedAppointment *services.SignedAppointment
-			if err := json.Unmarshal(appointment, &signedAppointment); err != nil {
-				services.Log.Error(err)
+			// if the updatedSince parameter is given we only return appointments that have
+			// been updated since the given time
+			if params.Data.UpdatedSince != nil && (params.Data.UpdatedSince.After(appointment.UpdatedAt) || params.Data.UpdatedSince.Equal(appointment.UpdatedAt)) {
 				continue
 			}
-			signedAppointments = append(signedAppointments, signedAppointment)
+			signedAppointments = append(signedAppointments, appointment)
 		}
 	}
 

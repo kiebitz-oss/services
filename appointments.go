@@ -302,9 +302,10 @@ type GetProviderAppointmentsSignedParams struct {
 }
 
 type GetProviderAppointmentsParams struct {
-	Timestamp time.Time `json:"timestamp"`
-	From      time.Time `json:"from"`
-	To        time.Time `json:"to"`
+	Timestamp    time.Time  `json:"timestamp"`
+	From         time.Time  `json:"from"`
+	To           time.Time  `json:"to"`
+	UpdatedSince *time.Time `json:"updatedSince"`
 }
 
 // PublishAppointments

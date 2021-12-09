@@ -73,6 +73,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 
 	usedTokens := c.db.Set("bookings", []byte("tokens"))
 
+	// to do: fix statistics generation
 	var bookedSlots, openSlots int64
 
 	for _, appointment := range params.Data.Offers {

@@ -845,6 +845,13 @@ var GetProviderAppointmentsDataForm = forms.Form{
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
+		{
+			Name: "updatedSince",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsTime{Format: "rfc3339"},
+			},
+		},
 	},
 	Validator: func(values map[string]interface{}, errorAdder forms.ErrorAdder) error {
 		// form validator only gets called if values are valid, so we can
