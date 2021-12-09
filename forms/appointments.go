@@ -67,9 +67,58 @@ func (j JSON) Validate(value interface{}, values map[string]interface{}) (interf
 	return jsonValue, nil
 }
 
-var ConfirmProviderForm = forms.Form{
-	Fields: []forms.Field{
-		{
+var PublicKeyValidators = []forms.Validator{
+	forms.IsBytes{
+		Encoding:  "base64",
+		MaxLength: 128,
+		MinLength: 64,
+	},
+}
+
+var PublicKeyField = forms.Field{
+	Name:       "publicKey",
+	Validators: PublicKeyValidators,
+}
+
+var SignatureField = forms.Field{
+	Name:       "signature",
+	Validators: PublicKeyValidators,
+}
+
+var OptionalIDField = forms.Field{
+	Name: "id",
+	Validators: []forms.Validator{
+		forms.IsOptional{},
+		ID,
+	},
+}
+
+var IDField = forms.Field{
+	Name: "id",
+	Validators: []forms.Validator{
+		ID,
+	},
+}
+
+var ProviderIDField = forms.Field{
+	Name: "providerID",
+	Validators: []forms.Validator{
+		ID,
+	},
+}
+
+var TimestampField = forms.Field{
+	Name: "timestamp",
+	Validators: []forms.Validator{
+		forms.IsTime{
+			Format: "rfc3339",
+		},
+	},
+}
+
+var SignedDataFields = func(form *forms.Form) []forms.Field {
+	return []forms.Field{
+		forms.Field{
 			Name: "data",
 			Validators: []forms.Validator{
 				forms.IsString{},
@@ -77,32 +126,17 @@ var ConfirmProviderForm = forms.Form{
 					Key: "json",
 				},
 				forms.IsStringMap{
-					Form: &ConfirmProviderDataForm,
+					Form: form,
 				},
 			},
 		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+		SignatureField,
+		PublicKeyField,
+	}
+}
+
+var ConfirmProviderForm = forms.Form{
+	Fields: SignedDataFields(&ConfirmProviderDataForm),
 }
 
 var RawProviderDataForm = forms.Form{
@@ -120,14 +154,7 @@ var RawProviderDataForm = forms.Form{
 
 var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "encryptedProviderData",
 			Validators: []forms.Validator{
@@ -186,104 +213,24 @@ var ProviderDataForm = forms.Form{
 }
 
 var SignedProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &ProviderDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
-		},
-	},
+	Fields: append(SignedDataFields(&ProviderDataForm), OptionalIDField),
 }
 
 var SignedKeyDataForm = func(form *forms.Form) *forms.Form {
 	return &forms.Form{
-		Fields: []forms.Field{
-			{
-				Name: "data",
-				Validators: []forms.Validator{
-					forms.IsString{},
-					JSON{
-						Key: "json",
-					},
-					forms.IsStringMap{
-						Form: form,
-					},
-				},
-			},
-			{
-				Name: "signature",
-				Validators: []forms.Validator{
-					forms.IsBytes{
-						Encoding:  "base64",
-						MaxLength: 1000,
-						MinLength: 30,
-					},
-				},
-			},
-			{
-				Name: "publicKey",
-				Validators: []forms.Validator{
-					forms.IsOptional{},
-					forms.IsBytes{
-						Encoding:  "base64",
-						MaxLength: 1000,
-						MinLength: 30,
-					},
-				},
-			},
-		},
+		Fields: SignedDataFields(form),
 	}
 }
 
 var ProviderKeyDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
-			Name: "signing",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
+			Name:       "signing",
+			Validators: PublicKeyValidators,
 		},
 		{
-			Name: "encryption",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
+			Name:       "encryption",
+			Validators: PublicKeyValidators,
 		},
 		{
 			Name: "queueData",
@@ -318,92 +265,17 @@ var ProviderQueueDataForm = forms.Form{
 }
 
 var ResetDBForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &ResetDBDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&ResetDBDataForm),
 }
 
 var ResetDBDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 	},
 }
 
 var AddMediatorPublicKeysForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &AddMediatorPublicKeysDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&AddMediatorPublicKeysDataForm),
 }
 
 var AddMediatorPublicKeysDataForm = forms.Form{
@@ -416,38 +288,19 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 	},
 }
 
 var MediatorKeyDataForm = forms.Form{
 	Fields: []forms.Field{
 		{
-			Name: "signing",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
+			Name:       "signing",
+			Validators: PublicKeyValidators,
 		},
 		{
-			Name: "encryption",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 30,
-				},
-			},
+			Name:       "encryption",
+			Validators: PublicKeyValidators,
 		},
 	},
 }
@@ -455,53 +308,12 @@ var MediatorKeyDataForm = forms.Form{
 // admin endpoints
 
 var AddCodesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CodesDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&CodesDataForm),
 }
 
 var CodesDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "actor",
 			Validators: []forms.Validator{
@@ -527,53 +339,12 @@ var CodesDataForm = forms.Form{
 }
 
 var UploadDistancesForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &DistancesDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&DistancesDataForm),
 }
 
 var DistancesDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "type",
 			Validators: []forms.Validator{
@@ -646,17 +417,7 @@ var GetTokenForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
+		PublicKeyField,
 	},
 }
 
@@ -708,41 +469,7 @@ var TokenQueueDataForm = forms.Form{
 }
 
 var SignedTokenDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &TokenDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&TokenDataForm),
 }
 
 var TokenDataForm = forms.Form{
@@ -820,51 +547,12 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 }
 
 var GetProviderAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetProviderAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&GetProviderAppointmentsDataForm),
 }
 
 var GetProviderAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
+		TimestampField,
 		{
 			Name: "from",
 			Validators: []forms.Validator{
@@ -901,51 +589,12 @@ var GetProviderAppointmentsDataForm = forms.Form{
 }
 
 var PublishAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &PublishAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&PublishAppointmentsDataForm),
 }
 
 var PublishAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
+		TimestampField,
 		{
 			Name: "offers",
 			Validators: []forms.Validator{
@@ -974,23 +623,8 @@ var AppointmentPropertiesForm = forms.Form{
 
 var BookingForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
+		IDField,
+		PublicKeyField,
 		{
 			Name: "token",
 			Validators: []forms.Validator{
@@ -1009,7 +643,7 @@ var BookingForm = forms.Form{
 }
 
 var SignedAppointmentForm = forms.Form{
-	Fields: []forms.Field{
+	Fields: append(SignedDataFields(&AppointmentDataForm), []forms.Field{
 		{
 			Name: "updatedAt",
 			Validators: []forms.Validator{
@@ -1032,50 +666,12 @@ var SignedAppointmentForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &AppointmentDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	}...),
 }
 
 var AppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
+		TimestampField,
 		{
 			Name: "duration",
 			Validators: []forms.Validator{
@@ -1095,22 +691,8 @@ var AppointmentDataForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
+		PublicKeyField,
+		IDField,
 		{
 			Name: "slotData",
 			Validators: []forms.Validator{
@@ -1128,177 +710,38 @@ var AppointmentDataForm = forms.Form{
 
 var SlotForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
+		IDField,
 	},
 }
 
 var GetBookedAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
+		TimestampField,
 	},
 }
 var GetBookedAppointmentsForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetBookedAppointmentsDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&GetBookedAppointmentsDataForm),
 }
 
 var CancelBookingDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339"},
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
+		TimestampField,
+		IDField,
 	},
 }
 var CancelBookingForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CancelBookingDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&CancelBookingDataForm),
 }
 
 var BookAppointmentForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &BookAppointmentDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&BookAppointmentDataForm),
 }
 
 var BookAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "providerID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		ProviderIDField,
+		IDField,
+		TimestampField,
 		{
 			Name: "signedTokenData",
 			Validators: []forms.Validator{
@@ -1319,57 +762,13 @@ var BookAppointmentDataForm = forms.Form{
 }
 
 var GetAppointmentForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetAppointmentDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&GetAppointmentDataForm),
 }
 
 var GetAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "providerID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
+		IDField,
+		ProviderIDField,
 		{
 			Name: "signedTokenData",
 			Validators: []forms.Validator{
@@ -1382,57 +781,13 @@ var GetAppointmentDataForm = forms.Form{
 }
 
 var CancelAppointmentForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CancelAppointmentDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&CancelAppointmentDataForm),
 }
 
 var CancelAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "id",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
-		{
-			Name: "providerID",
-			Validators: []forms.Validator{
-				ID,
-			},
-		},
+		IDField,
+		ProviderIDField,
 		{
 			Name: "signedTokenData",
 			Validators: []forms.Validator{
@@ -1445,143 +800,26 @@ var CancelAppointmentDataForm = forms.Form{
 }
 
 var CheckProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &CheckProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&CheckProviderDataDataForm),
 }
 
 var CheckProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 	},
 }
 
 var StoreProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &StoreProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&StoreProviderDataDataForm),
 }
 
 var EncryptedProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &ECDHEncryptedDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&ECDHEncryptedDataForm),
 }
 
 var StoreProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "code",
 			Validators: []forms.Validator{
@@ -1605,54 +843,12 @@ var StoreProviderDataDataForm = forms.Form{
 }
 
 var GetPendingProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name:        "data",
-			Description: "parameters for fetching pending provider data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetPendingProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&GetPendingProviderDataDataForm),
 }
 
 var GetPendingProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "limit",
 			Validators: []forms.Validator{
@@ -1669,53 +865,12 @@ var GetPendingProviderDataDataForm = forms.Form{
 }
 
 var GetVerifiedProviderDataForm = forms.Form{
-	Fields: []forms.Field{
-		{
-			Name: "data",
-			Validators: []forms.Validator{
-				forms.IsString{},
-				JSON{
-					Key: "json",
-				},
-				forms.IsStringMap{
-					Form: &GetPendingProviderDataDataForm,
-				},
-			},
-		},
-		{
-			Name: "signature",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsOptional{},
-				forms.IsBytes{
-					Encoding:  "base64",
-					MaxLength: 1000,
-					MinLength: 50,
-				},
-			},
-		},
-	},
+	Fields: SignedDataFields(&GetVerifiedProviderDataDataForm),
 }
 
 var GetVerifiedProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
-		{
-			Name: "timestamp",
-			Validators: []forms.Validator{
-				forms.IsTime{
-					Format: "rfc3339",
-				},
-			},
-		},
+		TimestampField,
 		{
 			Name: "limit",
 			Validators: []forms.Validator{

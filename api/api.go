@@ -17,6 +17,7 @@
 package api
 
 import (
+	"encoding/json"
 	"github.com/kiprotect/go-helpers/forms"
 )
 
@@ -42,7 +43,18 @@ type REST struct {
 }
 
 type ReturnType struct {
-	Validators []forms.Validator `json:"validators"`
+	Validators []forms.Validator
+}
+
+func (r *ReturnType) MarshalJSON() ([]byte, error) {
+	if descriptions, err := forms.SerializeValidators(r.Validators); err != nil {
+		return nil, err
+	} else {
+		return json.Marshal(map[string]interface{}{
+			"validators": descriptions,
+		})
+	}
+
 }
 
 type Endpoint struct {

@@ -78,6 +78,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getAppointmentsByZipCode", // unauthenticated
 				Form:    &forms.GetAppointmentsByZipCodeForm,
 				Handler: appointments.getAppointmentsByZipCode,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetAppointmentsByZipCodeRVV,
+				},
 				REST: &api.REST{
 					Path:   "appointments/zipCode/<zipCode>/<radius>",
 					Method: api.GET,

@@ -314,8 +314,8 @@ type PublicProviderData struct {
 	dbs services.Map
 }
 
-func (p *PublicProviderData) Get(hash []byte) (*services.SignedProviderData, error) {
-	if data, err := p.dbs.Get(hash); err != nil {
+func (p *PublicProviderData) Get(id []byte) (*services.SignedProviderData, error) {
+	if data, err := p.dbs.Get(id); err != nil {
 		return nil, err
 	} else if signedProviderData, err := SignedProviderData(data); err != nil {
 		return nil, err
@@ -324,11 +324,11 @@ func (p *PublicProviderData) Get(hash []byte) (*services.SignedProviderData, err
 	}
 }
 
-func (p *PublicProviderData) Set(hash []byte, signedProviderData *services.SignedProviderData) error {
+func (p *PublicProviderData) Set(id []byte, signedProviderData *services.SignedProviderData) error {
 	if data, err := json.Marshal(signedProviderData); err != nil {
 		return err
 	} else {
-		return p.dbs.Set(hash, data)
+		return p.dbs.Set(id, data)
 	}
 }
 
