@@ -44,10 +44,17 @@ type ConfirmProviderSignedParams struct {
 // this data is accessible to the provider, nothing "secret" should be
 // stored here...
 type ConfirmProviderParams struct {
-	Timestamp             time.Time                 `json:"timestamp"`
-	PublicProviderData    *SignedProviderData       `json:"publicProviderData"`
-	EncryptedProviderData *crypto.ECDHEncryptedData `json:"encryptedProviderData"`
-	SignedKeyData         *SignedKeyData            `json:"signedKeyData"`
+	Timestamp             time.Time              `json:"timestamp"`
+	PublicProviderData    *SignedProviderData    `json:"publicProviderData"`
+	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
+	SignedKeyData         *SignedKeyData         `json:"signedKeyData"`
+}
+
+type EncryptedProviderData struct {
+	JSON      string                    `json:"data" coerce:"name:json"`
+	Data      *crypto.ECDHEncryptedData `json:"-" coerce:"name:data"`
+	Signature []byte                    `json:"signature"`
+	PublicKey []byte                    `json:"publicKey"`
 }
 
 type SignedKeyData struct {

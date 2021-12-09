@@ -57,7 +57,7 @@ func (r *Response) Read() error {
 	}
 }
 
-func (r *Response) CoerceResult(target interface{}) error {
+func (r *Response) CoerceResult(target interface{}, form *forms.Form) error {
 	if bytes, err := r.Bytes(); err != nil {
 		return err
 	} else {
@@ -67,6 +67,15 @@ func (r *Response) CoerceResult(target interface{}) error {
 		}
 		if response.Result == nil {
 			return fmt.Errorf("no result")
+		}
+		if form != nil {
+			if mapResult, ok := response.Result.(map[string]interface{}); !ok {
+				return fmt.Errorf("expected a map result")
+			} else if params, err := form.Validate(mapResult); err != nil {
+				return err
+			} else {
+				return form.Coerce(target, params)
+			}
 		}
 		return forms.Coerce(target, response.Result)
 	}
@@ -255,6 +264,12 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 		return nil, err
 	}
 
+	signedEncryptedProviderData, err := encryptedProviderData.Sign(mediator.SigningKey)
+
+	if err != nil {
+		return nil, err
+	}
+
 	signedProviderData, err := provider.PublicData.Sign(mediator.SigningKey)
 
 	if err != nil {
@@ -262,10 +277,15 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 	}
 
 	params := &services.ConfirmProviderParams{
-		Timestamp:             time.Now(),
-		PublicProviderData:    signedProviderData,
-		EncryptedProviderData: encryptedProviderData,
-		SignedKeyData:         signedKeyData,
+		Timestamp:          time.Now(),
+		PublicProviderData: signedProviderData,
+		EncryptedProviderData: &services.EncryptedProviderData{
+			Signature: signedEncryptedProviderData.Signature,
+			PublicKey: signedEncryptedProviderData.PublicKey,
+			JSON:      string(signedEncryptedProviderData.Data),
+			Data:      encryptedProviderData,
+		},
+		SignedKeyData: signedKeyData,
 	}
 
 	return a.requester("confirmProvider", params, mediator.SigningKey)
@@ -360,10 +380,7 @@ func (a *AppointmentsClient) CheckProviderData(provider *Provider) (*Response, e
 	params := &services.CheckProviderDataParams{
 		Timestamp: time.Now(),
 	}
-
 	return a.requester("checkProviderData", params, provider.Actor.SigningKey)
-
-	return nil, nil
 }
 
 func (a *AppointmentsClient) GetPendingProviderData(params interface{}) (*Response, error) {

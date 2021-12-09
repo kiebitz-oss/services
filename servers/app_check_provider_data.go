@@ -17,13 +17,11 @@
 package servers
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
 )
 
-// { id, encryptedData, code }, keyPair
 func (c *Appointments) checkProviderData(context services.Context, params *services.CheckProviderDataSignedParams) services.Response {
 
 	resp, _ := c.isProvider(context, &services.SignedParams{
@@ -38,23 +36,15 @@ func (c *Appointments) checkProviderData(context services.Context, params *servi
 	}
 
 	hash := crypto.Hash(params.PublicKey)
-	verifiedProviderData := c.db.Map("providerData", []byte("checked"))
+	encryptedProviderData := c.backend.EncryptedProviderData()
 
-	if data, err := verifiedProviderData.Get(hash); err != nil {
+	if providerData, err := encryptedProviderData.Get(hash); err != nil {
 		if err == databases.NotFound {
 			return context.NotFound()
 		}
 		services.Log.Error(err)
 		return context.InternalError()
 	} else {
-		var m map[string]interface{}
-		if err := json.Unmarshal(data, &m); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		} else {
-			return context.Result(m)
-		}
+		return context.Result(providerData)
 	}
-
-	return context.Acknowledge()
 }

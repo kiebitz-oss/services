@@ -60,7 +60,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 
 	unverifiedProviderData := c.db.Map("providerData", []byte("unverified"))
 	verifiedProviderData := c.db.Map("providerData", []byte("verified"))
-	checkedProviderData := c.db.Map("providerData", []byte("checked"))
+	encryptedProviderData := c.backend.EncryptedProviderData()
 	publicProviderData := c.db.Map("providerData", []byte("public"))
 
 	oldPd, err := unverifiedProviderData.Get(hash)
@@ -94,8 +94,8 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 		return context.InternalError()
 	}
 
-	// we store a copy of the signed data for the provider to check
-	if err := checkedProviderData.Set(hash, []byte(params.JSON)); err != nil {
+	// we store a copy of the encrypted data for the provider to check
+	if err := encryptedProviderData.Set(hash, params.Data.EncryptedProviderData); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

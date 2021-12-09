@@ -119,7 +119,7 @@ var ConfirmProviderDataForm = forms.Form{
 			Name: "encryptedProviderData",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
-					Form: &ECDHEncryptedDataForm,
+					Form: &EncryptedProviderDataForm,
 				},
 			},
 		},
@@ -1474,6 +1474,45 @@ var StoreProviderDataForm = forms.Form{
 				},
 				forms.IsStringMap{
 					Form: &StoreProviderDataDataForm,
+				},
+			},
+		},
+		{
+			Name: "signature",
+			Validators: []forms.Validator{
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+		{
+			Name: "publicKey",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsBytes{
+					Encoding:  "base64",
+					MaxLength: 1000,
+					MinLength: 50,
+				},
+			},
+		},
+	},
+}
+
+var EncryptedProviderDataForm = forms.Form{
+	Fields: []forms.Field{
+
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsString{},
+				JSON{
+					Key: "json",
+				},
+				forms.IsStringMap{
+					Form: &ECDHEncryptedDataForm,
 				},
 			},
 		},

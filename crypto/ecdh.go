@@ -18,12 +18,21 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 )
 
 type ECDHEncryptedData struct {
 	IV        []byte `json:"iv"`
 	Data      []byte `json:"data"`
 	PublicKey []byte `json:"publicKey"`
+}
+
+func (e *ECDHEncryptedData) Sign(key *Key) (*SignedData, error) {
+	if data, err := json.Marshal(e); err != nil {
+		return nil, err
+	} else {
+		return key.Sign(data)
+	}
 }
 
 func pad(bytes []byte, n int) []byte {

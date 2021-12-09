@@ -3,6 +3,7 @@ package servers
 import (
 	"encoding/json"
 	"github.com/kiebitz-oss/services"
+	"github.com/kiebitz-oss/services/forms"
 	"time"
 )
 
@@ -16,6 +17,12 @@ type AppointmentsBackend struct {
 func (a *AppointmentsBackend) PublicProviderData() *PublicProviderData {
 	return &PublicProviderData{
 		dbs: a.db.Map("providerData", []byte("public")),
+	}
+}
+
+func (a *AppointmentsBackend) EncryptedProviderData() *EncryptedProviderData {
+	return &EncryptedProviderData{
+		dbs: a.db.Map("providerData", []byte("encrypted")),
 	}
 }
 
@@ -37,6 +44,36 @@ func (a *AppointmentsBackend) AppointmentDatesByID(providerID []byte) *Appointme
 func (a *AppointmentsBackend) UsedTokens() *UsedTokens {
 	return &UsedTokens{
 		dbs: a.db.Set("bookings", []byte("tokens")),
+	}
+}
+
+type EncryptedProviderData struct {
+	dbs services.Map
+}
+
+func (c *EncryptedProviderData) Set(providerID []byte, encryptedData *services.EncryptedProviderData) error {
+	if data, err := json.Marshal(encryptedData); err != nil {
+		return err
+	} else {
+		return c.dbs.Set(providerID, data)
+	}
+}
+
+func (c *EncryptedProviderData) Get(providerID []byte) (*services.EncryptedProviderData, error) {
+	if data, err := c.dbs.Get(providerID); err != nil {
+		return nil, err
+	} else {
+		var mapData map[string]interface{}
+		encryptedData := &services.EncryptedProviderData{}
+		if err := json.Unmarshal(data, &mapData); err != nil {
+			return nil, err
+		} else if params, err := forms.EncryptedProviderDataForm.Validate(mapData); err != nil {
+			return nil, err
+		} else if err := forms.EncryptedProviderDataForm.Coerce(encryptedData, params); err != nil {
+			return nil, err
+		} else {
+			return encryptedData, nil
+		}
 	}
 }
 

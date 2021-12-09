@@ -18,7 +18,9 @@ package servers_test
 
 import (
 	"encoding/json"
+	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/definitions"
+	"github.com/kiebitz-oss/services/forms"
 	"github.com/kiebitz-oss/services/helpers"
 	at "github.com/kiebitz-oss/services/testing"
 	af "github.com/kiebitz-oss/services/testing/fixtures"
@@ -103,16 +105,10 @@ func TestConfirmProvider(t *testing.T) {
 		t.Fatalf("expected a 200 status code, got %d instead", resp.StatusCode)
 	}
 
-	result := &ConfirmProviderResult{}
+	result := &services.EncryptedProviderData{}
 
-	if err := resp.CoerceResult(result); err != nil {
+	if err := resp.CoerceResult(result, &forms.EncryptedProviderDataForm); err != nil {
 		t.Fatal(err)
-	}
-
-	if keyData, err := result.SignedKeyData.KeyData(); err != nil {
-		t.Fatal(err)
-	} else if keyData.QueueData.ZipCode != "10707" {
-		t.Fatalf("zip code does not match")
 	}
 
 }
