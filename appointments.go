@@ -472,6 +472,7 @@ type CancelAppointmentSignedParams struct {
 }
 
 type CancelAppointmentParams struct {
+	Timestamp       time.Time        `json:"timestamp"`
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`

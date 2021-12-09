@@ -19,41 +19,20 @@ package servers
 import (
 	"bytes"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/crypto"
 	"time"
 )
 
 func (c *Appointments) cancelAppointment(context services.Context, params *services.CancelAppointmentSignedParams) services.Response {
 
-	// we verify the signature (without veryfing e.g. the provenance of the key)
-	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
+	if resp := c.isUser(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		ExtraData: params.Data.SignedTokenData,
+		Timestamp: params.Data.Timestamp,
+	}); resp != nil {
+		return resp
 	}
-
-	signedData := &crypto.SignedStringData{
-		Data:      params.Data.SignedTokenData.JSON,
-		Signature: params.Data.SignedTokenData.Signature,
-	}
-
-	tokenKey := c.settings.Key("token")
-
-	if ok, err := tokenKey.VerifyString(signedData); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
-	}
-
-	lock, err := c.db.Lock("cancelAppointment_" + string(params.Data.ProviderID[:]))
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	}
-
-	defer lock.Release()
 
 	appointmentDatesByID := c.backend.AppointmentDatesByID(params.Data.ProviderID)
 

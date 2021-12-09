@@ -19,7 +19,6 @@ package servers
 import (
 	"bytes"
 	"github.com/kiebitz-oss/services"
-	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
 	"time"
 )
@@ -40,50 +39,26 @@ func (c *Appointments) isActiveProvider(context services.Context, id []byte) ser
 
 func (c *Appointments) bookAppointment(context services.Context, params *services.BookAppointmentSignedParams) services.Response {
 
-	// Not sure, if this lock makes any sense.
-	lock, err := c.db.Lock("bookAppointment_" + string(params.Data.ID[:]))
-	if err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
+	if resp := c.isUser(context, &services.SignedParams{
+		JSON:      params.JSON,
+		Signature: params.Signature,
+		PublicKey: params.PublicKey,
+		ExtraData: params.Data.SignedTokenData,
+		Timestamp: params.Data.Timestamp,
+	}); resp != nil {
+		return resp
 	}
-
-	defer lock.Release()
 
 	var result interface{}
 
 	usedTokens := c.backend.UsedTokens()
-
-	notAuthorized := context.Error(401, "not authorized", nil)
-
-	signedData := &crypto.SignedStringData{
-		Data:      params.Data.SignedTokenData.JSON,
-		Signature: params.Data.SignedTokenData.Signature,
-	}
-
-	tokenKey := c.settings.Key("token")
-
-	if ok, err := tokenKey.VerifyString(signedData); err != nil {
-		services.Log.Error(err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
-	}
-
 	token := params.Data.SignedTokenData.Data.Token
 
 	if ok, err := usedTokens.Has(token); err != nil {
 		services.Log.Error()
 		return context.InternalError()
 	} else if ok {
-		return notAuthorized
-	}
-
-	// we verify the signature (without verifying e.g. the provenance of the key)
-	if ok, err := crypto.VerifyWithBytes([]byte(params.JSON), params.Signature, params.PublicKey); err != nil {
-		services.Log.Errorf("Cannot verify with bytes: %s", err)
-		return context.InternalError()
-	} else if !ok {
-		return context.Error(400, "invalid signature", nil)
+		return context.Error(401, "not authorized", nil)
 	}
 
 	// test if provider of the appointment is still active
