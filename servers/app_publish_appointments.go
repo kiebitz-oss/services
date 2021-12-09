@@ -63,7 +63,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 	defer lock.Release()
 
 	// appointments are stored in a provider-specific key
-	appointmentsByID := c.db.Map("appointmentsByID", hash)
+	appointmentDatesByID := c.db.Map("appointmentDatesByID", hash)
 
 	// appointments expire automatically after 120 days
 	if err := c.db.Expire("appointments", hash, time.Hour*24*120); err != nil {
@@ -78,9 +78,9 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 	for _, appointment := range params.Data.Offers {
 
 		// check if there's an existing appointment
-		if date, err := appointmentsByID.Get(appointment.Data.ID); err == nil {
+		if date, err := appointmentDatesByID.Get(appointment.Data.ID); err == nil {
 
-			if err := appointmentsByID.Del(appointment.Data.ID); err != nil {
+			if err := appointmentDatesByID.Del(appointment.Data.ID); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
 			}
@@ -152,12 +152,12 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 		}
 
 		// ID map will auto-delete after one year (purely for storage reasons, it does not contain sensitive data)
-		if err := c.db.Expire("appointmentsByID", hash, time.Hour*24*365); err != nil {
+		if err := c.db.Expire("appointmentDatesByID", hash, time.Hour*24*365); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
 
-		if err := appointmentsByID.Set(appointment.Data.ID, date); err != nil {
+		if err := appointmentDatesByID.Set(appointment.Data.ID, date); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}

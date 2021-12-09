@@ -89,9 +89,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		}
 
 		// appointments are stored in a provider-specific key
-		appointmentsByID := c.db.Map("appointmentsByID", hash)
+		appointmentDatesByID := c.db.Map("appointmentDatesByID", hash)
 		// complexity: O(n) where n is the number of appointments of the provider
-		allDates, err := appointmentsByID.GetAll()
+		allDates, err := appointmentDatesByID.GetAll()
 
 		if err != nil {
 			services.Log.Error(err)

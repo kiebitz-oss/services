@@ -47,8 +47,8 @@ func (c *Appointments) getProviderAppointments(context services.Context, params 
 	hash := crypto.Hash(pkd.Signing)
 
 	// appointments are stored in a provider-specific key
-	appointmentsByID := c.db.Map("appointmentsByID", hash)
-	allDates, err := appointmentsByID.GetAll()
+	appointmentDatesByID := c.db.Map("appointmentDatesByID", hash)
+	allDates, err := appointmentDatesByID.GetAll()
 
 	if err != nil {
 		services.Log.Error(err)

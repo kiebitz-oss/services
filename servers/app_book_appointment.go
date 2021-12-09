@@ -93,9 +93,9 @@ func (c *Appointments) bookAppointment(context services.Context, params *service
 		return context.Error(404, "invalid provider id", nil)
 	}
 
-	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
+	appointmentDatesByID := c.db.Map("appointmentDatesByID", params.Data.ProviderID)
 
-	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {
+	if date, err := appointmentDatesByID.Get(params.Data.ID); err != nil {
 		services.Log.Errorf("Cannot get appointment by ID: %v", err)
 		return context.InternalError()
 	} else {

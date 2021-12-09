@@ -34,9 +34,9 @@ func (c *Appointments) getAppointment(context services.Context, params *services
 		return resp
 	}
 
-	appointmentsByID := c.db.Map("appointmentsByID", params.Data.ProviderID)
+	appointmentDatesByID := c.db.Map("appointmentDatesByID", params.Data.ProviderID)
 
-	if date, err := appointmentsByID.Get(params.Data.ID); err != nil {
+	if date, err := appointmentDatesByID.Get(params.Data.ID); err != nil {
 		services.Log.Errorf("Cannot get appointment by ID: %v", err)
 		return context.InternalError()
 	} else {
