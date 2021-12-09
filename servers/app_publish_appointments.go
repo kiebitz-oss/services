@@ -19,10 +19,8 @@ package servers
 import (
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
-	"github.com/kiebitz-oss/services/forms"
 	"time"
 )
 
@@ -63,8 +61,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 	defer lock.Release()
 
 	// appointments are stored in a provider-specific key
-	appointmentDatesByID := c.db.Map("appointmentDatesByID", hash)
-
+	appointmentDatesByID := c.backend.AppointmentDatesByID(hash)
 	// appointments expire automatically after 120 days
 	if err := c.db.Expire("appointments", hash, time.Hour*24*120); err != nil {
 		services.Log.Error(err)
@@ -86,24 +83,14 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 				return context.InternalError()
 			}
 
-			appointmentsByDate := c.db.Map("appointmentsByDate", append(hash, date...))
+			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(date))
 
-			existingAppointment := &services.SignedAppointment{}
-			var mapData map[string]interface{}
-
-			if data, err := appointmentsByDate.Get(appointment.Data.ID); err != nil {
+			if existingAppointment, err := appointmentsByDate.Get(appointment.Data.ID); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
 			} else if err := appointmentsByDate.Del(appointment.Data.ID); err != nil {
 				services.Log.Error(err)
 				return context.InternalError()
-			} else if err := json.Unmarshal(data, &mapData); err != nil {
-				services.Log.Error(err)
-				return context.InternalError()
-			} else if params, err := forms.SignedAppointmentForm.Validate(mapData); err != nil {
-				services.Log.Error(err)
-			} else if err := forms.SignedAppointmentForm.Coerce(existingAppointment, params); err != nil {
-				services.Log.Error(err)
 			} else {
 				bookings := make([]*services.Booking, 0)
 				for _, existingSlotData := range existingAppointment.Data.SlotData {
@@ -140,23 +127,9 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 			}
 		}
 
-		date := []byte(appointment.Data.Timestamp.Format("2006-01-02"))
-		// the hash is under our control so it's safe to concatenate it directly with the date
-		dateKey := append(hash, date...)
+		date := appointment.Data.Timestamp.Format("2006-01-02")
 
-		appointmentsByDate := c.db.Map("appointmentsByDate", dateKey)
-
-		// appointments will auto-delete one day after their timestamp
-		if err := c.db.Expire("appointmentsByDate", dateKey, appointment.Data.Timestamp.Sub(time.Now())+time.Hour*24); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
-
-		// ID map will auto-delete after one year (purely for storage reasons, it does not contain sensitive data)
-		if err := c.db.Expire("appointmentDatesByID", hash, time.Hour*24*365); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		}
+		appointmentsByDate := c.backend.AppointmentsByDate(hash, date)
 
 		if err := appointmentDatesByID.Set(appointment.Data.ID, date); err != nil {
 			services.Log.Error(err)
@@ -165,10 +138,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 
 		appointment.UpdatedAt = time.Now()
 
-		if jsonData, err := json.Marshal(appointment); err != nil {
-			services.Log.Error(err)
-			return context.InternalError()
-		} else if err := appointmentsByDate.Set(appointment.Data.ID, jsonData); err != nil {
+		if err := appointmentsByDate.Set(appointment); err != nil {
 			services.Log.Error(err)
 			return context.InternalError()
 		}
