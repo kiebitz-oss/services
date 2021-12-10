@@ -60,6 +60,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getStats", // unauthenticated
 				Form:    &forms.GetStatsForm,
 				Handler: appointments.getStats,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetStatsRVV,
+				},
 				REST: &api.REST{
 					Path:   "stats",
 					Method: api.GET,
@@ -69,6 +72,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getKeys", // unauthenticated
 				Form:    &forms.GetKeysForm,
 				Handler: appointments.getKeys,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetKeysRVV,
+				},
 				REST: &api.REST{
 					Path:   "keys",
 					Method: api.GET,
@@ -90,6 +96,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getAppointment", // unauthenticated
 				Form:    &forms.GetAppointmentForm,
 				Handler: appointments.getAppointment,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetAppointmentRVV,
+				},
 				REST: &api.REST{
 					Path:   "provider/<providerID>/appointments/<id>",
 					Method: api.GET,
@@ -99,6 +108,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getToken", // unauthenticated
 				Form:    &forms.GetTokenForm,
 				Handler: appointments.getToken,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetTokenRVV,
+				},
 				REST: &api.REST{
 					Path:   "token",
 					Method: api.POST,
@@ -108,6 +120,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "addMediatorPublicKeys", // authenticted (root)
 				Form:    &forms.AddMediatorPublicKeysForm,
 				Handler: appointments.addMediatorPublicKeys,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "mediators",
 					Method: api.POST,
@@ -117,6 +132,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "addCodes", // authenticated (root)
 				Form:    &forms.AddCodesForm,
 				Handler: appointments.addCodes,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "codes",
 					Method: api.POST,
@@ -126,6 +144,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "uploadDistances", // authenticated (root)
 				Form:    &forms.UploadDistancesForm,
 				Handler: appointments.uploadDistances,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "distances",
 					Method: api.POST,
@@ -135,6 +156,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "resetDB", // authenticated (root)
 				Form:    &forms.ResetDBForm,
 				Handler: appointments.resetDB,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "db/reset",
 					Method: api.DELETE,
@@ -144,6 +168,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "confirmProvider", // authenticated (mediator)
 				Form:    &forms.ConfirmProviderForm,
 				Handler: appointments.confirmProvider,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "providers",
 					Method: api.POST,
@@ -153,6 +180,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getPendingProviderData", // authenticated (mediator)
 				Form:    &forms.GetPendingProviderDataForm,
 				Handler: appointments.getPendingProviderData,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetProviderDataRVV,
+				},
 				REST: &api.REST{
 					Path:   "providers/pending",
 					Method: api.POST,
@@ -162,6 +192,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getVerifiedProviderData", // authenticated (mediator)
 				Form:    &forms.GetVerifiedProviderDataForm,
 				Handler: appointments.getVerifiedProviderData,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetProviderDataRVV,
+				},
 				REST: &api.REST{
 					Path:   "providers/verified",
 					Method: api.POST,
@@ -171,6 +204,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "getProviderAppointments", // authenticated (provider)
 				Form:    &forms.GetProviderAppointmentsForm,
 				Handler: appointments.getProviderAppointments,
+				ReturnType: &api.ReturnType{
+					Validators: forms.GetProviderAppointmentsRVV,
+				},
 				REST: &api.REST{
 					Path:   "appointments",
 					Method: api.POST,
@@ -180,6 +216,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "publishAppointments", // authenticated (provider)
 				Form:    &forms.PublishAppointmentsForm,
 				Handler: appointments.publishAppointments,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "appointments/publish",
 					Method: api.POST,
@@ -189,6 +228,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "storeProviderData", // authenticated (provider)
 				Form:    &forms.StoreProviderDataForm,
 				Handler: appointments.storeProviderData,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "providers/data",
 					Method: api.POST,
@@ -198,6 +240,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "checkProviderData", // authenticated (provider)
 				Form:    &forms.CheckProviderDataForm,
 				Handler: appointments.checkProviderData,
+				ReturnType: &api.ReturnType{
+					Validators: forms.CheckProviderDataRVV,
+				},
 				REST: &api.REST{
 					Path:   "providers/data",
 					Method: api.POST,
@@ -207,6 +252,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "bookAppointment", // authenticated (user)
 				Form:    &forms.BookAppointmentForm,
 				Handler: appointments.bookAppointment,
+				ReturnType: &api.ReturnType{
+					Validators: forms.BookAppointmentRVV,
+				},
 				REST: &api.REST{
 					Path:   "appointments/book",
 					Method: api.POST,
@@ -216,6 +264,9 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				Name:    "cancelAppointment", // authenticated (user)
 				Form:    &forms.CancelAppointmentForm,
 				Handler: appointments.cancelAppointment,
+				ReturnType: &api.ReturnType{
+					Validators: forms.IsAcknowledgeRVV,
+				},
 				REST: &api.REST{
 					Path:   "appointments/cancel",
 					Method: api.DELETE,

@@ -76,10 +76,10 @@ var PublicKeyValidators = []forms.Validator{
 }
 
 var PublicKeyField = forms.Field{
-	Name:       "publicKey",
-	Global:     true,
+	Name:        "publicKey",
+	Global:      true,
 	Description: "An ECDSA or ECDH public key",
-	Validators: PublicKeyValidators,
+	Validators:  PublicKeyValidators,
 }
 
 var SignatureField = forms.Field{
@@ -515,6 +515,14 @@ var TokenDataForm = forms.Form{
 			Name: "token",
 			Validators: []forms.Validator{
 				ID,
+			},
+		},
+		PublicKeyField,
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsStringMap{},
 			},
 		},
 	},

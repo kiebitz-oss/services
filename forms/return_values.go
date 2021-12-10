@@ -4,6 +4,127 @@ import (
 	"github.com/kiprotect/go-helpers/forms"
 )
 
+var GetTokenRVV = []forms.Validator{
+	forms.IsStringMap{
+		Form: &SignedTokenDataForm,
+	},
+}
+
+var GetAppointmentRVV = []forms.Validator{
+	forms.IsStringMap{
+		Form: &SignedAppointmentForm,
+	},
+}
+
+var BookAppointmentRVV = []forms.Validator{
+	forms.IsStringMap{
+		Form: &BookingForm,
+	},
+}
+
+var GetProviderAppointmentsRVV = []forms.Validator{
+	forms.IsList{
+		Validators: []forms.Validator{
+			forms.IsStringMap{
+				Form: &SignedAppointmentForm,
+			},
+		},
+	},
+}
+
+var CheckProviderDataRVV = []forms.Validator{
+	forms.IsStringMap{
+		Form: &EncryptedProviderDataForm,
+	},
+}
+
+var GetProviderDataRVV = []forms.Validator{
+	forms.IsList{
+		Validators: []forms.Validator{
+			forms.IsStringMap{
+				Form: &RawProviderDataForm,
+			},
+		},
+	},
+}
+
+var StatsValueForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name: "name",
+			Validators: []forms.Validator{
+				forms.IsString{},
+			},
+		},
+		{
+			Name: "from",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+		{
+			Name: "to",
+			Validators: []forms.Validator{
+				forms.IsTime{
+					Format: "rfc3339",
+				},
+			},
+		},
+		{
+			Name: "data",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsStringMap{},
+			},
+		},
+		{
+			Name: "value",
+			Validators: []forms.Validator{
+				forms.IsInteger{},
+			},
+		},
+	},
+}
+
+var IsAcknowledgeRVV = []forms.Validator{
+	forms.IsString{},
+}
+
+var GetStatsRVV = []forms.Validator{
+	forms.IsList{
+		Validators: []forms.Validator{
+			forms.IsStringMap{
+				Form: &StatsValueForm,
+			},
+		},
+	},
+}
+
+var KeysForm = forms.Form{
+	Fields: []forms.Field{
+		{
+			Name:       "providerData",
+			Validators: PublicKeyValidators,
+		},
+		{
+			Name:       "rootKey",
+			Validators: PublicKeyValidators,
+		},
+		{
+			Name:       "tokenKey",
+			Validators: PublicKeyValidators,
+		},
+	},
+}
+
+var GetKeysRVV = []forms.Validator{
+	forms.IsStringMap{
+		Form: &KeysForm,
+	},
+}
+
 var GetAppointmentsByZipCodeRVV = []forms.Validator{
 	forms.IsList{
 		Validators: []forms.Validator{
