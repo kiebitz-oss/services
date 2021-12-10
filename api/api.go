@@ -32,6 +32,7 @@ const (
 )
 
 type API struct {
+	Name        string      `json:"name"`
 	Version     int         `json:"version"`
 	Description string      `json:"description"`
 	Endpoints   []*Endpoint `json:"endpoints"`

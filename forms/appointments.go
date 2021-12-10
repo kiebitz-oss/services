@@ -717,7 +717,7 @@ var SignedAppointmentForm = forms.Form{
 }
 
 var AppointmentDataForm = forms.Form{
-	Name: "appintmentData",
+	Name: "appointmentData",
 	Fields: []forms.Field{
 		TimestampField,
 		{

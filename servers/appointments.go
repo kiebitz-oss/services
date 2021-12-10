@@ -55,6 +55,7 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 
 	api := &api.API{
 		Version: 1,
+		Name:    "appointments",
 		Endpoints: []*api.Endpoint{
 			{
 				Name:    "getStats", // unauthenticated

@@ -49,6 +49,7 @@ var GetProviderDataRVV = []forms.Validator{
 }
 
 var StatsValueForm = forms.Form{
+	Name: "statsValue",
 	Fields: []forms.Field{
 		{
 			Name: "name",
@@ -103,6 +104,7 @@ var GetStatsRVV = []forms.Validator{
 }
 
 var KeysForm = forms.Form{
+	Name: "keys",
 	Fields: []forms.Field{
 		{
 			Name:       "providerData",
