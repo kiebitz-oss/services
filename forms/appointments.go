@@ -77,16 +77,20 @@ var PublicKeyValidators = []forms.Validator{
 
 var PublicKeyField = forms.Field{
 	Name:       "publicKey",
+	Global:     true,
+	Description: "An ECDSA or ECDH public key",
 	Validators: PublicKeyValidators,
 }
 
 var SignatureField = forms.Field{
 	Name:       "signature",
+	Global:     true,
 	Validators: PublicKeyValidators,
 }
 
 var OptionalIDField = forms.Field{
-	Name: "id",
+	Name:   "id",
+	Global: true,
 	Validators: []forms.Validator{
 		forms.IsOptional{},
 		ID,
@@ -94,21 +98,24 @@ var OptionalIDField = forms.Field{
 }
 
 var IDField = forms.Field{
-	Name: "id",
+	Name:   "id",
+	Global: true,
 	Validators: []forms.Validator{
 		ID,
 	},
 }
 
 var ProviderIDField = forms.Field{
-	Name: "providerID",
+	Name:   "providerID",
+	Global: true,
 	Validators: []forms.Validator{
 		ID,
 	},
 }
 
 var TimestampField = forms.Field{
-	Name: "timestamp",
+	Name:   "timestamp",
+	Global: true,
 	Validators: []forms.Validator{
 		forms.IsTime{
 			Format: "rfc3339",
@@ -119,7 +126,8 @@ var TimestampField = forms.Field{
 var SignedDataFields = func(form *forms.Form) []forms.Field {
 	return []forms.Field{
 		forms.Field{
-			Name: "data",
+			Name:   "data",
+			Global: true,
 			Validators: []forms.Validator{
 				forms.IsString{},
 				JSON{

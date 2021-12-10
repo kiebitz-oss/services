@@ -43,15 +43,6 @@ var ECDHEncryptedDataForm = forms.Form{
 				},
 			},
 		},
-		{
-			Name: "publicKey",
-			Validators: []forms.Validator{
-				forms.IsBytes{
-					Encoding:  "base64",
-					MinLength: 1,
-					MaxLength: 1000,
-				},
-			},
-		},
+		PublicKeyField,
 	},
 }
