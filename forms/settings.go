@@ -21,6 +21,7 @@ import (
 )
 
 var AdminForm = forms.Form{
+	Name: "admin",
 	Fields: []forms.Field{
 		{
 			Name: "signing",
@@ -42,6 +43,7 @@ var AdminForm = forms.Form{
 }
 
 var ClientForm = forms.Form{
+	Name: "client",
 	Fields: []forms.Field{
 		{
 			Name: "storage_endpoint",
@@ -59,6 +61,7 @@ var ClientForm = forms.Form{
 }
 
 var SigningForm = forms.Form{
+	Name: "signing",
 	Fields: []forms.Field{
 		{
 			Name: "keys",
@@ -76,6 +79,7 @@ var SigningForm = forms.Form{
 }
 
 var DatabaseForm = forms.Form{
+	Name: "database",
 	Fields: []forms.Field{
 		{
 			Name: "name",
@@ -101,6 +105,7 @@ var DatabaseForm = forms.Form{
 }
 
 var MeterForm = forms.Form{
+	Name: "meter",
 	Fields: []forms.Field{
 		{
 			Name: "name",
@@ -126,6 +131,7 @@ var MeterForm = forms.Form{
 }
 
 var MailForm = forms.Form{
+	Name: "mail",
 	Fields: []forms.Field{
 		{
 			Name: "smtp_host",
@@ -179,6 +185,7 @@ var MailForm = forms.Form{
 }
 
 var StorageForm = forms.Form{
+	Name: "storage",
 	Fields: []forms.Field{
 		{
 			Name: "keys",
@@ -234,6 +241,7 @@ var StorageForm = forms.Form{
 }
 
 var ECDSAParamsForm = forms.Form{
+	Name: "ecdsaParams",
 	Fields: []forms.Field{
 		{
 			Name: "curve",
@@ -245,6 +253,7 @@ var ECDSAParamsForm = forms.Form{
 }
 
 var KeyForm = forms.Form{
+	Name: "key",
 	Fields: []forms.Field{
 		{
 			Name: "type",
@@ -311,6 +320,7 @@ var KeyForm = forms.Form{
 }
 
 var AppointmentsForm = forms.Form{
+	Name: "appointments",
 	Fields: []forms.Field{
 		{
 			Name: "keys",
@@ -416,6 +426,7 @@ var AppointmentsForm = forms.Form{
 }
 
 var MetricsForm = forms.Form{
+	Name: "metrics",
 	Fields: []forms.Field{
 		{
 			Name: "bind_address",
@@ -427,6 +438,7 @@ var MetricsForm = forms.Form{
 }
 
 var SettingsForm = forms.Form{
+	Name: "settings",
 	Fields: []forms.Field{
 		{
 			Name: "test",

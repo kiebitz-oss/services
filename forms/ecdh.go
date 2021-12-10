@@ -21,6 +21,7 @@ import (
 )
 
 var ECDHEncryptedDataForm = forms.Form{
+	Name: "ecdhEncryptedData",
 	Fields: []forms.Field{
 		{
 			Name: "iv",

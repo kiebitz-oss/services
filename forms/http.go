@@ -22,6 +22,7 @@ import (
 )
 
 var HTTPServerSettingsForm = forms.Form{
+	Name: "httpServerSettings",
 	Fields: []forms.Field{
 		{
 			Name: "bind_address",

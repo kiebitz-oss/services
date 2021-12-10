@@ -27,6 +27,7 @@ func (a IsAnything) Validate(value interface{}, values map[string]interface{}) (
 }
 
 var StoreSettingsForm = forms.Form{
+	Name: "storeSettings",
 	Fields: []forms.Field{
 		{
 			Name: "id",
@@ -44,6 +45,7 @@ var StoreSettingsForm = forms.Form{
 }
 
 var GetSettingsForm = forms.Form{
+	Name: "getSettings",
 	Fields: []forms.Field{
 		{
 			Name: "id",
@@ -55,6 +57,7 @@ var GetSettingsForm = forms.Form{
 }
 
 var DeleteSettingsForm = forms.Form{
+	Name: "deleteSettings",
 	Fields: []forms.Field{
 		{
 			Name: "id",

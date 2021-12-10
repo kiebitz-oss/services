@@ -136,10 +136,12 @@ var SignedDataFields = func(form *forms.Form) []forms.Field {
 }
 
 var ConfirmProviderForm = forms.Form{
+	Name:   "confirmProvider",
 	Fields: SignedDataFields(&ConfirmProviderDataForm),
 }
 
 var RawProviderDataForm = forms.Form{
+	Name: "rawProviderData",
 	Fields: []forms.Field{
 		{
 			Name: "encryptedData",
@@ -153,6 +155,7 @@ var RawProviderDataForm = forms.Form{
 }
 
 var ConfirmProviderDataForm = forms.Form{
+	Name: "confirmProviderData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -176,7 +179,7 @@ var ConfirmProviderDataForm = forms.Form{
 			Name: "signedKeyData",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
-					Form: SignedKeyDataForm(&ProviderKeyDataForm),
+					Form: SignedKeyDataForm(&ProviderKeyDataForm, "providerSignedKeyData"),
 				},
 			},
 		},
@@ -184,6 +187,7 @@ var ConfirmProviderDataForm = forms.Form{
 }
 
 var ProviderDataForm = forms.Form{
+	Name: "providerData",
 	Fields: []forms.Field{
 		{
 			Name: "name",
@@ -213,16 +217,19 @@ var ProviderDataForm = forms.Form{
 }
 
 var SignedProviderDataForm = forms.Form{
+	Name:   "signedProviderData",
 	Fields: append(SignedDataFields(&ProviderDataForm), OptionalIDField),
 }
 
-var SignedKeyDataForm = func(form *forms.Form) *forms.Form {
+var SignedKeyDataForm = func(form *forms.Form, name string) *forms.Form {
 	return &forms.Form{
+		Name:   name,
 		Fields: SignedDataFields(form),
 	}
 }
 
 var ProviderKeyDataForm = forms.Form{
+	Name: "providerKeyData",
 	Fields: []forms.Field{
 		{
 			Name:       "signing",
@@ -244,6 +251,7 @@ var ProviderKeyDataForm = forms.Form{
 }
 
 var ProviderQueueDataForm = forms.Form{
+	Name: "providerQueueData",
 	Fields: []forms.Field{
 		{
 			Name: "zipCode",
@@ -265,26 +273,30 @@ var ProviderQueueDataForm = forms.Form{
 }
 
 var ResetDBForm = forms.Form{
+	Name:   "resetDB",
 	Fields: SignedDataFields(&ResetDBDataForm),
 }
 
 var ResetDBDataForm = forms.Form{
+	Name: "resetDBData",
 	Fields: []forms.Field{
 		TimestampField,
 	},
 }
 
 var AddMediatorPublicKeysForm = forms.Form{
+	Name:   "addMediatorPublicKeys",
 	Fields: SignedDataFields(&AddMediatorPublicKeysDataForm),
 }
 
 var AddMediatorPublicKeysDataForm = forms.Form{
+	Name: "addMediatorPublicKeysData",
 	Fields: []forms.Field{
 		{
 			Name: "signedKeyData",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
-					Form: SignedKeyDataForm(&MediatorKeyDataForm),
+					Form: SignedKeyDataForm(&MediatorKeyDataForm, "mediatorSignedKeyData"),
 				},
 			},
 		},
@@ -293,6 +305,7 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 }
 
 var MediatorKeyDataForm = forms.Form{
+	Name: "mediatorKeyData",
 	Fields: []forms.Field{
 		{
 			Name:       "signing",
@@ -308,10 +321,12 @@ var MediatorKeyDataForm = forms.Form{
 // admin endpoints
 
 var AddCodesForm = forms.Form{
+	Name:   "addCodes",
 	Fields: SignedDataFields(&CodesDataForm),
 }
 
 var CodesDataForm = forms.Form{
+	Name: "codesData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -339,10 +354,12 @@ var CodesDataForm = forms.Form{
 }
 
 var UploadDistancesForm = forms.Form{
+	Name:   "uploadDistances",
 	Fields: SignedDataFields(&DistancesDataForm),
 }
 
 var DistancesDataForm = forms.Form{
+	Name: "distancesData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -367,6 +384,7 @@ var DistancesDataForm = forms.Form{
 }
 
 var DistanceForm = forms.Form{
+	Name: "distance",
 	Fields: []forms.Field{
 		{
 			Name: "from",
@@ -395,10 +413,12 @@ var DistanceForm = forms.Form{
 }
 
 var GetKeysForm = forms.Form{
+	Name:   "getKeys",
 	Fields: []forms.Field{},
 }
 
 var GetTokenForm = forms.Form{
+	Name: "getToken",
 	Fields: []forms.Field{
 		{
 			Name: "hash",
@@ -422,6 +442,7 @@ var GetTokenForm = forms.Form{
 }
 
 var TokenQueueDataForm = forms.Form{
+	Name: "tokenQueueData",
 	Fields: []forms.Field{
 		{
 			Name: "zipCode",
@@ -469,10 +490,12 @@ var TokenQueueDataForm = forms.Form{
 }
 
 var SignedTokenDataForm = forms.Form{
+	Name:   "signedTokenData",
 	Fields: SignedDataFields(&TokenDataForm),
 }
 
 var TokenDataForm = forms.Form{
+	Name: "tokenData",
 	Fields: []forms.Field{
 		{
 			Name: "hash",
@@ -490,6 +513,7 @@ var TokenDataForm = forms.Form{
 }
 
 var GetAppointmentsByZipCodeForm = forms.Form{
+	Name: "getAppointmentsByZipCode",
 	Fields: []forms.Field{
 		{
 			Name: "radius",
@@ -547,10 +571,12 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 }
 
 var GetProviderAppointmentsForm = forms.Form{
+	Name:   "getProviderAppointments",
 	Fields: SignedDataFields(&GetProviderAppointmentsDataForm),
 }
 
 var GetProviderAppointmentsDataForm = forms.Form{
+	Name: "getProviderAppointmentsData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -589,10 +615,12 @@ var GetProviderAppointmentsDataForm = forms.Form{
 }
 
 var PublishAppointmentsForm = forms.Form{
+	Name:   "publishAppointments",
 	Fields: SignedDataFields(&PublishAppointmentsDataForm),
 }
 
 var PublishAppointmentsDataForm = forms.Form{
+	Name: "publishAppointmentsData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -611,6 +639,7 @@ var PublishAppointmentsDataForm = forms.Form{
 }
 
 var AppointmentPropertiesForm = forms.Form{
+	Name: "appointmentProperties",
 	Fields: []forms.Field{
 		{
 			Name: "vaccine",
@@ -622,6 +651,7 @@ var AppointmentPropertiesForm = forms.Form{
 }
 
 var BookingForm = forms.Form{
+	Name: "booking",
 	Fields: []forms.Field{
 		IDField,
 		PublicKeyField,
@@ -643,6 +673,7 @@ var BookingForm = forms.Form{
 }
 
 var SignedAppointmentForm = forms.Form{
+	Name: "signedAppointment",
 	Fields: append(SignedDataFields(&AppointmentDataForm), []forms.Field{
 		{
 			Name: "updatedAt",
@@ -670,6 +701,7 @@ var SignedAppointmentForm = forms.Form{
 }
 
 var AppointmentDataForm = forms.Form{
+	Name: "appintmentData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -709,35 +741,42 @@ var AppointmentDataForm = forms.Form{
 }
 
 var SlotForm = forms.Form{
+	Name: "slot",
 	Fields: []forms.Field{
 		IDField,
 	},
 }
 
 var GetBookedAppointmentsDataForm = forms.Form{
+	Name: "getBookedAppointmentsData",
 	Fields: []forms.Field{
 		TimestampField,
 	},
 }
 var GetBookedAppointmentsForm = forms.Form{
+	Name:   "getBookedAppointments",
 	Fields: SignedDataFields(&GetBookedAppointmentsDataForm),
 }
 
 var CancelBookingDataForm = forms.Form{
+	Name: "cancelBookingData",
 	Fields: []forms.Field{
 		TimestampField,
 		IDField,
 	},
 }
 var CancelBookingForm = forms.Form{
+	Name:   "cancelBooking",
 	Fields: SignedDataFields(&CancelBookingDataForm),
 }
 
 var BookAppointmentForm = forms.Form{
+	Name:   "bookAppointment",
 	Fields: SignedDataFields(&BookAppointmentDataForm),
 }
 
 var BookAppointmentDataForm = forms.Form{
+	Name: "bookAppointmentData",
 	Fields: []forms.Field{
 		ProviderIDField,
 		IDField,
@@ -762,10 +801,12 @@ var BookAppointmentDataForm = forms.Form{
 }
 
 var GetAppointmentForm = forms.Form{
+	Name:   "getAppointment",
 	Fields: SignedDataFields(&GetAppointmentDataForm),
 }
 
 var GetAppointmentDataForm = forms.Form{
+	Name: "getAppointmentData",
 	Fields: []forms.Field{
 		IDField,
 		ProviderIDField,
@@ -781,10 +822,12 @@ var GetAppointmentDataForm = forms.Form{
 }
 
 var CancelAppointmentForm = forms.Form{
+	Name:   "cancelAppointment",
 	Fields: SignedDataFields(&CancelAppointmentDataForm),
 }
 
 var CancelAppointmentDataForm = forms.Form{
+	Name: "cancelAppointmentData",
 	Fields: []forms.Field{
 		IDField,
 		ProviderIDField,
@@ -800,24 +843,29 @@ var CancelAppointmentDataForm = forms.Form{
 }
 
 var CheckProviderDataForm = forms.Form{
+	Name:   "checkProviderData",
 	Fields: SignedDataFields(&CheckProviderDataDataForm),
 }
 
 var CheckProviderDataDataForm = forms.Form{
+	Name: "checkProviderDataData",
 	Fields: []forms.Field{
 		TimestampField,
 	},
 }
 
 var StoreProviderDataForm = forms.Form{
+	Name:   "storeProviderData",
 	Fields: SignedDataFields(&StoreProviderDataDataForm),
 }
 
 var EncryptedProviderDataForm = forms.Form{
+	Name:   "encryptedProviderData",
 	Fields: SignedDataFields(&ECDHEncryptedDataForm),
 }
 
 var StoreProviderDataDataForm = forms.Form{
+	Name: "storeProviderDataData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -843,10 +891,12 @@ var StoreProviderDataDataForm = forms.Form{
 }
 
 var GetPendingProviderDataForm = forms.Form{
+	Name:   "getPendingProviderData",
 	Fields: SignedDataFields(&GetPendingProviderDataDataForm),
 }
 
 var GetPendingProviderDataDataForm = forms.Form{
+	Name: "getPendingProviderDataData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -865,10 +915,12 @@ var GetPendingProviderDataDataForm = forms.Form{
 }
 
 var GetVerifiedProviderDataForm = forms.Form{
+	Name:   "getVerifiedProviderData",
 	Fields: SignedDataFields(&GetVerifiedProviderDataDataForm),
 }
 
 var GetVerifiedProviderDataDataForm = forms.Form{
+	Name: "getVerifiedProviderDataData",
 	Fields: []forms.Field{
 		TimestampField,
 		{
@@ -887,6 +939,7 @@ var GetVerifiedProviderDataDataForm = forms.Form{
 }
 
 var GetStatsForm = forms.Form{
+	Name: "getStats",
 	Fields: []forms.Field{
 		{
 			Name: "id",

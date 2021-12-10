@@ -22,6 +22,7 @@ import (
 )
 
 var CorsSettingsForm = forms.Form{
+	Name:     "corsSettings",
 	ErrorMsg: "invalid data encountered in the CORS settings form",
 	Fields: []forms.Field{
 		{

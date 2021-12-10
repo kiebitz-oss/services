@@ -15,10 +15,12 @@ var GetAppointmentsByZipCodeRVV = []forms.Validator{
 }
 
 var ActorKeyForm = forms.Form{
+	Name:   "actorKey",
 	Fields: SignedDataFields(nil),
 }
 
 var KeyChainForm = forms.Form{
+	Name: "keyChain",
 	Fields: []forms.Field{
 		{
 			Name: "provider",
@@ -40,6 +42,7 @@ var KeyChainForm = forms.Form{
 }
 
 var ProviderAppointmentsForm = forms.Form{
+	Name: "providerAppointments",
 	Fields: []forms.Field{
 		{
 			Name: "provider",

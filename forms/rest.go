@@ -21,6 +21,7 @@ import (
 )
 
 var RESTServerSettingsForm = forms.Form{
+	Name: "restServerSettings",
 	Fields: []forms.Field{
 		{
 			Name: "cors",
