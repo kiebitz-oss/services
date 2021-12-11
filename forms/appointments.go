@@ -78,19 +78,21 @@ var PublicKeyValidators = []forms.Validator{
 var PublicKeyField = forms.Field{
 	Name:        "publicKey",
 	Global:      true,
-	Description: "An ECDSA or ECDH public key",
+	Description: "An ECDSA or ECDH public key.",
 	Validators:  PublicKeyValidators,
 }
 
 var SignatureField = forms.Field{
-	Name:       "signature",
-	Global:     true,
-	Validators: PublicKeyValidators,
+	Name:        "signature",
+	Global:      true,
+	Description: "An ECDSA signature.",
+	Validators:  PublicKeyValidators,
 }
 
 var OptionalIDField = forms.Field{
-	Name:   "id",
-	Global: true,
+	Name:        "id",
+	Global:      true,
+	Description: "An ID.",
 	Validators: []forms.Validator{
 		forms.IsOptional{},
 		ID,
@@ -98,24 +100,27 @@ var OptionalIDField = forms.Field{
 }
 
 var IDField = forms.Field{
-	Name:   "id",
-	Global: true,
+	Name:        "id",
+	Global:      true,
+	Description: "An ID.",
 	Validators: []forms.Validator{
 		ID,
 	},
 }
 
 var ProviderIDField = forms.Field{
-	Name:   "providerID",
-	Global: true,
+	Name:        "providerID",
+	Global:      true,
+	Description: "A provider ID.",
 	Validators: []forms.Validator{
 		ID,
 	},
 }
 
 var TimestampField = forms.Field{
-	Name:   "timestamp",
-	Global: true,
+	Name:        "timestamp",
+	Global:      true,
+	Description: "A timestamp.",
 	Validators: []forms.Validator{
 		forms.IsTime{
 			Format: "rfc3339",
@@ -126,8 +131,9 @@ var TimestampField = forms.Field{
 var SignedDataFields = func(form *forms.Form) []forms.Field {
 	return []forms.Field{
 		forms.Field{
-			Name:   "data",
-			Global: true,
+			Name:        "data",
+			Global:      true,
+			Description: "A JSON data field.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 				JSON{
@@ -152,7 +158,8 @@ var RawProviderDataForm = forms.Form{
 	Name: "rawProviderData",
 	Fields: []forms.Field{
 		{
-			Name: "encryptedData",
+			Name:        "encryptedData",
+			Description: "Encrypted data submitted by the provider.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ECDHEncryptedDataForm,
@@ -167,7 +174,8 @@ var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "encryptedProviderData",
+			Name:        "encryptedProviderData",
+			Description: "Encrypted provider data for review by a mediator.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &EncryptedProviderDataForm,
@@ -175,7 +183,8 @@ var ConfirmProviderDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "publicProviderData",
+			Name:        "publicProviderData",
+			Description: "Publicly visible provider data.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsStringMap{
@@ -184,7 +193,8 @@ var ConfirmProviderDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "signedKeyData",
+			Name:        "signedKeyData",
+			Description: "Publicly visible signed key data.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: SignedKeyDataForm(&ProviderKeyDataForm, "providerSignedKeyData"),
@@ -198,25 +208,29 @@ var ProviderDataForm = forms.Form{
 	Name: "providerData",
 	Fields: []forms.Field{
 		{
-			Name: "name",
+			Name:        "name",
+			Description: "Name of the provider.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "street",
+			Name:        "street",
+			Description: "Street address of the provider.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "city",
+			Name:        "city",
+			Description: "City of the provider.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "zipCode",
+			Name:        "zipCode",
+			Description: "Zip code of the provider.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
@@ -240,15 +254,18 @@ var ProviderKeyDataForm = forms.Form{
 	Name: "providerKeyData",
 	Fields: []forms.Field{
 		{
-			Name:       "signing",
-			Validators: PublicKeyValidators,
+			Name:        "signing",
+			Description: "Public signing key of the provider.",
+			Validators:  PublicKeyValidators,
 		},
 		{
-			Name:       "encryption",
-			Validators: PublicKeyValidators,
+			Name:        "encryption",
+			Description: "Public encryption key of the provider.",
+			Validators:  PublicKeyValidators,
 		},
 		{
-			Name: "queueData",
+			Name:        "queueData",
+			Description: "Public information of the provider.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ProviderQueueDataForm,
@@ -262,7 +279,8 @@ var ProviderQueueDataForm = forms.Form{
 	Name: "providerQueueData",
 	Fields: []forms.Field{
 		{
-			Name: "zipCode",
+			Name:        "zipCode",
+			Description: "Zip code of the provider.",
 			Validators: []forms.Validator{
 				forms.IsString{
 					MaxLength: 5,
@@ -271,7 +289,8 @@ var ProviderQueueDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "accessible",
+			Name:        "accessible",
+			Description: "Whether the provider location is accessible.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: false},
 				forms.IsBoolean{},
@@ -301,7 +320,8 @@ var AddMediatorPublicKeysDataForm = forms.Form{
 	Name: "addMediatorPublicKeysData",
 	Fields: []forms.Field{
 		{
-			Name: "signedKeyData",
+			Name:        "signedKeyData",
+			Description: "Signed mediator key data.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: SignedKeyDataForm(&MediatorKeyDataForm, "mediatorSignedKeyData"),
@@ -316,12 +336,14 @@ var MediatorKeyDataForm = forms.Form{
 	Name: "mediatorKeyData",
 	Fields: []forms.Field{
 		{
-			Name:       "signing",
-			Validators: PublicKeyValidators,
+			Name:        "signing",
+			Description: "Public signing key of the mediator.",
+			Validators:  PublicKeyValidators,
 		},
 		{
-			Name:       "encryption",
-			Validators: PublicKeyValidators,
+			Name:        "encryption",
+			Description: "Public encryption key of the mediator.",
+			Validators:  PublicKeyValidators,
 		},
 	},
 }
@@ -338,14 +360,16 @@ var CodesDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "actor",
+			Name:        "actor",
+			Description: "The actor for which to store signup codes.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 				forms.IsIn{Choices: []interface{}{"provider", "user"}},
 			},
 		},
 		{
-			Name: "codes",
+			Name:        "codes",
+			Description: "The signup codes to store.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{
@@ -371,13 +395,15 @@ var DistancesDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "type",
+			Name:        "type",
+			Description: "The type of distance information to store.",
 			Validators: []forms.Validator{
 				forms.IsIn{Choices: []interface{}{"zipCode", "zipArea"}},
 			},
 		},
 		{
-			Name: "distances",
+			Name:        "distances",
+			Description: "The distances to store.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{
@@ -395,19 +421,22 @@ var DistanceForm = forms.Form{
 	Name: "distance",
 	Fields: []forms.Field{
 		{
-			Name: "from",
+			Name:        "from",
+			Description: "The origin.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "to",
+			Name:        "to",
+			Description: "The destination.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "distance",
+			Name:        "distance",
+			Description: "The distance between origin and destination.",
 			Validators: []forms.Validator{
 				forms.IsFloat{
 					HasMin: true,
@@ -429,13 +458,15 @@ var GetTokenForm = forms.Form{
 	Name: "getToken",
 	Fields: []forms.Field{
 		{
-			Name: "hash",
+			Name:        "hash",
+			Description: "The user-generated hash to store with the token.",
 			Validators: []forms.Validator{
 				ID,
 			},
 		},
 		{
-			Name: "code",
+			Name:        "code",
+			Description: "The optional signup code to use.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsBytes{
@@ -449,54 +480,6 @@ var GetTokenForm = forms.Form{
 	},
 }
 
-var TokenQueueDataForm = forms.Form{
-	Name: "tokenQueueData",
-	Fields: []forms.Field{
-		{
-			Name: "zipCode",
-			Validators: []forms.Validator{
-				forms.IsString{
-					MaxLength: 5,
-					MinLength: 5,
-				},
-			},
-		},
-		{
-			Name: "distance",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: 5},
-				forms.IsInteger{
-					HasMin: true,
-					HasMax: true,
-					Min:    5,
-					Max:    50,
-				},
-			},
-		},
-		{
-			Name: "accessible",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
-			Name: "offerReceived",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-		{
-			Name: "offerAccepted",
-			Validators: []forms.Validator{
-				forms.IsOptional{Default: false},
-				forms.IsBoolean{},
-			},
-		},
-	},
-}
-
 var SignedTokenDataForm = forms.Form{
 	Name:   "signedTokenData",
 	Fields: SignedDataFields(&TokenDataForm),
@@ -506,20 +489,23 @@ var TokenDataForm = forms.Form{
 	Name: "tokenData",
 	Fields: []forms.Field{
 		{
-			Name: "hash",
+			Name:        "hash",
+			Description: "The user-generated hash belonging to the token.",
 			Validators: []forms.Validator{
 				ID,
 			},
 		},
 		{
-			Name: "token",
+			Name:        "token",
+			Description: "The server-generated token.",
 			Validators: []forms.Validator{
 				ID,
 			},
 		},
 		PublicKeyField,
 		{
-			Name: "data",
+			Name:        "data",
+			Description: "Optional data associated with the token.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsStringMap{},
@@ -532,7 +518,8 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 	Name: "getAppointmentsByZipCode",
 	Fields: []forms.Field{
 		{
-			Name: "radius",
+			Name:        "radius",
+			Description: "The radius around the given zip code for which to show appointments.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: 50},
 				forms.IsInteger{
@@ -545,7 +532,8 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 			},
 		},
 		{
-			Name: "zipCode",
+			Name:        "zipCode",
+			Description: "The zip code to use as the user location.",
 			Validators: []forms.Validator{
 				forms.IsString{
 					MaxLength: 5,
@@ -554,19 +542,22 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 			},
 		},
 		{
-			Name: "from",
+			Name:        "from",
+			Description: "The earliest date of appointments to return.",
 			Validators: []forms.Validator{
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
 		{
-			Name: "to",
+			Name:        "to",
+			Description: "The latest date of appointments to return.",
 			Validators: []forms.Validator{
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
 		{
-			Name: "aggregate",
+			Name:        "aggregate",
+			Description: "Whether to return aggregate data instead of actual appointments.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: false},
 				forms.IsBoolean{},
@@ -596,19 +587,22 @@ var GetProviderAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "from",
+			Name:        "from",
+			Description: "The earliest date of appointments to return.",
 			Validators: []forms.Validator{
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
 		{
-			Name: "to",
+			Name:        "to",
+			Description: "The latest date of appointments to return.",
 			Validators: []forms.Validator{
 				forms.IsTime{Format: "rfc3339-date"},
 			},
 		},
 		{
-			Name: "updatedSince",
+			Name:        "updatedSince",
+			Description: "The minimum 'updatedAt' value of appointments to return.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsTime{Format: "rfc3339"},
@@ -640,7 +634,8 @@ var PublishAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "offers",
+			Name:        "offers",
+			Description: "The appointment offers to publish.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{
@@ -658,7 +653,8 @@ var AppointmentPropertiesForm = forms.Form{
 	Name: "appointmentProperties",
 	Fields: []forms.Field{
 		{
-			Name: "vaccine",
+			Name:        "vaccine",
+			Description: "The vaccine type used.",
 			Validators: []forms.Validator{
 				forms.IsIn{Choices: []interface{}{"biontech", "moderna", "astrazeneca", "johnson-johnson"}},
 			},
@@ -672,13 +668,15 @@ var BookingForm = forms.Form{
 		IDField,
 		PublicKeyField,
 		{
-			Name: "token",
+			Name:        "token",
+			Description: "The token used for this booking.",
 			Validators: []forms.Validator{
 				ID,
 			},
 		},
 		{
-			Name: "encryptedData",
+			Name:        "encryptedData",
+			Description: "Encrypted data for the provider.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ECDHEncryptedDataForm,
@@ -692,7 +690,8 @@ var SignedAppointmentForm = forms.Form{
 	Name: "signedAppointment",
 	Fields: append(SignedDataFields(&AppointmentDataForm), []forms.Field{
 		{
-			Name: "updatedAt",
+			Name:        "updatedAt",
+			Description: "Time the appointment has last been updated.",
 			Validators: []forms.Validator{
 				forms.IsOptional{}, // only for reading, not for submitting
 				forms.IsTime{
@@ -701,7 +700,22 @@ var SignedAppointmentForm = forms.Form{
 			},
 		},
 		{
-			Name: "bookings",
+			Name:        "bookedSlots",
+			Description: "Booked slots associated with the appointment (visible to users).",
+			Validators: []forms.Validator{
+				forms.IsOptional{}, // only for reading, not for submitting
+				forms.IsList{
+					Validators: []forms.Validator{
+						forms.IsStringMap{
+							Form: &SlotForm,
+						},
+					},
+				},
+			},
+		},
+		{
+			Name:        "bookings",
+			Description: "Bookings associated with the appointment (only visible to providers).",
 			Validators: []forms.Validator{
 				forms.IsOptional{}, // only for reading, not for submitting
 				forms.IsList{
@@ -721,7 +735,8 @@ var AppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "duration",
+			Name:        "duration",
+			Description: "Duration of the appointment.",
 			Validators: []forms.Validator{
 				forms.IsInteger{
 					HasMin: true,
@@ -732,7 +747,8 @@ var AppointmentDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "properties",
+			Name:        "properties",
+			Description: "Properties of the appointment.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &AppointmentPropertiesForm,
@@ -742,7 +758,8 @@ var AppointmentDataForm = forms.Form{
 		PublicKeyField,
 		IDField,
 		{
-			Name: "slotData",
+			Name:        "slotData",
+			Description: "Appointment slots.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{
@@ -798,7 +815,8 @@ var BookAppointmentDataForm = forms.Form{
 		IDField,
 		TimestampField,
 		{
-			Name: "signedTokenData",
+			Name:        "signedTokenData",
+			Description: "Signed token data of the user.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &SignedTokenDataForm,
@@ -806,7 +824,8 @@ var BookAppointmentDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "encryptedData",
+			Name:        "encryptedData",
+			Description: "Encrypted data for the provider.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ECDHEncryptedDataForm,
@@ -827,7 +846,8 @@ var GetAppointmentDataForm = forms.Form{
 		IDField,
 		ProviderIDField,
 		{
-			Name: "signedTokenData",
+			Name:        "signedTokenData",
+			Description: "Signed token data of the user.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &SignedTokenDataForm,
@@ -848,7 +868,8 @@ var CancelAppointmentDataForm = forms.Form{
 		IDField,
 		ProviderIDField,
 		{
-			Name: "signedTokenData",
+			Name:        "signedTokenData",
+			Description: "Signed token data of the user.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &SignedTokenDataForm,
@@ -885,7 +906,8 @@ var StoreProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "code",
+			Name:        "code",
+			Description: "Optional signup code.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsBytes{
@@ -896,7 +918,8 @@ var StoreProviderDataDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "encryptedData",
+			Name:        "encryptedData",
+			Description: "Encrypted data for mediators to review.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ECDHEncryptedDataForm,
@@ -916,7 +939,8 @@ var GetPendingProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "limit",
+			Name:        "limit",
+			Description: "Number of entries to return at most.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: 1000},
 				forms.IsInteger{
@@ -940,7 +964,8 @@ var GetVerifiedProviderDataDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name: "limit",
+			Name:        "limit",
+			Description: "Number of entries to return at most.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: 1000},
 				forms.IsInteger{
@@ -958,54 +983,62 @@ var GetStatsForm = forms.Form{
 	Name: "getStats",
 	Fields: []forms.Field{
 		{
-			Name: "id",
+			Name:        "id",
+			Description: "ID of the statistics to return.",
 			Validators: []forms.Validator{
 				forms.IsIn{Choices: []interface{}{"queues", "tokens"}},
 			},
 		},
 		{
-			Name: "type",
+			Name:        "type",
+			Description: "Time window type of the statistics to return.",
 			Validators: []forms.Validator{
 				forms.IsIn{Choices: []interface{}{"minute", "hour", "day", "quarterHour", "week", "month"}},
 			},
 		},
 		{
-			Name: "name",
+			Name:        "name",
+			Description: "Optional name of the statistics to return.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: ""},
 				forms.MatchesRegex{Regexp: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
 			},
 		},
 		{
-			Name: "metric",
+			Name:        "metric",
+			Description: "Optional sub-metric to return.",
 			Validators: []forms.Validator{
 				forms.IsOptional{Default: ""},
 				forms.MatchesRegex{Regexp: regexp.MustCompile(`^[\w\d\-]{0,50}$`)},
 			},
 		},
 		{
-			Name: "filter",
+			Name:        "filter",
+			Description: "Optional additional filter criteria to apply.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsStringMap{},
 			},
 		},
 		{
-			Name: "from",
+			Name:        "from",
+			Description: "Earliest date for which to return statistics. Only applicable if 'n' is not set.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsTime{Format: "rfc3339", ToUTC: true},
 			},
 		},
 		{
-			Name: "to",
+			Name:        "to",
+			Description: "Latest date for which to return statistics. Only applicable if 'n' is not set.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsTime{Format: "rfc3339", ToUTC: true},
 			},
 		},
 		{
-			Name: "n",
+			Name:        "n",
+			Description: "Maximum number of statistics values to return.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsInteger{HasMin: true, Min: 1, HasMax: true, Max: 500, Convert: true},

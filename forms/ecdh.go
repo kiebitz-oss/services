@@ -24,7 +24,8 @@ var ECDHEncryptedDataForm = forms.Form{
 	Name: "ecdhEncryptedData",
 	Fields: []forms.Field{
 		{
-			Name: "iv",
+			Name:        "iv",
+			Description: "IV value associated with the encrypted data.",
 			Validators: []forms.Validator{
 				forms.IsBytes{
 					Encoding:  "base64",
@@ -34,7 +35,8 @@ var ECDHEncryptedDataForm = forms.Form{
 			},
 		},
 		{
-			Name: "data",
+			Name:        "data",
+			Description: "The encrypted data.",
 			Validators: []forms.Validator{
 				forms.IsBytes{
 					Encoding:  "base64",

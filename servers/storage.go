@@ -42,30 +42,34 @@ func MakeStorage(settings *services.Settings) (*Storage, error) {
 		Name:    "storage",
 		Endpoints: []*api.Endpoint{
 			{
-				Name:    "storeSettings",
-				Form:    &forms.StoreSettingsForm,
-				Handler: storage.storeSettings,
+				Name:        "storeSettings",
+				Description: "Stores encrypted settings.",
+				Form:        &forms.StoreSettingsForm,
+				Handler:     storage.storeSettings,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
 			},
 			{
-				Name:    "getSettings",
-				Form:    &forms.GetSettingsForm,
-				Handler: storage.getSettings,
+				Name:        "getSettings",
+				Description: "Retrieves encrypted settings.",
+				Form:        &forms.GetSettingsForm,
+				Handler:     storage.getSettings,
 			},
 			{
-				Name:    "deleteSettings",
-				Form:    &forms.DeleteSettingsForm,
-				Handler: storage.deleteSettings,
+				Name:        "deleteSettings",
+				Description: "Deletes encrypted settings.",
+				Form:        &forms.DeleteSettingsForm,
+				Handler:     storage.deleteSettings,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
 			},
 			{
-				Name:    "resetDB",
-				Form:    &forms.ResetDBForm,
-				Handler: storage.resetDB,
+				Name:        "resetDB",
+				Description: "Resets the database. Only enabled for test deployments.",
+				Form:        &forms.ResetDBForm,
+				Handler:     storage.resetDB,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},

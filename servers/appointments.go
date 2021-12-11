@@ -58,9 +58,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 		Name:    "appointments",
 		Endpoints: []*api.Endpoint{
 			{
-				Name:    "getStats", // unauthenticated
-				Form:    &forms.GetStatsForm,
-				Handler: appointments.getStats,
+				Name:        "getStats", // unauthenticated
+				Description: "Returns various public statistics related to the system.",
+				Form:        &forms.GetStatsForm,
+				Handler:     appointments.getStats,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetStatsRVV,
 				},
@@ -70,9 +71,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getKeys", // unauthenticated
-				Form:    &forms.GetKeysForm,
-				Handler: appointments.getKeys,
+				Name:        "getKeys", // unauthenticated
+				Description: "Returns various required public keys. Please note that you should have an independent verification mechanism for these keys and not blindly trust the ones provided by this API.",
+				Form:        &forms.GetKeysForm,
+				Handler:     appointments.getKeys,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetKeysRVV,
 				},
@@ -82,9 +84,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getAppointmentsByZipCode", // unauthenticated
-				Form:    &forms.GetAppointmentsByZipCodeForm,
-				Handler: appointments.getAppointmentsByZipCode,
+				Name:        "getAppointmentsByZipCode", // unauthenticated
+				Description: "Returns available appointments for a given zip code area.",
+				Form:        &forms.GetAppointmentsByZipCodeForm,
+				Handler:     appointments.getAppointmentsByZipCode,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetAppointmentsByZipCodeRVV,
 				},
@@ -94,9 +97,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getAppointment", // unauthenticated
-				Form:    &forms.GetAppointmentForm,
-				Handler: appointments.getAppointment,
+				Name:        "getAppointment", // unauthenticated
+				Description: "Returns details about a specific appointment.",
+				Form:        &forms.GetAppointmentForm,
+				Handler:     appointments.getAppointment,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetAppointmentRVV,
 				},
@@ -106,9 +110,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getToken", // unauthenticated
-				Form:    &forms.GetTokenForm,
-				Handler: appointments.getToken,
+				Name:        "getToken", // unauthenticated
+				Description: "Returns a signed token that allows users to book appointments.",
+				Form:        &forms.GetTokenForm,
+				Handler:     appointments.getToken,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetTokenRVV,
 				},
@@ -118,9 +123,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "addMediatorPublicKeys", // authenticted (root)
-				Form:    &forms.AddMediatorPublicKeysForm,
-				Handler: appointments.addMediatorPublicKeys,
+				Name:        "addMediatorPublicKeys", // authenticted (root)
+				Description: "Adds the public key data and associated information of a mediator to the system.",
+				Form:        &forms.AddMediatorPublicKeysForm,
+				Handler:     appointments.addMediatorPublicKeys,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -130,9 +136,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "addCodes", // authenticated (root)
-				Form:    &forms.AddCodesForm,
-				Handler: appointments.addCodes,
+				Name:        "addCodes", // authenticated (root)
+				Description: "Adds signup codes to the system.",
+				Form:        &forms.AddCodesForm,
+				Handler:     appointments.addCodes,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -142,9 +149,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "uploadDistances", // authenticated (root)
-				Form:    &forms.UploadDistancesForm,
-				Handler: appointments.uploadDistances,
+				Name:        "uploadDistances", // authenticated (root)
+				Description: "Uploads distance information to the system.",
+				Form:        &forms.UploadDistancesForm,
+				Handler:     appointments.uploadDistances,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -154,9 +162,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "resetDB", // authenticated (root)
-				Form:    &forms.ResetDBForm,
-				Handler: appointments.resetDB,
+				Name:        "resetDB", // authenticated (root)
+				Description: "Resets the database. This endpoint is only active for test deployments.",
+				Form:        &forms.ResetDBForm,
+				Handler:     appointments.resetDB,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -166,9 +175,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "confirmProvider", // authenticated (mediator)
-				Form:    &forms.ConfirmProviderForm,
-				Handler: appointments.confirmProvider,
+				Name:        "confirmProvider", // authenticated (mediator)
+				Description: "Confirms a provider by adding its public key data and associated information to the system.",
+				Form:        &forms.ConfirmProviderForm,
+				Handler:     appointments.confirmProvider,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -178,9 +188,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getPendingProviderData", // authenticated (mediator)
-				Form:    &forms.GetPendingProviderDataForm,
-				Handler: appointments.getPendingProviderData,
+				Name:        "getPendingProviderData", // authenticated (mediator)
+				Description: "Returns a list of provider data waiting for confirmation.",
+				Form:        &forms.GetPendingProviderDataForm,
+				Handler:     appointments.getPendingProviderData,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetProviderDataRVV,
 				},
@@ -190,9 +201,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getVerifiedProviderData", // authenticated (mediator)
-				Form:    &forms.GetVerifiedProviderDataForm,
-				Handler: appointments.getVerifiedProviderData,
+				Name:        "getVerifiedProviderData", // authenticated (mediator)
+				Description: "Returns a list of confirmed provider data.",
+				Form:        &forms.GetVerifiedProviderDataForm,
+				Handler:     appointments.getVerifiedProviderData,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetProviderDataRVV,
 				},
@@ -202,9 +214,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "getProviderAppointments", // authenticated (provider)
-				Form:    &forms.GetProviderAppointmentsForm,
-				Handler: appointments.getProviderAppointments,
+				Name:        "getProviderAppointments", // authenticated (provider)
+				Description: "Returns a list of appointments for the given provider.",
+				Form:        &forms.GetProviderAppointmentsForm,
+				Handler:     appointments.getProviderAppointments,
 				ReturnType: &api.ReturnType{
 					Validators: forms.GetProviderAppointmentsRVV,
 				},
@@ -214,9 +227,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "publishAppointments", // authenticated (provider)
-				Form:    &forms.PublishAppointmentsForm,
-				Handler: appointments.publishAppointments,
+				Name:        "publishAppointments", // authenticated (provider)
+				Description: "Publishes new or modified appointments to the system.",
+				Form:        &forms.PublishAppointmentsForm,
+				Handler:     appointments.publishAppointments,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -226,9 +240,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "storeProviderData", // authenticated (provider)
-				Form:    &forms.StoreProviderDataForm,
-				Handler: appointments.storeProviderData,
+				Name:        "storeProviderData", // authenticated (provider)
+				Description: "Stores provider data for verification.",
+				Form:        &forms.StoreProviderDataForm,
+				Handler:     appointments.storeProviderData,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},
@@ -238,9 +253,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "checkProviderData", // authenticated (provider)
-				Form:    &forms.CheckProviderDataForm,
-				Handler: appointments.checkProviderData,
+				Name:        "checkProviderData", // authenticated (provider)
+				Description: "Checks the verification status of provider data.",
+				Form:        &forms.CheckProviderDataForm,
+				Handler:     appointments.checkProviderData,
 				ReturnType: &api.ReturnType{
 					Validators: forms.CheckProviderDataRVV,
 				},
@@ -250,9 +266,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "bookAppointment", // authenticated (user)
-				Form:    &forms.BookAppointmentForm,
-				Handler: appointments.bookAppointment,
+				Name:        "bookAppointment", // authenticated (user)
+				Description: "Books an appointment.",
+				Form:        &forms.BookAppointmentForm,
+				Handler:     appointments.bookAppointment,
 				ReturnType: &api.ReturnType{
 					Validators: forms.BookAppointmentRVV,
 				},
@@ -262,9 +279,10 @@ func MakeAppointments(settings *services.Settings) (*Appointments, error) {
 				},
 			},
 			{
-				Name:    "cancelAppointment", // authenticated (user)
-				Form:    &forms.CancelAppointmentForm,
-				Handler: appointments.cancelAppointment,
+				Name:        "cancelAppointment", // authenticated (user)
+				Description: "Cancels a booking.",
+				Form:        &forms.CancelAppointmentForm,
+				Handler:     appointments.cancelAppointment,
 				ReturnType: &api.ReturnType{
 					Validators: forms.IsAcknowledgeRVV,
 				},

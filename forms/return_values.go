@@ -52,13 +52,15 @@ var StatsValueForm = forms.Form{
 	Name: "statsValue",
 	Fields: []forms.Field{
 		{
-			Name: "name",
+			Name:        "name",
+			Description: "Name of the statistics value.",
 			Validators: []forms.Validator{
 				forms.IsString{},
 			},
 		},
 		{
-			Name: "from",
+			Name:        "from",
+			Description: "Beginning of the time window of the statistics value.",
 			Validators: []forms.Validator{
 				forms.IsTime{
 					Format: "rfc3339",
@@ -66,7 +68,8 @@ var StatsValueForm = forms.Form{
 			},
 		},
 		{
-			Name: "to",
+			Name:        "to",
+			Description: "End of the time window of the statistics value.",
 			Validators: []forms.Validator{
 				forms.IsTime{
 					Format: "rfc3339",
@@ -74,14 +77,16 @@ var StatsValueForm = forms.Form{
 			},
 		},
 		{
-			Name: "data",
+			Name:        "data",
+			Description: "Data associate with the statistics value.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsStringMap{},
 			},
 		},
 		{
-			Name: "value",
+			Name:        "value",
+			Description: "The statistics value itself.",
 			Validators: []forms.Validator{
 				forms.IsInteger{},
 			},
@@ -90,7 +95,7 @@ var StatsValueForm = forms.Form{
 }
 
 var IsAcknowledgeRVV = []forms.Validator{
-	forms.IsString{},
+	forms.IsIn{Choices: []interface{}{"ok"}},
 }
 
 var GetStatsRVV = []forms.Validator{
@@ -107,16 +112,19 @@ var KeysForm = forms.Form{
 	Name: "keys",
 	Fields: []forms.Field{
 		{
-			Name:       "providerData",
-			Validators: PublicKeyValidators,
+			Name:        "providerData",
+			Description: "Public provider data key.",
+			Validators:  PublicKeyValidators,
 		},
 		{
-			Name:       "rootKey",
-			Validators: PublicKeyValidators,
+			Name:        "rootKey",
+			Description: "Public root key.",
+			Validators:  PublicKeyValidators,
 		},
 		{
-			Name:       "tokenKey",
-			Validators: PublicKeyValidators,
+			Name:        "tokenKey",
+			Description: "Public token key.",
+			Validators:  PublicKeyValidators,
 		},
 	},
 }
@@ -146,7 +154,8 @@ var KeyChainForm = forms.Form{
 	Name: "keyChain",
 	Fields: []forms.Field{
 		{
-			Name: "provider",
+			Name:        "provider",
+			Description: "Public provider key data.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ActorKeyForm,
@@ -154,7 +163,8 @@ var KeyChainForm = forms.Form{
 			},
 		},
 		{
-			Name: "mediator",
+			Name:        "mediator",
+			Description: "Public mediator key data.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &ActorKeyForm,
@@ -168,7 +178,8 @@ var ProviderAppointmentsForm = forms.Form{
 	Name: "providerAppointments",
 	Fields: []forms.Field{
 		{
-			Name: "provider",
+			Name:        "provider",
+			Description: "Signed public provider data.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
 					Form: &SignedProviderDataForm,
@@ -176,7 +187,8 @@ var ProviderAppointmentsForm = forms.Form{
 			},
 		},
 		{
-			Name: "offers",
+			Name:        "offers",
+			Description: "Appointment offers for the provider.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{

@@ -30,13 +30,15 @@ var StoreSettingsForm = forms.Form{
 	Name: "storeSettings",
 	Fields: []forms.Field{
 		{
-			Name: "id",
+			Name:        "id",
+			Description: "ID under which to store settings.",
 			Validators: []forms.Validator{
 				ID,
 			},
 		},
 		{
-			Name: "data",
+			Name:        "data",
+			Description: "Settings to store under the given ID.",
 			Validators: []forms.Validator{
 				IsAnything{},
 			},
@@ -48,7 +50,8 @@ var GetSettingsForm = forms.Form{
 	Name: "getSettings",
 	Fields: []forms.Field{
 		{
-			Name: "id",
+			Name:        "id",
+			Description: "ID for which to retrieve settings.",
 			Validators: []forms.Validator{
 				ID,
 			},
@@ -60,7 +63,8 @@ var DeleteSettingsForm = forms.Form{
 	Name: "deleteSettings",
 	Fields: []forms.Field{
 		{
-			Name: "id",
+			Name:        "id",
+			Description: "ID for which to delete settings.",
 			Validators: []forms.Validator{
 				ID,
 			},
