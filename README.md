@@ -43,6 +43,16 @@ kiebitz admin keys setup
 
 This will generate two files in the Kiebitz settings directory, `002_admin.json` and `003_appt.json`. The former is only for administration purposes and should remain locked away. The latter is for use with the appointments server.
 
+Optionally, you can encrypt the `002_admin.json` file with a passphrase. The
+passphrase must be present in the `KIEBITZ_PASSPHRASE` environment variable, and
+has to be pretsent for the generation of the keys as well as **every time** the
+server starts. You can generate an encrypted key file with the `-e` switch like
+this:
+
+```bash
+kiebitz admin keys setup -e
+```
+
 Now we can then generate mediator keys. To do this, we simply run
 
 ```bash

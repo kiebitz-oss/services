@@ -182,6 +182,9 @@ func exportRootPublicKey(settings *services.Settings) func(c *cli.Context) error
 		}
 
 		jsonData, err := json.MarshalIndent(exportKeys, "", "  ")
+		if err != nil {
+			services.Log.Fatal(err)
+		}
 
 		fmt.Println(string(jsonData))
 		return nil
@@ -276,10 +279,6 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 			services.Log.Fatal(err)
 		}
 
-		if err != nil {
-			services.Log.Fatal(err)
-		}
-
 		settingsPaths, err := helpers.RealSettingsPaths()
 
 		if err != nil {
@@ -288,6 +287,26 @@ func setupKeys(settings *services.Settings) func(c *cli.Context) error {
 
 		if len(settingsPaths) == 0 {
 			services.Log.Fatal("no settings paths defined!")
+		}
+
+		// encrypt admin settings if flag is set
+		if c.Bool("encrypt") {
+
+			key, err := crypto.BuildKeyFromEnv()
+			if err != nil {
+				services.Log.Fatal(err)
+			}
+
+			encAdminSettings, err := crypto.Encrypt(adminJson, key)
+			if err != nil {
+				services.Log.Fatal(err)
+			}
+
+			adminJson, err = json.MarshalIndent(encAdminSettings, "", " ")
+			if err != nil {
+				services.Log.Fatal(err)
+			}
+
 		}
 
 		if err := ioutil.WriteFile(fmt.Sprintf("%s/002_admin.json", settingsPaths[0]), adminJson, 0644); err != nil {
@@ -784,7 +803,12 @@ func Admin(settings *services.Settings) ([]cli.Command, error) {
 					Subcommands: []cli.Command{
 						{
 							Name:   "setup",
-							Flags:  []cli.Flag{},
+							Flags:  []cli.Flag{
+								&cli.BoolFlag{
+									Name:  "encrypt, e",
+									Usage: "encrypt private keys file",
+								},
+							},
 							Usage:  "set up keys for the given environment",
 							Action: setupKeys(settings),
 						},
