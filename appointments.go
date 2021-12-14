@@ -296,7 +296,6 @@ type KeyChain struct {
 type ProviderAppointments struct {
 	Provider *SignedProviderData  `json:"provider"`
 	Offers   []*SignedAppointment `json:"offers"`
-	Booked   [][]byte             `json:"booked"`
 	KeyChain *KeyChain            `json:"keyChain"`
 }
 
