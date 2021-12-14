@@ -21,9 +21,9 @@ storage:
   http:
     bind_address: localhost:9999
     #tls:
-    #  ca_certificate_file: "$DIR/certs/root.crt"
-    #  certificate_file: "$DIR/certs/storage-1.crt"
-    #  key_file: "$DIR/certs/storage-1.key"
+    #  ca_certificate_file: "/$DIR/certs/root.crt"
+    #  certificate_file: "/$DIR/certs/storage-1.crt"
+    #  key_file: "/$DIR/certs/storage-1.key"
   rest: {}
   jsonrpc:
     cors:
@@ -46,9 +46,9 @@ appointments:
   http:
     bind_address: localhost:8888
     #tls:
-    #  ca_certificate_file: "$DIR/certs/root.crt"
-    #  certificate_file: "$DIR/certs/storage-1.crt"
-    #  key_file: "$DIR/certs/storage-1.key"
+    #  ca_certificate_file: "/$DIR/certs/root.crt"
+    #  certificate_file: "/$DIR/certs/storage-1.crt"
+    #  key_file: "/$DIR/certs/storage-1.key"
   jsonrpc:
     cors:
       allowed_hosts: [ "http://localhost:8080" ]
