@@ -285,7 +285,7 @@ var KeyForm = forms.Form{
 			},
 		},
 		{
-			Name: "public_key",
+			Name: "publicKey",
 			Validators: []forms.Validator{
 				forms.IsBytes{
 					Encoding: "base64",
@@ -293,7 +293,7 @@ var KeyForm = forms.Form{
 			},
 		},
 		{
-			Name: "private_key",
+			Name: "privateKey",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsBytes{

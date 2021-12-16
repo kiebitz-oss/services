@@ -304,7 +304,7 @@ type SignedProviderData struct {
 	Data      *ProviderData `json:"-" coerce:"name:data"`
 	Signature []byte        `json:"signature"`
 	PublicKey []byte        `json:"publicKey"`
-	ID        []byte        `json:"id"`
+	ID        []byte        `json:"id,omitempty"`
 }
 
 func (k *ProviderData) Sign(key *crypto.Key) (*SignedProviderData, error) {
