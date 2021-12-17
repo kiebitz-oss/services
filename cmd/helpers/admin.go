@@ -27,6 +27,7 @@ import (
 	"github.com/kiprotect/go-helpers/forms"
 	"github.com/urfave/cli"
 	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -700,38 +701,29 @@ func uploadMediatorKeys(settings *services.Settings) func(c *cli.Context) error 
 			services.Log.Fatal(err)
 		}
 
-		client := jsonrpc.MakeClient(settings.Admin.Client.AppointmentsEndpoint)
-
-		data := map[string]interface{}{
-			"signing":    keyPairs.Signing.PublicKey,
-			"encryption": keyPairs.Encryption.PublicKey,
-			"timestamp":  time.Now(),
+		keyData := &services.MediatorKeyData{
+			Signing:    keyPairs.Signing.PublicKey,
+			Encryption: keyPairs.Encryption.PublicKey,
 		}
 
-		signingKey := settings.Admin.Signing.Key("root")
+		rootKey := settings.Admin.Signing.Key("root")
 
-		if signingKey == nil {
-			services.Log.Fatal("can't find signing key")
-		}
-
-		bytes, err := json.Marshal(data)
-
+		signedKeyData, err := keyData.Sign(rootKey)
 		if err != nil {
-			services.Log.Fatal(err)
+			return err
 		}
 
-		signedData, err := signingKey.SignString(string(bytes))
+		params := &services.AddMediatorPublicKeysParams{
+			Timestamp:     time.Now(),
+			SignedKeyData: signedKeyData,
+		}
 
+		client := &http.Client{}
+		requester := helpers.MakeAPIClient(settings.Admin.Client.AppointmentsEndpoint, client)
+
+		_, err = requester("addMediatorPublicKeys", params, rootKey)
 		if err != nil {
-			services.Log.Fatal(err)
-		}
-
-		request := jsonrpc.MakeRequest("addMediatorPublicKeys", "", signedData.AsMap())
-
-		if response, err := client.Call(request); err != nil {
-			services.Log.Fatal(err)
-		} else {
-			services.Log.Info(response.AsJSON())
+			return err
 		}
 
 		return nil
