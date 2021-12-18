@@ -20,6 +20,7 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
+	"time"
 )
 
 func (c *Appointments) getAppointmentsByZipCode(context services.Context, params *services.GetAppointmentsByZipCodeParams) services.Response {
@@ -103,15 +104,25 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		visitedDates := make(map[string]bool)
 
 	getAppointments:
-		for _, date := range allDates {
+		for _, dateStr := range allDates {
 
-			if _, ok := visitedDates[string(date)]; ok {
+			if _, ok := visitedDates[string(dateStr)]; ok {
 				continue
 			} else {
-				visitedDates[string(date)] = true
+				visitedDates[string(dateStr)] = true
 			}
 
-			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(date))
+			date, err := time.Parse("2006-01-02", string(dateStr))
+			if err != nil {
+				services.Log.Error(err)
+				continue
+			}
+
+			if date.Before(params.From) || date.After(params.To) {
+				continue
+			}
+
+			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(dateStr))
 			allAppointments, err := appointmentsByDate.GetAll()
 
 			if err != nil {

@@ -284,8 +284,11 @@ type TokenData struct {
 // GetAppointmentsByZipCode
 
 type GetAppointmentsByZipCodeParams struct {
-	ZipCode string `json:"zipCode"`
-	Radius  int64  `json:"radius"`
+	Radius    int64     `json:"radius"`
+	ZipCode   string    `json:"zipCode"`
+	From      time.Time `json:"from"`
+	To        time.Time `json:"to"`
+	Aggregate bool      `json:"aggregate"`
 }
 
 type KeyChain struct {
