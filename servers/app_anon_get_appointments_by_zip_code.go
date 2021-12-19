@@ -139,12 +139,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 				}
 
 				// if all slots are booked we do not return the appointment
-				// to do: enable once the frontend is migrated to the new checking process
-				/*
-					if len(slots) == len(signedAppointment.Data.SlotData) {
-						continue
-					}
-				*/
+				if len(slots) == len(signedAppointment.Data.SlotData) {
+					continue
+				}
 
 				// we remove the bookings as the user is not allowed to see them
 				signedAppointment.Bookings = nil
