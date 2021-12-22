@@ -9,6 +9,9 @@ This repository contains Kiebitz's backend services:
 **We are showing a quick version here, full details below**
 make sure you installed Golang in a current version >=1.16.
 
+we need a [Redis](#dependencies) server:  
+`docker run -d -p 6379:6379 redis`
+
 simply run
 1. `make` to [install](#Installation)
 1. `source .test-setup` so tests [create/setup](#basic-setup) necessary data
