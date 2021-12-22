@@ -5,6 +5,18 @@ This repository contains Kiebitz's backend services:
 * A **storage** service that stores encrypted user & operator settings and temporary data.
 * An **appointments** service that stores encrypted appointment data.
 
+## tl;dr
+**We are showing a quick version here, full details below**
+make sure you installed Golang in a current version >=1.16.
+
+simply run
+1. `make` to [install](#Installation)
+1. `source .test-setup` so tests [create/setup](#basic-setup) necessary data
+1. `kiebitz admin keys setup` to generate necessary [keys](#cryptographic-keys) ***will overwrite existing key files***
+1. `kiebitz run all` to [run the development services](#running)
+
+Then have a look and jump to the [APIs](#apis)
+
 ## Dependencies
 
 The Kiebitz backend services are written in Golang. Please install a recent version, preferably >=1.16.
@@ -143,7 +155,7 @@ The Kiebitz services can be exposed as a JSON-RPC or REST service (or both). For
 # REST endpoint
 curl http://localhost:8888/appointments/zipCode/10707/20
 # JSON-RPC endpoint
-curl -X POST --header "Content-Type: application/json" http://localhost:8888/jsonrpc --data '{"jsonrpc": "2.0", "method": "getAppointmentsByZipCode", "params": {"zipCode": "10707", "radius": "20"}}' 
+curl -X POST --header "Content-Type: application/json" http://localhost:8888/jsonrpc --data '{"jsonrpc": "2.0", "method": "getAppointmentsByZipCode", "params": {"zipCode": "10707", "radius": "20"}}'
 ```
 
 In general, the REST API is better for caching as it exposes cacheable endpoints via GET requests, while the JSON-RPC API provides a simpler and more natural interface.
@@ -153,7 +165,7 @@ In general, the REST API is better for caching as it exposes cacheable endpoints
 Here's how you can send a request to the storage server via `curl` (this assumes you have `jq` installed for parsing of the JSON result):
 
 ```bash
-curl --cacert settings/dev/certs/root.crt --resolve storage-1:9999:127.0.0.1 https://storage-1:9999/jsonrpc --header "Content-Type: application/json; charset=utf-8" --data '{"method": "getSettings", "id": "2", "params": {"key": "az4df7vjunsd6ad"}, "jsonrpc": "2.0"}' 2>/dev/null | jq 
+curl --cacert settings/dev/certs/root.crt --resolve storage-1:9999:127.0.0.1 https://storage-1:9999/jsonrpc --header "Content-Type: application/json; charset=utf-8" --data '{"method": "getSettings", "id": "2", "params": {"key": "az4df7vjunsd6ad"}, "jsonrpc": "2.0"}' 2>/dev/null | jq
 ```
 
 To run all Go tests and benchmarks, simply
@@ -169,7 +181,7 @@ make bench
 
 ### Load Testing
 
-**Careful, the following commands will create massive amounts of fake data via the API client, never run this against the production system, except for initial load testing!** 
+**Careful, the following commands will create massive amounts of fake data via the API client, never run this against the production system, except for initial load testing!**
 
 You can simulate providers, appointments and bookings in the backend using the `testing benchmark` command. The following command will create 1.000 providers with 1.000 appointments with 20 slots each, hence a total of 20.000.000 appointments:
 
@@ -189,5 +201,5 @@ make copyright
 
 ## Security
 
-Did you find a security issue you'd like to report? Please contact us at [security@kiebitz.eu](mailto:security@kiebitz.eu). We appreciate if you follow [responsible disclosure practices](https://en.wikipedia.org/wiki/Responsible_disclosure). 
+Did you find a security issue you'd like to report? Please contact us at [security@kiebitz.eu](mailto:security@kiebitz.eu). We appreciate if you follow [responsible disclosure practices](https://en.wikipedia.org/wiki/Responsible_disclosure).
 **Please do not create a public Github issue for exploitable vulnerabilities that you've identified**. We do not have a formal bug bounty program in place but will try to reward researchers for significant security findings. We also pledge to never take any kind of legal action or retaliate against researchers that disclose security issues in good faith. You may of course disclose issues anonymously as well.
