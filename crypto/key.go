@@ -21,10 +21,10 @@ type Key struct {
 	Type      string                 `json:"type"`
 	Format    string                 `json:"format"`
 	Params    map[string]interface{} `json:"params"`
-	PublicKey []byte                 `json:"public_key"`
+	PublicKey []byte                 `json:"publicKey"`
 	Purposes  []string               `json:"purposes"`
 	// only defined for local signing operations
-	PrivateKey []byte `json:"private_key,omitempty"`
+	PrivateKey []byte `json:"privateKey,omitempty"`
 }
 
 func (k *Key) Encrypt(data []byte, recipient *Key) (*ECDHEncryptedData, error) {

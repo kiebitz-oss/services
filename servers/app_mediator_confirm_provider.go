@@ -52,7 +52,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 	}
 
 	unverifiedProviderData := c.backend.UnverifiedProviderData()
-	verifiedProviderData := c.backend.UnverifiedProviderData()
+	verifiedProviderData := c.backend.VerifiedProviderData()
 	encryptedProviderData := c.backend.EncryptedProviderData()
 	publicProviderData := c.backend.PublicProviderData()
 

@@ -285,7 +285,7 @@ var KeyForm = forms.Form{
 			},
 		},
 		{
-			Name: "public_key",
+			Name: "publicKey",
 			Validators: []forms.Validator{
 				forms.IsBytes{
 					Encoding: "base64",
@@ -293,7 +293,7 @@ var KeyForm = forms.Form{
 			},
 		},
 		{
-			Name: "private_key",
+			Name: "privateKey",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
 				forms.IsBytes{
@@ -382,6 +382,26 @@ var AppointmentsForm = forms.Form{
 					Min:    0,
 					HasMax: true,
 					Max:    1000,
+				},
+			},
+		},
+		{
+			Name: "response_max_provider",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: 10},
+				forms.IsInteger{
+					HasMin: true,
+					Min:    1,
+				},
+			},
+		},
+		{
+			Name: "response_max_appointment",
+			Validators: []forms.Validator{
+				forms.IsOptional{Default: 10},
+				forms.IsInteger{
+					HasMin: true,
+					Min:    1,
 				},
 			},
 		},

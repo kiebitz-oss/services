@@ -43,6 +43,8 @@ type AppointmentsSettings struct {
 	UserCodesEnabled        bool                   `json:"user_codes_enabled,omitempty"`
 	UserCodesReuseLimit     int64                  `json:"user_codes_reuse_limit"`
 	ProviderCodesReuseLimit int64                  `json:"provider_codes_reuse_limit"`
+	ResponseMaxProvider     int64                  `json:"response_max_provider"`
+	ResponseMaxAppointment  int64                  `json:"response_max_appointment"`
 }
 
 func (a *AppointmentsSettings) Key(name string) *crypto.Key {

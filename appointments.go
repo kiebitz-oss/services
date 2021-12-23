@@ -284,8 +284,11 @@ type TokenData struct {
 // GetAppointmentsByZipCode
 
 type GetAppointmentsByZipCodeParams struct {
-	ZipCode string `json:"zipCode"`
-	Radius  int64  `json:"radius"`
+	Radius    int64     `json:"radius"`
+	ZipCode   string    `json:"zipCode"`
+	From      time.Time `json:"from"`
+	To        time.Time `json:"to"`
+	Aggregate bool      `json:"aggregate"`
 }
 
 type KeyChain struct {
@@ -296,7 +299,6 @@ type KeyChain struct {
 type ProviderAppointments struct {
 	Provider *SignedProviderData  `json:"provider"`
 	Offers   []*SignedAppointment `json:"offers"`
-	Booked   [][]byte             `json:"booked"`
 	KeyChain *KeyChain            `json:"keyChain"`
 }
 
@@ -305,7 +307,7 @@ type SignedProviderData struct {
 	Data      *ProviderData `json:"-" coerce:"name:data"`
 	Signature []byte        `json:"signature"`
 	PublicKey []byte        `json:"publicKey"`
-	ID        []byte        `json:"id"`
+	ID        []byte        `json:"id,omitempty"`
 }
 
 func (k *ProviderData) Sign(key *crypto.Key) (*SignedProviderData, error) {

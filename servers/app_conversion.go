@@ -9,7 +9,7 @@ import (
 func SignedAppointment(data []byte) (*services.SignedAppointment, error) {
 	var mapData map[string]interface{}
 	signedAppointment := &services.SignedAppointment{}
-	if err := json.Unmarshal(data, &data); err != nil {
+	if err := json.Unmarshal(data, &mapData); err != nil {
 		return nil, err
 	} else if params, err := forms.SignedAppointmentForm.Validate(mapData); err != nil {
 		return nil, err

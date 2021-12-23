@@ -20,6 +20,7 @@ import (
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/databases"
+	"time"
 )
 
 func (c *Appointments) getAppointmentsByZipCode(context services.Context, params *services.GetAppointmentsByZipCodeParams) services.Response {
@@ -53,8 +54,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 
 	for _, providerKey := range keys.Providers {
 
-		// max 10 providers
-		if len(providerAppointmentsList) > 10 {
+		if int64(len(providerAppointmentsList)) >= c.settings.ResponseMaxProvider {
 			break
 		}
 
@@ -103,15 +103,25 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		visitedDates := make(map[string]bool)
 
 	getAppointments:
-		for _, date := range allDates {
+		for _, dateStr := range allDates {
 
-			if _, ok := visitedDates[string(date)]; ok {
+			if _, ok := visitedDates[string(dateStr)]; ok {
 				continue
 			} else {
-				visitedDates[string(date)] = true
+				visitedDates[string(dateStr)] = true
 			}
 
-			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(date))
+			date, err := time.Parse("2006-01-02", string(dateStr))
+			if err != nil {
+				services.Log.Error(err)
+				continue
+			}
+
+			if date.Before(params.From) || date.After(params.To) {
+				continue
+			}
+
+			appointmentsByDate := c.backend.AppointmentsByDate(hash, string(dateStr))
 			allAppointments, err := appointmentsByDate.GetAll()
 
 			if err != nil {
@@ -128,12 +138,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 				}
 
 				// if all slots are booked we do not return the appointment
-				// to do: enable once the frontend is migrated to the new checking process
-				/*
-					if len(slots) == len(signedAppointment.Data.SlotData) {
-						continue
-					}
-				*/
+				if len(slots) == len(signedAppointment.Data.SlotData) {
+					continue
+				}
 
 				// we remove the bookings as the user is not allowed to see them
 				signedAppointment.Bookings = nil
@@ -141,7 +148,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 
 				signedAppointments = append(signedAppointments, signedAppointment)
 
-				if len(signedAppointments) > 10 {
+				if int64(len(signedAppointments)) >= c.settings.ResponseMaxAppointment {
 					break getAppointments
 				}
 			}
