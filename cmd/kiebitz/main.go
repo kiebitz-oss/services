@@ -19,7 +19,9 @@ package main
 import (
 	"github.com/kiebitz-oss/services"
 	cmdHelpers "github.com/kiebitz-oss/services/cmd/helpers"
+	"github.com/kiebitz-oss/services/crypto"
 	"github.com/kiebitz-oss/services/definitions"
+	"github.com/kiebitz-oss/services/encryptFs"
 	"github.com/kiebitz-oss/services/helpers"
 )
 
@@ -27,7 +29,14 @@ func Settings(definitions *services.Definitions) (*services.Settings, error) {
 	if settingsPaths, fs, err := helpers.SettingsPaths(); err != nil {
 		return nil, err
 	} else {
-		return helpers.Settings(settingsPaths, fs, definitions)
+
+		key, err := crypto.BuildKeyFromEnv()
+		if err != nil {
+			services.Log.Fatal(err)
+		}
+
+		encFs := encryptFs.New(fs, key)
+		return helpers.Settings(settingsPaths, encFs, definitions)
 	}
 }
 
