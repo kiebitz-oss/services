@@ -32,7 +32,7 @@ func Settings(definitions *services.Definitions) (*services.Settings, error) {
 
 		key, err := crypto.BuildKeyFromEnv()
 		if err != nil {
-			services.Log.Fatal(err)
+			services.Log.Warning(err)
 		}
 
 		encFs := encryptFs.New(fs, key)
