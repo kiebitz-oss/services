@@ -610,14 +610,14 @@ var GetProviderAppointmentsDataForm = forms.Form{
 			Name:        "from",
 			Description: "The earliest date of appointments to return.",
 			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339-date"},
+				forms.IsTime{Format: "rfc3339"},
 			},
 		},
 		{
 			Name:        "to",
 			Description: "The latest date of appointments to return.",
 			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339-date"},
+				forms.IsTime{Format: "rfc3339"},
 			},
 		},
 		{
@@ -811,18 +811,6 @@ var GetBookedAppointmentsForm = forms.Form{
 	Fields: SignedDataFields(&GetBookedAppointmentsDataForm),
 }
 
-var CancelBookingDataForm = forms.Form{
-	Name: "cancelBookingData",
-	Fields: []forms.Field{
-		TimestampField,
-		IDField,
-	},
-}
-var CancelBookingForm = forms.Form{
-	Name:   "cancelBooking",
-	Fields: SignedDataFields(&CancelBookingDataForm),
-}
-
 var BookAppointmentForm = forms.Form{
 	Name:   "bookAppointment",
 	Fields: SignedDataFields(&BookAppointmentDataForm),
@@ -887,6 +875,7 @@ var CancelAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		IDField,
 		ProviderIDField,
+		TimestampField,
 		{
 			Name:        "signedTokenData",
 			Description: "Signed token data of the user.",
