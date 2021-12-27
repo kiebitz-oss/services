@@ -199,6 +199,7 @@ type KeyLists struct {
 }
 
 type ActorKey struct {
+	ID        []byte        `json:"id"`
 	Data      string        `json:"data"`
 	Signature []byte        `json:"signature"`
 	PublicKey []byte        `json:"publicKey"`
@@ -452,18 +453,9 @@ type Booking struct {
 
 // GetAppointment
 
-type GetAppointmentSignedParams struct {
-	JSON      string                `json:"data" coerce:"name:json"`
-	Data      *GetAppointmentParams `json:"-" coerce:"name:data"`
-	Signature []byte                `json:"signature"`
-	PublicKey []byte                `json:"publicKey"`
-}
-
 type GetAppointmentParams struct {
-	Timestamp       time.Time        `json:"timestamp"`
-	ProviderID      []byte           `json:"providerID"`
-	SignedTokenData *SignedTokenData `json:"signedTokenData"`
-	ID              []byte           `json:"id"`
+	ProviderID []byte `json:"providerID"`
+	ID         []byte `json:"id"`
 }
 
 // CancelAppointment

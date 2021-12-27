@@ -844,24 +844,10 @@ var BookAppointmentDataForm = forms.Form{
 }
 
 var GetAppointmentForm = forms.Form{
-	Name:   "getAppointment",
-	Fields: SignedDataFields(&GetAppointmentDataForm),
-}
-
-var GetAppointmentDataForm = forms.Form{
-	Name: "getAppointmentData",
+	Name: "getAppointment",
 	Fields: []forms.Field{
 		IDField,
 		ProviderIDField,
-		{
-			Name:        "signedTokenData",
-			Description: "Signed token data of the user.",
-			Validators: []forms.Validator{
-				forms.IsStringMap{
-					Form: &SignedTokenDataForm,
-				},
-			},
-		},
 	},
 }
 

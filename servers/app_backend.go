@@ -158,11 +158,12 @@ func (k *Keys) GetAll() ([]*services.ActorKey, error) {
 
 	actorKeys := []*services.ActorKey{}
 
-	for _, v := range mk {
+	for id, v := range mk {
 		var m *services.ActorKey
 		if err := json.Unmarshal(v, &m); err != nil {
 			return nil, err
 		} else {
+			m.ID = []byte(id)
 			actorKeys = append(actorKeys, m)
 		}
 	}

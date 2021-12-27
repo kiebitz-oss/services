@@ -42,12 +42,15 @@ func EncodeSlice(data [][]byte) []string {
 	return strings
 }
 
-func findActorKey(keys []*services.ActorKey, publicKey []byte) (*services.ActorKey, error) {
+func findActorKey(keys []*services.ActorKey, publicKeyOrID []byte) (*services.ActorKey, error) {
 	for _, key := range keys {
+		if bytes.Equal(key.ID, publicKeyOrID) {
+			return key, nil
+		}
 		if akd, err := key.KeyData(); err != nil {
 			services.Log.Error(err)
 			continue
-		} else if bytes.Equal(akd.Signing, publicKey) {
+		} else if bytes.Equal(akd.Signing, publicKeyOrID) {
 			return key, nil
 		}
 	}
