@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -268,13 +270,13 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 		return nil, err
 	}
 
-	encryptedProviderData, err := ephemeralKey.Encrypt(providerData, provider.Actor.EncryptionKey)
+	confirmedProviderData, err := ephemeralKey.Encrypt(providerData, provider.Actor.EncryptionKey)
 
 	if err != nil {
 		return nil, err
 	}
 
-	signedEncryptedProviderData, err := encryptedProviderData.Sign(mediator.SigningKey)
+	signedConfirmedProviderData, err := confirmedProviderData.Sign(mediator.SigningKey)
 
 	if err != nil {
 		return nil, err
@@ -289,11 +291,11 @@ func (a *AppointmentsClient) ConfirmProvider(provider *Provider, mediator *crypt
 	params := &services.ConfirmProviderParams{
 		Timestamp:          time.Now(),
 		PublicProviderData: signedProviderData,
-		EncryptedProviderData: &services.EncryptedProviderData{
-			Signature: signedEncryptedProviderData.Signature,
-			PublicKey: signedEncryptedProviderData.PublicKey,
-			JSON:      string(signedEncryptedProviderData.Data),
-			Data:      encryptedProviderData,
+		ConfirmedProviderData: &services.ConfirmedProviderData{
+			Signature: signedConfirmedProviderData.Signature,
+			PublicKey: signedConfirmedProviderData.PublicKey,
+			JSON:      string(signedConfirmedProviderData.Data),
+			Data:      confirmedProviderData,
 		},
 		SignedKeyData: signedKeyData,
 	}

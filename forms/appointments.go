@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -174,11 +176,11 @@ var ConfirmProviderDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name:        "encryptedProviderData",
-			Description: "Encrypted provider data for review by a mediator.",
+			Name:        "confirmedProviderData",
+			Description: "Confirmed provider data for review by the provider.",
 			Validators: []forms.Validator{
 				forms.IsStringMap{
-					Form: &EncryptedProviderDataForm,
+					Form: &ConfirmedProviderDataForm,
 				},
 			},
 		},
@@ -896,8 +898,8 @@ var StoreProviderDataForm = forms.Form{
 	Fields: SignedDataFields(&StoreProviderDataDataForm),
 }
 
-var EncryptedProviderDataForm = forms.Form{
-	Name:   "encryptedProviderData",
+var ConfirmedProviderDataForm = forms.Form{
+	Name:   "confirmedProviderData",
 	Fields: SignedDataFields(&ECDHEncryptedDataForm),
 }
 

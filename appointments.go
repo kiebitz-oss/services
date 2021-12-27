@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -46,11 +48,11 @@ type ConfirmProviderSignedParams struct {
 type ConfirmProviderParams struct {
 	Timestamp             time.Time              `json:"timestamp"`
 	PublicProviderData    *SignedProviderData    `json:"publicProviderData"`
-	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
+	ConfirmedProviderData *ConfirmedProviderData `json:"confirmedProviderData"`
 	SignedKeyData         *SignedProviderKeyData `json:"signedKeyData"`
 }
 
-type EncryptedProviderData struct {
+type ConfirmedProviderData struct {
 	JSON      string                    `json:"data" coerce:"name:json"`
 	Data      *crypto.ECDHEncryptedData `json:"-" coerce:"name:data"`
 	Signature []byte                    `json:"signature"`

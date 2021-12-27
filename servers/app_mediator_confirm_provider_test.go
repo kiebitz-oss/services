@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,7 +19,6 @@
 package servers_test
 
 import (
-	"encoding/json"
 	"github.com/kiebitz-oss/services"
 	"github.com/kiebitz-oss/services/definitions"
 	"github.com/kiebitz-oss/services/forms"
@@ -26,40 +27,6 @@ import (
 	af "github.com/kiebitz-oss/services/testing/fixtures"
 	"testing"
 )
-
-type ConfirmProviderResult struct {
-	EncryptedProviderData *EncryptedProviderData `json:"encryptedProviderData"`
-	SignedKeyData         *SignedKeyData         `json:"signedKeyData"`
-}
-
-type SignedKeyData struct {
-	Data      string `json:"data"`
-	Signature string `json:"signature"`
-	PublicKey string `json:"publicKey"`
-}
-
-func (s *SignedKeyData) KeyData() (*KeyData, error) {
-	keyData := &KeyData{}
-	if err := json.Unmarshal([]byte(s.Data), keyData); err != nil {
-		return nil, err
-	} else {
-		return keyData, nil
-	}
-}
-
-type KeyData struct {
-	QueueData *QueueData `json:"queueData"`
-}
-
-type QueueData struct {
-	ZipCode string `json:"zipCode"`
-}
-
-type EncryptedProviderData struct {
-	Data      string `json:"data"`
-	IV        string `json:"iv"`
-	PublicKey string `json:"publicKey"`
-}
 
 func TestConfirmProvider(t *testing.T) {
 
@@ -105,9 +72,9 @@ func TestConfirmProvider(t *testing.T) {
 		t.Fatalf("expected a 200 status code, got %d instead", resp.StatusCode)
 	}
 
-	result := &services.EncryptedProviderData{}
+	result := &services.ConfirmedProviderData{}
 
-	if err := resp.CoerceResult(result, &forms.EncryptedProviderDataForm); err != nil {
+	if err := resp.CoerceResult(result, &forms.ConfirmedProviderDataForm); err != nil {
 		t.Fatal(err)
 	}
 

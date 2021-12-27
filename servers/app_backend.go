@@ -1,3 +1,21 @@
+// Kiebitz - Privacy-Friendly Appointment Scheduling
+// Copyright (C) 2021-2021 The Kiebitz Authors
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as
+// published by the Free Software Foundation, either version 3 of the
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 package servers
 
 import (
@@ -46,9 +64,9 @@ func (a *AppointmentsBackend) PublicProviderData() *PublicProviderData {
 	}
 }
 
-func (a *AppointmentsBackend) EncryptedProviderData() *EncryptedProviderData {
-	return &EncryptedProviderData{
-		dbs: a.db.Map("providerData", []byte("encrypted")),
+func (a *AppointmentsBackend) ConfirmedProviderData() *ConfirmedProviderData {
+	return &ConfirmedProviderData{
+		dbs: a.db.Map("providerData", []byte("confirmed")),
 	}
 }
 
@@ -178,11 +196,11 @@ func (c *Codes) AddToScore(code []byte, score int64) error {
 	return c.scores.Add(code, score)
 }
 
-type EncryptedProviderData struct {
+type ConfirmedProviderData struct {
 	dbs services.Map
 }
 
-func (c *EncryptedProviderData) Set(providerID []byte, encryptedData *services.EncryptedProviderData) error {
+func (c *ConfirmedProviderData) Set(providerID []byte, encryptedData *services.ConfirmedProviderData) error {
 	if data, err := json.Marshal(encryptedData); err != nil {
 		return err
 	} else {
@@ -190,17 +208,17 @@ func (c *EncryptedProviderData) Set(providerID []byte, encryptedData *services.E
 	}
 }
 
-func (c *EncryptedProviderData) Get(providerID []byte) (*services.EncryptedProviderData, error) {
+func (c *ConfirmedProviderData) Get(providerID []byte) (*services.ConfirmedProviderData, error) {
 	if data, err := c.dbs.Get(providerID); err != nil {
 		return nil, err
 	} else {
 		var mapData map[string]interface{}
-		encryptedData := &services.EncryptedProviderData{}
+		encryptedData := &services.ConfirmedProviderData{}
 		if err := json.Unmarshal(data, &mapData); err != nil {
 			return nil, err
-		} else if params, err := forms.EncryptedProviderDataForm.Validate(mapData); err != nil {
+		} else if params, err := forms.ConfirmedProviderDataForm.Validate(mapData); err != nil {
 			return nil, err
-		} else if err := forms.EncryptedProviderDataForm.Coerce(encryptedData, params); err != nil {
+		} else if err := forms.ConfirmedProviderDataForm.Coerce(encryptedData, params); err != nil {
 			return nil, err
 		} else {
 			return encryptedData, nil

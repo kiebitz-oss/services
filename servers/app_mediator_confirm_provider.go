@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -53,7 +55,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 
 	unverifiedProviderData := c.backend.UnverifiedProviderData()
 	verifiedProviderData := c.backend.VerifiedProviderData()
-	encryptedProviderData := c.backend.EncryptedProviderData()
+	confirmedProviderData := c.backend.ConfirmedProviderData()
 	publicProviderData := c.backend.PublicProviderData()
 
 	oldPd, err := unverifiedProviderData.Get(hash)
@@ -88,7 +90,7 @@ func (c *Appointments) confirmProvider(context services.Context, params *service
 	}
 
 	// we store a copy of the encrypted data for the provider to check
-	if err := encryptedProviderData.Set(hash, params.Data.EncryptedProviderData); err != nil {
+	if err := confirmedProviderData.Set(hash, params.Data.ConfirmedProviderData); err != nil {
 		services.Log.Error(err)
 		return context.InternalError()
 	}

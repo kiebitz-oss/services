@@ -4,7 +4,9 @@
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Affero General Public License as
 // published by the Free Software Foundation, either version 3 of the
-// License, or (at your option) any later version.
+// License, or (at your option) any later version. Additional terms
+// as defined in section 7 of the license (e.g. regarding attribution)
+// are specified at https://kiebitz.eu/en/docs/open-source/additional-terms.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,10 +24,10 @@ package encryptFs
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/kiebitz-oss/services/crypto"
 	"io"
 	"io/fs"
-	"fmt"
 )
 
 type EncryptedFS struct {
@@ -40,10 +42,10 @@ type EncryptedFile struct {
 	isEOF  bool
 }
 
-func New (fs fs.FS, key []byte) (fs.FS) {
+func New(fs fs.FS, key []byte) fs.FS {
 	return &EncryptedFS{
 		envfs: fs,
-		key: key,
+		key:   key,
 	}
 }
 
@@ -60,11 +62,11 @@ func (e *EncryptedFS) Open(name string) (fs.File, error) {
 	}
 }
 
-func (e *EncryptedFS) ReadDir(name string) ([]fs.DirEntry, error){
+func (e *EncryptedFS) ReadDir(name string) ([]fs.DirEntry, error) {
 	return fs.ReadDir(e.envfs, name)
 }
 
-func (e *EncryptedFile) Close() (error) {
+func (e *EncryptedFile) Close() error {
 	return e.file.Close()
 }
 
@@ -110,7 +112,6 @@ func (e *EncryptedFile) Read(p []byte) (int, error) {
 	if len(e.buffer) == 0 {
 		e.isEOF = true
 	}
-
 
 	return size, nil
 
