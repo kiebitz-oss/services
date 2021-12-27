@@ -205,8 +205,8 @@ var ProviderAppointmentsForm = forms.Form{
 			},
 		},
 		{
-			Name:        "offers",
-			Description: "Appointment offers for the provider.",
+			Name:        "appointments",
+			Description: "Appointments offered by the provider.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{

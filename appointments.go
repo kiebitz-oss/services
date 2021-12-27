@@ -299,9 +299,9 @@ type KeyChain struct {
 }
 
 type ProviderAppointments struct {
-	Provider *SignedProviderData  `json:"provider"`
-	Offers   []*SignedAppointment `json:"offers"`
-	KeyChain *KeyChain            `json:"keyChain"`
+	Provider     *SignedProviderData  `json:"provider"`
+	Appointments []*SignedAppointment `json:"appointments"`
+	KeyChain     *KeyChain            `json:"keyChain"`
 }
 
 type SignedProviderData struct {
@@ -361,8 +361,8 @@ type PublishAppointmentsSignedParams struct {
 }
 
 type PublishAppointmentsParams struct {
-	Timestamp time.Time            `json:"timestamp"`
-	Offers    []*SignedAppointment `json:"offers"`
+	Timestamp    time.Time            `json:"timestamp"`
+	Appointments []*SignedAppointment `json:"appointments"`
 }
 
 type SignedAppointment struct {

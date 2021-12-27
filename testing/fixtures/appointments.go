@@ -55,7 +55,7 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("provider missing")
 	}
 
-	offers := make([]*services.SignedAppointment, c.N)
+	appointments := make([]*services.SignedAppointment, c.N)
 
 	ct := c.Start
 	for i := int64(0); i < c.N; i++ {
@@ -67,15 +67,15 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 			if signedAppointment, err := appointment.Sign(provider.Actor.SigningKey); err != nil {
 				return nil, err
 			} else {
-				offers[i] = signedAppointment
+				appointments[i] = signedAppointment
 			}
 		}
 		ct = ct.Add(time.Duration(c.Duration) * time.Minute)
 	}
 
 	params := &services.PublishAppointmentsParams{
-		Timestamp: time.Now(),
-		Offers:    offers,
+		Timestamp:    time.Now(),
+		Appointments: appointments,
 	}
 
 	// we confirm the provider data
@@ -86,7 +86,7 @@ func (c Appointments) Setup(fixtures map[string]interface{}) (interface{}, error
 		return nil, fmt.Errorf("cannot publish appointments: %v", json)
 	}
 
-	return offers, nil
+	return appointments, nil
 
 }
 

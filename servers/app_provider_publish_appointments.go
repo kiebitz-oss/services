@@ -61,7 +61,7 @@ func (c *Appointments) publishAppointments(context services.Context, params *ser
 	// to do: fix statistics generation
 	var bookedSlots, openSlots int64
 
-	for _, appointment := range params.Data.Offers {
+	for _, appointment := range params.Data.Appointments {
 
 		// check if there's an existing appointment
 		if date, err := appointmentDatesByID.Get(appointment.Data.ID); err == nil {

@@ -636,8 +636,8 @@ var PublishAppointmentsDataForm = forms.Form{
 	Fields: []forms.Field{
 		TimestampField,
 		{
-			Name:        "offers",
-			Description: "The appointment offers to publish.",
+			Name:        "appointments",
+			Description: "The appointments to publish.",
 			Validators: []forms.Validator{
 				forms.IsList{
 					Validators: []forms.Validator{

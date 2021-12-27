@@ -176,9 +176,9 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		providerData.ID = hash
 
 		providerAppointments := &services.ProviderAppointments{
-			Provider: providerData,
-			Offers:   signedAppointments,
-			KeyChain: keyChain,
+			Provider:     providerData,
+			Appointments: signedAppointments,
+			KeyChain:     keyChain,
 		}
 
 		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
