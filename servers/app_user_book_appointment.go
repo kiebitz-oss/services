@@ -31,9 +31,6 @@ func (c *Appointments) isActiveProvider(context services.Context, id []byte) ser
 		if err == databases.NotFound {
 			return context.Error(404, "provider not found", nil)
 		}
-	} else {
-		services.Log.Error(err)
-		return context.InternalError()
 	}
 
 	return nil
@@ -57,7 +54,7 @@ func (c *Appointments) bookAppointment(context services.Context, params *service
 	token := params.Data.SignedTokenData.Data.Token
 
 	if ok, err := usedTokens.Has(token); err != nil {
-		services.Log.Error()
+		services.Log.Error(err)
 		return context.InternalError()
 	} else if ok {
 		return context.Error(401, "not authorized", nil)

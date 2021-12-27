@@ -347,16 +347,18 @@ func (c *Appointments) getActorKeys() (*services.KeyLists, error) {
 
 func (c *Appointments) isUser(context services.Context, params *services.SignedParams) services.Response {
 
-	signedData := &crypto.SignedStringData{
-		Data:      params.JSON,
-		Signature: params.Signature,
-	}
-
 	tokenKey := c.settings.Key("token")
 
 	if tokenKey == nil {
 		services.Log.Error("token key missing")
 		return context.InternalError()
+	}
+
+	signedTokenData := params.ExtraData.(*services.SignedTokenData)
+
+	signedData := &crypto.SignedStringData{
+		Data:      signedTokenData.JSON,
+		Signature: signedTokenData.Signature,
 	}
 
 	// first we verify the signed token against the token key
@@ -366,8 +368,6 @@ func (c *Appointments) isUser(context services.Context, params *services.SignedP
 	} else if !ok {
 		return context.Error(400, "invalid token", nil)
 	}
-
-	signedTokenData := params.ExtraData.(*services.SignedTokenData)
 
 	// then we ensure the public key matches the key from the signed token data
 	if !bytes.Equal(signedTokenData.Data.PublicKey, params.PublicKey) {

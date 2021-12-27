@@ -487,6 +487,18 @@ var SignedTokenDataForm = forms.Form{
 	Fields: SignedDataFields(&TokenDataForm),
 }
 
+var PriorityTokenForm = forms.Form{
+	Name: "priorityToken",
+	Fields: []forms.Field{
+		{
+			Name: "n",
+			Validators: []forms.Validator{
+				forms.IsInteger{HasMin: true, Min: 0},
+			},
+		},
+	},
+}
+
 var TokenDataForm = forms.Form{
 	Name: "tokenData",
 	Fields: []forms.Field{
@@ -510,7 +522,13 @@ var TokenDataForm = forms.Form{
 			Description: "Optional data associated with the token.",
 			Validators: []forms.Validator{
 				forms.IsOptional{},
-				forms.IsStringMap{},
+				forms.IsString{},
+				JSON{
+					Key: "json",
+				},
+				forms.IsStringMap{
+					Form: &PriorityTokenForm,
+				},
 			},
 		},
 	},
@@ -547,14 +565,14 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 			Name:        "from",
 			Description: "The earliest date of appointments to return.",
 			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339-date"},
+				forms.IsTime{Format: "rfc3339"},
 			},
 		},
 		{
 			Name:        "to",
 			Description: "The latest date of appointments to return.",
 			Validators: []forms.Validator{
-				forms.IsTime{Format: "rfc3339-date"},
+				forms.IsTime{Format: "rfc3339"},
 			},
 		},
 		{
@@ -572,8 +590,8 @@ var GetAppointmentsByZipCodeForm = forms.Form{
 		if from.After(to) {
 			return fmt.Errorf("'from' value is after 'to' value")
 		}
-		if to.Sub(from) > time.Hour*24 {
-			return fmt.Errorf("date span exceeds 1 day")
+		if to.Sub(from) > time.Hour*48 {
+			return fmt.Errorf("date span exceeds 2 days")
 		}
 		return nil
 	},
