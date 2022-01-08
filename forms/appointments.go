@@ -861,6 +861,13 @@ var CancelAppointmentDataForm = forms.Form{
 	Fields: []forms.Field{
 		IDField,
 		ProviderIDField,
+		{
+			Name:        "slotID",
+			Description: "The ID of the slot to cancel.",
+			Validators: []forms.Validator{
+				ID,
+			},
+		},
 		TimestampField,
 		{
 			Name:        "signedTokenData",

@@ -472,6 +472,7 @@ type CancelAppointmentParams struct {
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`
+	SlotID          []byte           `json:"slotID"`
 }
 
 // CheckProviderData
