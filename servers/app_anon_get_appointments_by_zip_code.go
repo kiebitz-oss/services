@@ -53,10 +53,11 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 	}
 
 	providerAppointmentsList := []*services.ProviderAppointments{}
+	aggregatedProviderAppointmentsList := []*services.AggregatedProviderAppointments{}
 
 	for _, providerKey := range keys.Providers {
 
-		if int64(len(providerAppointmentsList)) >= c.settings.ResponseMaxProvider {
+		if (!params.Aggregate) && int64(len(providerAppointmentsList)) >= c.settings.ResponseMaxProvider {
 			break
 		}
 
@@ -150,7 +151,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 
 				signedAppointments = append(signedAppointments, signedAppointment)
 
-				if int64(len(signedAppointments)) >= c.settings.ResponseMaxAppointment {
+				if (!params.Aggregate) && int64(len(signedAppointments)) >= c.settings.ResponseMaxAppointment {
 					break getAppointments
 				}
 			}
@@ -175,14 +176,33 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		// we add the hash for convenience
 		providerData.ID = hash
 
-		providerAppointments := &services.ProviderAppointments{
-			Provider:     providerData,
-			Appointments: signedAppointments,
-			KeyChain:     keyChain,
+		if params.Aggregate {
+			openAppointments := map[string]int64{}
+			for _, signedAppointment := range signedAppointments {
+				dateStr := signedAppointment.Data.Timestamp.Format("2006-01-02")
+				n, _ := openAppointments[dateStr]
+				// we add the open slots to the count
+				openAppointments[dateStr] = n + int64(len(signedAppointment.Data.SlotData)-len(signedAppointment.BookedSlots))
+			}
+			aggregatedProviderAppointments := &services.AggregatedProviderAppointments{
+				Provider:         providerData,
+				OpenAppointments: openAppointments,
+				KeyChain:         keyChain,
+			}
+			aggregatedProviderAppointmentsList = append(aggregatedProviderAppointmentsList, aggregatedProviderAppointments)
+		} else {
+			providerAppointments := &services.ProviderAppointments{
+				Provider:     providerData,
+				Appointments: signedAppointments,
+				KeyChain:     keyChain,
+			}
+			providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
 		}
 
-		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
+	}
 
+	if params.Aggregate {
+		return context.Result(aggregatedProviderAppointmentsList)
 	}
 
 	return context.Result(providerAppointmentsList)

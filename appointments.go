@@ -299,6 +299,12 @@ type KeyChain struct {
 	Mediator *ActorKey `json:"mediator"`
 }
 
+type AggregatedProviderAppointments struct {
+	Provider         *SignedProviderData `json:"provider"`
+	OpenAppointments map[string]int64    `json:"openAppointments"`
+	KeyChain         *KeyChain           `json:"keyChain"`
+}
+
 type ProviderAppointments struct {
 	Provider     *SignedProviderData  `json:"provider"`
 	Appointments []*SignedAppointment `json:"appointments"`

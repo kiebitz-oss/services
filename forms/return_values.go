@@ -156,8 +156,17 @@ var GetKeysRVV = []forms.Validator{
 var GetAppointmentsByZipCodeRVV = []forms.Validator{
 	forms.IsList{
 		Validators: []forms.Validator{
-			forms.IsStringMap{
-				Form: &ProviderAppointmentsForm,
+			forms.Or{
+				Options: [][]forms.Validator{
+					{
+						forms.IsStringMap{
+							Form: &ProviderAppointmentsForm,
+						},
+						forms.IsStringMap{
+							Form: &AggregatedProviderAppointmentsForm,
+						},
+					},
+				},
 			},
 		},
 	},
@@ -205,6 +214,15 @@ var ProviderAppointmentsForm = forms.Form{
 			},
 		},
 		{
+			Name:        "keyChain",
+			Description: "The chain of keys that signed the provider key.",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &KeyChainForm,
+				},
+			},
+		},
+		{
 			Name:        "appointments",
 			Description: "Appointments offered by the provider.",
 			Validators: []forms.Validator{
@@ -215,6 +233,37 @@ var ProviderAppointmentsForm = forms.Form{
 						},
 					},
 				},
+			},
+		},
+	},
+}
+
+var AggregatedProviderAppointmentsForm = forms.Form{
+	Name: "aggregatedProviderAppointments",
+	Fields: []forms.Field{
+		{
+			Name:        "provider",
+			Description: "Signed public provider data.",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &SignedProviderDataForm,
+				},
+			},
+		},
+		{
+			Name:        "keyChain",
+			Description: "The chain of keys that signed the provider key.",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &KeyChainForm,
+				},
+			},
+		},
+		{
+			Name:        "openAppointments",
+			Description: "Number of open appointments offered by the provider, grouped by day.",
+			Validators: []forms.Validator{
+				forms.IsStringMap{},
 			},
 		},
 	},
