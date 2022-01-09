@@ -301,8 +301,8 @@ type KeyChain struct {
 
 type ProviderAppointments struct {
 	Provider               *SignedProviderData  `json:"provider"`
-	Appointments           []*SignedAppointment `json:"appointments"`
-	AggregatedAppointments map[string]int64     `json:"aggregatedAppointments"`
+	Appointments           []*SignedAppointment `json:"appointments,omitempty"`
+	AggregatedAppointments map[string]int64     `json:"aggregatedAppointments,omitempty"`
 	KeyChain               *KeyChain            `json:"keyChain"`
 }
 
