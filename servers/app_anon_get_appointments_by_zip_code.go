@@ -53,7 +53,6 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 	}
 
 	providerAppointmentsList := []*services.ProviderAppointments{}
-	aggregatedProviderAppointmentsList := []*services.AggregatedProviderAppointments{}
 
 	for _, providerKey := range keys.Providers {
 
@@ -176,6 +175,11 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		// we add the hash for convenience
 		providerData.ID = hash
 
+		providerAppointments := &services.ProviderAppointments{
+			Provider: providerData,
+			KeyChain: keyChain,
+		}
+
 		if params.Aggregate {
 			openAppointments := map[string]int64{}
 			for _, signedAppointment := range signedAppointments {
@@ -184,25 +188,13 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 				// we add the open slots to the count
 				openAppointments[dateStr] = n + int64(len(signedAppointment.Data.SlotData)-len(signedAppointment.BookedSlots))
 			}
-			aggregatedProviderAppointments := &services.AggregatedProviderAppointments{
-				Provider:         providerData,
-				OpenAppointments: openAppointments,
-				KeyChain:         keyChain,
-			}
-			aggregatedProviderAppointmentsList = append(aggregatedProviderAppointmentsList, aggregatedProviderAppointments)
+			providerAppointments.AggregatedAppointments = openAppointments
 		} else {
-			providerAppointments := &services.ProviderAppointments{
-				Provider:     providerData,
-				Appointments: signedAppointments,
-				KeyChain:     keyChain,
-			}
-			providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
+			providerAppointments.Appointments = signedAppointments
 		}
 
-	}
+		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)
 
-	if params.Aggregate {
-		return context.Result(aggregatedProviderAppointmentsList)
 	}
 
 	return context.Result(providerAppointmentsList)
