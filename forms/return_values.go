@@ -205,9 +205,19 @@ var ProviderAppointmentsForm = forms.Form{
 			},
 		},
 		{
+			Name:        "keyChain",
+			Description: "The chain of keys that signed the provider key.",
+			Validators: []forms.Validator{
+				forms.IsStringMap{
+					Form: &KeyChainForm,
+				},
+			},
+		},
+		{
 			Name:        "appointments",
 			Description: "Appointments offered by the provider.",
 			Validators: []forms.Validator{
+				forms.IsOptional{},
 				forms.IsList{
 					Validators: []forms.Validator{
 						forms.IsStringMap{
@@ -215,6 +225,14 @@ var ProviderAppointmentsForm = forms.Form{
 						},
 					},
 				},
+			},
+		},
+		{
+			Name:        "aggregatedAppointments",
+			Description: "Number of open appointments offered by the provider, grouped by day.",
+			Validators: []forms.Validator{
+				forms.IsOptional{},
+				forms.IsStringMap{},
 			},
 		},
 	},

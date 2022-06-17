@@ -300,9 +300,10 @@ type KeyChain struct {
 }
 
 type ProviderAppointments struct {
-	Provider     *SignedProviderData  `json:"provider"`
-	Appointments []*SignedAppointment `json:"appointments"`
-	KeyChain     *KeyChain            `json:"keyChain"`
+	Provider               *SignedProviderData  `json:"provider"`
+	Appointments           []*SignedAppointment `json:"appointments,omitempty"`
+	AggregatedAppointments map[string]int64     `json:"aggregatedAppointments,omitempty"`
+	KeyChain               *KeyChain            `json:"keyChain"`
 }
 
 type SignedProviderData struct {
@@ -472,6 +473,7 @@ type CancelAppointmentParams struct {
 	ProviderID      []byte           `json:"providerID"`
 	SignedTokenData *SignedTokenData `json:"signedTokenData"`
 	ID              []byte           `json:"id"`
+	SlotID          []byte           `json:"slotID"`
 }
 
 // CheckProviderData

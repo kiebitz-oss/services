@@ -56,7 +56,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 
 	for _, providerKey := range keys.Providers {
 
-		if int64(len(providerAppointmentsList)) >= c.settings.ResponseMaxProvider {
+		if (!params.Aggregate) && int64(len(providerAppointmentsList)) >= c.settings.ResponseMaxProvider {
 			break
 		}
 
@@ -150,7 +150,7 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 
 				signedAppointments = append(signedAppointments, signedAppointment)
 
-				if int64(len(signedAppointments)) >= c.settings.ResponseMaxAppointment {
+				if (!params.Aggregate) && int64(len(signedAppointments)) >= c.settings.ResponseMaxAppointment {
 					break getAppointments
 				}
 			}
@@ -176,9 +176,21 @@ func (c *Appointments) getAppointmentsByZipCode(context services.Context, params
 		providerData.ID = hash
 
 		providerAppointments := &services.ProviderAppointments{
-			Provider:     providerData,
-			Appointments: signedAppointments,
-			KeyChain:     keyChain,
+			Provider: providerData,
+			KeyChain: keyChain,
+		}
+
+		if params.Aggregate {
+			openAppointments := map[string]int64{}
+			for _, signedAppointment := range signedAppointments {
+				dateStr := signedAppointment.Data.Timestamp.Format("2006-01-02")
+				n, _ := openAppointments[dateStr]
+				// we add the open slots to the count
+				openAppointments[dateStr] = n + int64(len(signedAppointment.Data.SlotData)-len(signedAppointment.BookedSlots))
+			}
+			providerAppointments.AggregatedAppointments = openAppointments
+		} else {
+			providerAppointments.Appointments = signedAppointments
 		}
 
 		providerAppointmentsList = append(providerAppointmentsList, providerAppointments)

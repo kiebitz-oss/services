@@ -55,7 +55,7 @@ func (c *Appointments) cancelAppointment(context services.Context, params *servi
 
 			found := false
 			for _, booking := range signedAppointment.Bookings {
-				if bytes.Equal(booking.Token, token) {
+				if bytes.Equal(booking.Token, token) && bytes.Equal(booking.ID, params.Data.SlotID) {
 					found = true
 					continue
 				}
