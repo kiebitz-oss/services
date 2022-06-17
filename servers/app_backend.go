@@ -143,6 +143,8 @@ func (k *Keys) Get(id []byte) (*services.ActorKey, error) {
 		if err := json.Unmarshal(mk, &key); err != nil {
 			return nil, err
 		} else {
+			// we set the ID to
+			key.ID = id
 			return key, nil
 		}
 	}
